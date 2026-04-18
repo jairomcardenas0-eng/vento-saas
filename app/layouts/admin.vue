@@ -220,6 +220,17 @@ const catalogStore = useCatalogStore()
 const sidebarOpen = ref(false)
 const openAccordion = ref<string | null>('Comercial')
 
+// Lock body scroll when sidebar is open on mobile
+watch(sidebarOpen, (isOpen) => {
+  if (import.meta.client) {
+    if (isOpen) {
+      document.body.style.overflow = 'hidden'
+    } else {
+      document.body.style.overflow = ''
+    }
+  }
+})
+
 const navGroups: NavGroup[] = [
   {
     title: 'Operacion',
