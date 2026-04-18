@@ -1,11 +1,7 @@
 <template>
   <div v-if="catalog" class="admin-grid">
     <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Moderacion" title="Cluster de resenas" description="Bandeja dual para auditoria, aprobacion y respuesta del negocio.">
-        <template #actions>
-          <span class="ghost-btn small">{{ reviewsStore.pending.length }} pendientes</span>
-        </template>
-      </UiSectionHeader>
+      <UiSectionHeader eyebrow="Moderacion" title="Cluster de resenas" description="Bandeja dual para auditoria, aprobacion y respuesta del negocio." />
 
       <div class="review-metrics">
         <article class="metric-card">
