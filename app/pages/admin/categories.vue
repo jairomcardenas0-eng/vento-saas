@@ -26,7 +26,10 @@
         <label class="full"><span>Nota</span><textarea v-model="form.note" rows="3" /></label>
         <label class="toggle"><input v-model="form.active" type="checkbox" /><span>Activa</span></label>
         <div class="full">
-          <button class="solid-btn">Guardar categoría</button>
+          <button class="solid-btn" :disabled="saving">
+            {{ saving ? 'Guardando...' : 'Guardar categoría' }}
+          </button>
+          <p v-if="saveError" class="mt-2 text-sm text-rose-500">{{ saveError }}</p>
         </div>
       </form>
     </section>
@@ -54,11 +57,26 @@ const editCategory = (category: CatalogCategory) => {
   form.value = { ...category }
 }
 
+const saving = ref(false)
+const saveError = ref('')
+
 const save = async () => {
-  await catalogStore.upsertCategory({
-    ...form.value,
-    id: form.value.id || `${form.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
-  })
-  form.value = { id: '', name: '', note: '', order: categories.value.length + 1, active: true }
+  if (!catalog.value) return
+
+  saving.value = true
+  saveError.value = ''
+
+  try {
+    await catalogStore.upsertCategory({
+      ...form.value,
+      id: form.value.id || `${form.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+    })
+    form.value = { id: '', name: '', note: '', order: categories.value.length + 1, active: true }
+  } catch (error) {
+    console.error('Error al guardar categoría:', error)
+    saveError.value = 'Error al guardar. Intenta nuevamente.'
+  } finally {
+    saving.value = false
+  }
 }
 </script>
