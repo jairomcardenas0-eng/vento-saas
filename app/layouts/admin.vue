@@ -141,7 +141,7 @@
 
       <main class="min-w-0 flex-1 lg:pl-[290px]">
         <!-- Header sticky con backdrop-blur -->
-        <header class="sticky top-0 z-30 bg-[#F8FAFC]/80 dark:bg-[#0B1120]/80 backdrop-blur-xl border-b border-slate-200/60 dark:border-slate-800/60">
+        <header class="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#0B1120] border-b border-slate-200/60 dark:border-slate-800/60">
           <div class="flex items-center gap-3.5 px-5 py-3.5">
             <button
               class="flex h-10 w-10 items-center justify-center rounded-2xl bg-white dark:bg-slate-800 border border-slate-200/60 dark:border-slate-700 shadow-sm press transition lg:hidden"
@@ -162,7 +162,7 @@
           </div>
         </header>
 
-        <div class="px-4 py-5 sm:px-6 lg:px-8">
+        <div class="px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
           <slot />
         </div>
       </main>

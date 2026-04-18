@@ -168,6 +168,18 @@ select {
   padding: 1.5rem;
 }
 
+@media (max-width: 640px) {
+  .hero-copy,
+  .hero-preview,
+  .auth-card,
+  .market-card,
+  .panel-card {
+    padding: 1rem;
+    border-radius: 20px;
+    backdrop-filter: none;
+  }
+}
+
 .admin-preview-frame {
   overflow: hidden;
   border-radius: 22px;

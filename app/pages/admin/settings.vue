@@ -82,7 +82,7 @@
           </section>
           <AdminAddressMapEditor v-model="draft.address" />
 
-          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
+          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-3 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
             <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p class="eyebrow">Horarios</p>
@@ -96,9 +96,9 @@
             <p class="mb-4 text-sm text-zinc-500 dark:text-zinc-400">{{ scheduleStatusLabel }}</p>
 
             <div v-if="draft.scheduleMode === 'weekly'" class="space-y-4">
-              <article v-for="(day, dayIndex) in draft.weeklySchedule" :key="day.dayKey" class="rounded-[28px] border border-zinc-200 bg-zinc-50/50 p-5 dark:border-zinc-800/50 dark:bg-zinc-900/40">
-                <div class="mb-4 flex items-center justify-between gap-4">
-                  <div class="flex items-center gap-4">
+              <article v-for="(day, dayIndex) in draft.weeklySchedule" :key="day.dayKey" class="rounded-[28px] border border-zinc-200 bg-zinc-50/50 p-3 sm:p-5 dark:border-zinc-800/50 dark:bg-zinc-900/40">
+                <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+                  <div class="flex flex-wrap items-center gap-3">
                     <label class="toggle !m-0">
                       <input v-model="day.enabled" type="checkbox" />
                       <span class="text-base font-bold">{{ day.label }}</span>
@@ -107,7 +107,7 @@
                       {{ day.enabled ? 'Abierto' : 'Cerrado' }}
                     </span>
                   </div>
-                  <button class="ghost-btn small !min-h-[34px] !rounded-full !px-4" type="button" @click="addScheduleRange(dayIndex)">
+                  <button class="ghost-btn small !min-h-[34px] !rounded-full !px-3 !text-xs" type="button" @click="addScheduleRange(dayIndex)">
                     + Añadir horario
                   </button>
                 </div>
