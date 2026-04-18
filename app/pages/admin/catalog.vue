@@ -128,8 +128,8 @@
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="drawerOpen" class="fixed inset-0 z-50 bg-black/50 backdrop-blur-sm" @click.self="closeDrawer">
-        <div class="absolute inset-y-0 right-0 w-full max-w-2xl overflow-y-auto border-l border-zinc-200 bg-white/95 p-5 shadow-[0_30px_90px_rgba(16,12,10,0.28)] ring-1 ring-black/10 dark:border-zinc-800 dark:bg-zinc-950/95">
+      <div v-if="drawerOpen" class="fixed inset-0 z-[60] bg-black/50" @click.self="closeDrawer">
+        <div class="fixed inset-0 sm:absolute sm:inset-y-0 sm:right-0 sm:left-auto w-full max-w-full sm:max-w-2xl overflow-y-auto border-l border-zinc-200 bg-white p-5 shadow-[0_30px_90px_rgba(16,12,10,0.28)] ring-1 ring-black/10 dark:border-zinc-800 dark:bg-zinc-950">
           <div class="mb-6 flex items-start justify-between gap-4">
             <div>
               <p class="eyebrow">{{ drawerMode === 'product' ? 'Producto' : 'Categoria' }}</p>
@@ -192,12 +192,12 @@
             <!-- Imágenes (hasta 3) -->
             <div class="rounded-[24px] border border-dashed border-zinc-300 bg-white/80 p-4 dark:border-zinc-700 dark:bg-zinc-900/80">
               <p class="mb-3 text-sm font-semibold text-zinc-900 dark:text-zinc-100">Imágenes del producto</p>
-              <div class="grid grid-cols-3 gap-3">
+              <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
                 <div v-for="(_, imgIdx) in [0, 1, 2]" :key="imgIdx" class="flex flex-col gap-2">
                   <p class="text-xs text-zinc-400">Imagen {{ imgIdx + 1 }}<span v-if="imgIdx === 0" class="text-zinc-500"> (principal)</span></p>
                   <div class="overflow-hidden rounded-[16px] border border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950">
-                    <img v-if="productDraft.imageUrls[imgIdx]" :src="productDraft.imageUrls[imgIdx]!" class="h-28 w-full object-cover" />
-                    <div v-else class="flex h-28 items-center justify-center text-xs text-zinc-400">Sin imagen</div>
+                    <img v-if="productDraft.imageUrls[imgIdx]" :src="productDraft.imageUrls[imgIdx]!" class="h-40 sm:h-28 w-full object-cover" />
+                    <div v-else class="flex h-40 sm:h-28 items-center justify-center text-xs text-zinc-400">Sin imagen</div>
                   </div>
                   <div class="grid grid-cols-2 gap-1.5">
                     <label :for="`cam-${imgIdx}`" class="flex cursor-pointer items-center justify-center gap-1.5 rounded-[12px] border border-zinc-200 bg-white py-2.5 text-[11px] font-medium text-zinc-600 shadow-sm transition-colors hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-300 dark:hover:bg-zinc-900">
@@ -430,14 +430,39 @@ const openCategoryEditor = (category?: CategoryItem) => {
     : createEmptyCategory(catalogEngine.categories.length + 1)
 }
 
+const nextSortOrderForCategory = (categoryId: string) => {
+  if (!categoryId) return 1
+  const count = catalogEngine.products.filter(p => p.categoryId === categoryId).length
+  return count + 1
+}
+
 const openProductEditor = (product?: ProductItem) => {
   drawerMode.value = 'product'
   drawerOpen.value = true
   previousImageUrl.value = product?.imageUrl || null
-  productDraft.value = product
-    ? JSON.parse(JSON.stringify(product))
-    : createEmptyProduct(selectedCategoryId.value || catalogEngine.categories[0]?.id || '')
+  if (product) {
+    productDraft.value = JSON.parse(JSON.stringify(product))
+  } else {
+    const categoryId = selectedCategoryId.value || catalogEngine.categories[0]?.id || ''
+    const empty = createEmptyProduct(categoryId)
+    empty.sortOrder = nextSortOrderForCategory(categoryId)
+    productDraft.value = empty
+  }
 }
+
+// Auto-update sortOrder when category changes (only for new products)
+watch(() => productDraft.value.categoryId, (newCategoryId) => {
+  if (!productDraft.value.id && newCategoryId) {
+    productDraft.value.sortOrder = nextSortOrderForCategory(newCategoryId)
+  }
+})
+
+// Lock body scroll when drawer is open
+watch(drawerOpen, (isOpen) => {
+  if (import.meta.client) {
+    document.body.style.overflow = isOpen ? 'hidden' : ''
+  }
+})
 
 const closeDrawer = () => {
   drawerOpen.value = false
