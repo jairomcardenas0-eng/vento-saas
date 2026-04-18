@@ -1,0 +1,203 @@
+import type {
+  BusinessDaySchedule,
+  CatalogCategory,
+  CatalogCoupon,
+  CatalogOperationalSettings,
+  CatalogProduct,
+  CatalogRecord,
+  CatalogReview,
+  CatalogThemeSettings,
+  DeliveryZone,
+  UserProfile,
+} from '~/types/catalog'
+
+const defaultScheduleRanges = () => ([{ start: '09:00', end: '18:00' }])
+
+export const defaultWeeklySchedule = (): BusinessDaySchedule[] => ([
+  { dayKey: 'monday', label: 'Lunes', enabled: true, ranges: defaultScheduleRanges() },
+  { dayKey: 'tuesday', label: 'Martes', enabled: true, ranges: defaultScheduleRanges() },
+  { dayKey: 'wednesday', label: 'Miércoles', enabled: true, ranges: defaultScheduleRanges() },
+  { dayKey: 'thursday', label: 'Jueves', enabled: true, ranges: defaultScheduleRanges() },
+  { dayKey: 'friday', label: 'Viernes', enabled: true, ranges: [{ start: '09:00', end: '15:00' }, { start: '18:00', end: '23:00' }] },
+  { dayKey: 'saturday', label: 'Sábado', enabled: true, ranges: [{ start: '10:00', end: '15:00' }, { start: '18:00', end: '23:30' }] },
+  { dayKey: 'sunday', label: 'Domingo', enabled: false, ranges: defaultScheduleRanges() },
+])
+
+export const createDeliveryZone = (seed = Date.now()): DeliveryZone => ({
+  id: `zone-${seed}`,
+  name: '',
+  price: 0,
+  minOrder: 0,
+  estimatedMinutes: 45,
+})
+
+export const createCouponDraft = (seed = Date.now()): CatalogCoupon => ({
+  id: `coupon-${seed}`,
+  name: '',
+  code: '',
+  discountType: 'percentage',
+  discountValue: 10,
+  minimumOrder: 0,
+  usageLimit: null,
+  usedCount: 0,
+  startsAt: null,
+  expiresAt: null,
+  visiblePublicly: false,
+  active: true,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
+})
+
+export const defaultTheme = (): CatalogThemeSettings => ({
+  primary: '#bf4c22',
+  bg: '#fff9f0',
+  bgType: 'color',
+  bgImage: '',
+  headerBg: '#20130f',
+  headerText: '#fff7f2',
+  cardBg: '#fffdf9',
+  cardStyle: 'glass-premium',
+  priceColor: '#bf4c22',
+  descColor: '#7e5b4a',
+  productTitleColor: '#24140f',
+  catNoteColor: '#8d6a57',
+  offerBadgeBg: '#d93a2f',
+  offerBadgeText: '#fff6f4',
+  timerBadgeBg: '#24140f',
+  timerBadgeText: '#fff6f4',
+  priceOldColor: '#8f837d',
+  tagBg: '#f2d3c2',
+  tagText: '#5b2916',
+  searchInputBg: '#fff7f2',
+  searchInputBorder: '#e6c5b4',
+  qtyBg: '#f5dfd3',
+  qtyMinusBg: '#ebc0aa',
+  detailBg: '#fffdf9',
+  detailNameColor: '#24140f',
+  detailDescColor: '#7b6255',
+  detailPriceColor: '#bf4c22',
+  btnCartBg: '#bf4c22',
+  btnCartText: '#fffaf6',
+  btnWaBg: '#1fa463',
+  btnWaText: '#ffffff',
+  bannerText: 'Pedidos directos por WhatsApp con catálogo premium.',
+  bannerMode: 'loop',
+  bannerSticky: true,
+  bannerBg: '#2f1b15',
+  bannerTextColor: '#fff7f2',
+})
+
+export const defaultSettings = (name = 'Nueva Tienda', slug = 'nueva-tienda'): CatalogOperationalSettings => ({
+  businessName: name,
+  businessType: ['Restaurante'],
+  tagline: 'Catálogo digital premium listo para vender',
+  logoUrl: '',
+  coverImage: '',
+  storefrontLayout: 'classic',
+  timezone: 'America/Mexico_City',
+  address: {
+    countryCode: '',
+    stateCode: '',
+    city: '',
+    details: '',
+    lat: 23.6345,
+    lng: -102.5528,
+  },
+  instagram: '',
+  facebook: '',
+  website: '',
+  ogTitle: `${name} | Catálogo Digital`,
+  ogDescription: `Explora ${name} y haz tu pedido en segundos.`,
+  ogImageUrl: '',
+  phone: '',
+  whatsapp: '',
+  currency: 'MXN',
+  scheduleMode: 'weekly',
+  weeklySchedule: defaultWeeklySchedule(),
+  cartEnabled: true,
+  whatsappEnabled: true,
+  productCarouselEnabled: true,
+  productCarouselSeconds: 4,
+  checkoutNameReq: 'obligatorio',
+  checkoutAddressReq: 'opcional',
+  checkoutPaymentReq: 'opcional',
+  deliveryEnabled: true,
+  deliveryPaused: false,
+  deliveryFeeType: 'flat',
+  deliveryFlatFee: 39,
+  deliveryMinimumOrder: 149,
+  deliveryZones: [],
+  riderInstructions: '',
+  pickupEnabled: true,
+  pickupPoint: 'Mostrador principal',
+  pickupInstructions: 'Presenta tu nombre en caja para retirar tu pedido.',
+  pickupEtaMinutes: 20,
+  closed: false,
+  closedMessage: 'Ahora mismo no estamos recibiendo pedidos.\nVuelve pronto.',
+  closedTextSizeLarge: 32,
+  closedTextSizeSmall: 17,
+  closedTextColor: '#ffffff',
+  closedBgType: 'color',
+  closedBgColor: '#20130f',
+  closedBgImage: '',
+  closedTextBox: true,
+  closedTextBoxColor: '#000000',
+  closedTextBoxOpacity: 65,
+  closedShowMenuBtn: true,
+  closedMenuBtnBg: '#bf4c22',
+  closedMenuBtnText: '#ffffff',
+  closedShowWhatsapp: true,
+  closedShowCall: true,
+  reviewsEnabled: true,
+  reviewModeration: true,
+  adminReplyName: name,
+  qrDotColor: '#20130f',
+  qrBgColor: '#fff7f2',
+  qrDotType: 'rounded',
+  qrCornerType: 'extra-rounded',
+  qrLogoUrl: '',
+})
+
+export const defaultCategories = (): CatalogCategory[] => []
+
+export const defaultProducts = (): CatalogProduct[] => []
+
+export const createCatalogRecord = (
+  ownerUid: string,
+  slug: string,
+  name: string,
+): CatalogRecord => ({
+  id: slug,
+  slug,
+  ownerUid,
+  status: 'published',
+  planTier: 'free',
+  isBanned: false,
+  createdAt: new Date().toISOString(),
+  ratingAverage: 0,
+  ratingApprovedCount: 0,
+  theme: defaultTheme(),
+  settings: defaultSettings(name, slug),
+  categories: defaultCategories(),
+  products: defaultProducts(),
+  reviews: [],
+  orders: [],
+})
+
+export const demoUser = (): UserProfile => ({
+  uid: 'demo-owner',
+  email: 'demo@catalogo.com',
+  displayName: 'Demo Owner',
+  defaultCatalogId: 'brasa-house',
+  systemRole: 'merchant',
+  createdAt: new Date().toISOString(),
+})
+
+export const demoCatalog = (): CatalogRecord => {
+  const catalog = createCatalogRecord('demo-owner', 'brasa-house', 'Brasa House')
+  catalog.settings.phone = '5512345678'
+  catalog.settings.whatsapp = '525512345678'
+  catalog.settings.businessType = ['Hamburguesería']
+  catalog.settings.tagline = 'Menú visual para delivery, pickup y ventas directas.'
+  return catalog
+}
