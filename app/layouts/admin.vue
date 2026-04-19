@@ -2,23 +2,23 @@
   <div class="min-h-screen bg-zinc-50 text-zinc-900 transition-colors duration-200 dark:bg-black dark:text-zinc-100">
     <div class="flex min-h-screen">
       <Transition
-        enter-active-class="transition duration-200 ease-out"
+        enter-active-class="transition duration-150 ease-out"
         enter-from-class="opacity-0"
         enter-to-class="opacity-100"
-        leave-active-class="transition duration-150 ease-in"
+        leave-active-class="transition duration-100 ease-in"
         leave-from-class="opacity-100"
         leave-to-class="opacity-0"
       >
         <div
           v-if="sidebarOpen"
-          class="fixed inset-0 z-40 bg-black/45 backdrop-blur-sm lg:hidden"
+          class="fixed inset-0 z-40 bg-black/50 lg:hidden"
           @click="sidebarOpen = false"
         />
       </Transition>
 
       <aside
         :class="[
-          'fixed inset-y-0 left-0 z-50 flex w-full flex-col border-r p-0 transition-transform duration-300 lg:w-[290px]',
+          'fixed inset-y-0 left-0 z-50 flex w-full flex-col border-r p-0 transition-transform duration-200 ease-out will-change-transform lg:w-[290px]',
           'bg-white dark:bg-[#0F172A] border-slate-200 dark:border-slate-800',
           sidebarOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0',
         ]"
