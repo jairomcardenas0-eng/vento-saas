@@ -172,13 +172,6 @@
       </div>
     </section>
 
-    <footer class="menu-footer">
-      <div class="menu-footer-pill">
-        <span>Desarrollado por</span>
-        <a href="https://smartiadigital.com" target="_blank" rel="noopener noreferrer">smartiadigital</a>
-      </div>
-    </footer>
-
     <div v-if="settings.cartEnabled && cartStore.isHydrated && cartStore.totalItems > 0" class="cart-bar" :class="{ visible: cartStore.totalItems > 0 }">
       <div class="cart-preview">
         <div v-for="item in cartStore.items.slice(0, 4)" :key="item.cartItemId" class="preview-tag">

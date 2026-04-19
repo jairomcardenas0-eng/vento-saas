@@ -1,5 +1,5 @@
 <template>
-  <div class="min-h-screen bg-zinc-50 text-zinc-900 transition-colors duration-200 dark:bg-black dark:text-zinc-100">
+  <div class="min-h-screen overflow-x-hidden bg-zinc-50 text-zinc-900 transition-colors duration-200 dark:bg-black dark:text-zinc-100">
     <div class="flex min-h-screen">
       <Transition
         enter-active-class="transition duration-150 ease-out"
@@ -142,7 +142,7 @@
         </div>
       </aside>
 
-      <main class="min-w-0 flex-1 lg:pl-[290px]">
+      <main class="min-w-0 flex-1 overflow-x-hidden lg:pl-[290px]">
         <!-- Header sticky con backdrop-blur -->
         <header class="sticky top-0 z-30 bg-[#F8FAFC] dark:bg-[#0B1120] border-b border-slate-200/60 dark:border-slate-800/60">
           <div class="flex items-center gap-3.5 px-5 py-3.5">

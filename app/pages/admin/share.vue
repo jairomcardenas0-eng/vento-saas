@@ -1,11 +1,11 @@
 <template>
-  <section v-if="catalog" class="panel-card span-2 !p-0 overflow-hidden">
-    <div class="border-b border-zinc-100 p-6 dark:border-zinc-800">
+  <section v-if="catalog" class="panel-card span-2 !p-0 w-full max-w-full overflow-hidden">
+    <div class="border-b border-zinc-100 p-4 sm:p-6 dark:border-zinc-800">
       <UiSectionHeader eyebrow="Distribución" title="Tu catálogo al mundo" description="Copia tu link, descarga tu QR y personaliza cómo te ves en redes sociales." />
     </div>
 
-    <div class="grid gap-0 lg:grid-cols-[1fr_360px]">
-      <div class="space-y-8 p-6 lg:border-r lg:border-zinc-100 lg:dark:border-zinc-800">
+    <div class="grid w-full max-w-full gap-0 lg:grid-cols-[minmax(0,1fr)_360px]">
+      <div class="min-w-0 space-y-8 p-4 sm:p-6 lg:border-r lg:border-zinc-100 lg:dark:border-zinc-800">
         <div class="space-y-4">
           <h4 class="text-sm font-bold uppercase tracking-widest text-zinc-400">Acceso Público</h4>
 
@@ -57,7 +57,7 @@
         </div>
       </div>
 
-      <div class="bg-zinc-50/30 p-6 dark:bg-zinc-950/30">
+      <div class="min-w-0 bg-zinc-50/30 p-4 sm:p-6 dark:bg-zinc-950/30">
         <div class="flex flex-col items-center gap-5 text-center">
           <h4 class="text-sm font-bold uppercase tracking-widest text-zinc-400">Código QR</h4>
           <div class="overflow-hidden rounded-[32px] border-4 border-white bg-white p-4 shadow-xl shadow-zinc-200/50 dark:border-zinc-800 dark:bg-zinc-900 dark:shadow-none">
@@ -69,7 +69,7 @@
             <p class="text-xs leading-relaxed text-zinc-400">Personaliza tu QR y descárgalo listo para imprimir.</p>
           </div>
 
-          <div class="w-full space-y-3 text-left">
+          <div class="mx-auto w-full max-w-md space-y-3 text-left">
             <div class="grid grid-cols-2 gap-3">
               <label class="flex items-center justify-between gap-2 rounded-2xl border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-900">
                 <span class="text-xs font-semibold text-zinc-600 dark:text-zinc-400">Puntos</span>
@@ -118,11 +118,11 @@
             </button>
           </div>
 
-          <div class="flex w-full gap-2">
-            <button @click="downloadQR('png')" class="solid-btn small !flex-1 !rounded-2xl">
+          <div class="mx-auto flex w-full max-w-md min-w-0 gap-2">
+            <button @click="downloadQR('png')" class="solid-btn small !min-w-0 !flex-1 !rounded-2xl">
               PNG
             </button>
-            <button @click="downloadQR('svg')" class="ghost-btn small !flex-1 !rounded-2xl">
+            <button @click="downloadQR('svg')" class="ghost-btn small !min-w-0 !flex-1 !rounded-2xl">
               SVG
             </button>
           </div>
