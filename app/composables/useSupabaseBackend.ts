@@ -356,19 +356,9 @@ export const useSupabaseBackend = () => {
     key: 'settings' | 'theme',
     payload: Record<string, any>,
   ) => {
-    const current = await getCatalogHeaderById(catalogId)
-    if (!current) {
-      throw new Error('Catalogo no encontrado')
-    }
-
-    const merged = {
-      ...(current[key] || {}),
-      ...clone(payload),
-    }
-
     const { error } = await $supabase
       .from('catalogs')
-      .update({ [key]: merged })
+      .update({ [key]: clone(payload) })
       .eq('id', catalogId)
 
     ensureSuccess(error, `No se pudo actualizar ${key}`)
@@ -660,29 +650,12 @@ export const useSupabaseBackend = () => {
       return assembleCatalog(catalogRow)
     },
     async updateSettings(catalogId: string, settings: Partial<CatalogOperationalSettings>) {
-      await ensurePaidPlan(catalogId)
       await updateCatalogJson(catalogId, 'settings', settings)
     },
     async updateStorefrontLayout(catalogId: string, storefrontLayout: CatalogOperationalSettings['storefrontLayout']) {
-      const current = await getCatalogHeaderById(catalogId)
-      if (!current) {
-        throw new Error('Catalogo no encontrado')
-      }
-
-      const { error } = await $supabase
-        .from('catalogs')
-        .update({
-          settings: {
-            ...(current.settings || {}),
-            storefrontLayout,
-          },
-        })
-        .eq('id', catalogId)
-
-      ensureSuccess(error, 'No se pudo actualizar el layout')
+      await updateCatalogJson(catalogId, 'settings', { storefrontLayout })
     },
     async updateTheme(catalogId: string, theme: Partial<CatalogThemeSettings>) {
-      await ensurePaidPlan(catalogId)
       await updateCatalogJson(catalogId, 'theme', theme)
     },
     async updateCatalogBanStatus(catalogId: string, isBanned: boolean) {

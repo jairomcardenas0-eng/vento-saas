@@ -35,6 +35,7 @@ export interface ProductItem {
   timerShowMinutes: boolean
   timerShowSeconds: boolean
   timerLinkSale: boolean
+  tags: string[]
   productRating: number
   productRatingCount: number
   createdAt: string | null
@@ -90,6 +91,7 @@ const mapCatalogProductToItem = (product: CatalogProduct): ProductItem => ({
   timerShowMinutes: product.timerShowMinutes ?? true,
   timerShowSeconds: product.timerShowSeconds ?? true,
   timerLinkSale: product.timerLinkSale ?? false,
+  tags: product.tags || [],
   productRating: Number(product.productRating || 0),
   productRatingCount: Number(product.productRatingCount || 0),
   createdAt: null,
@@ -122,7 +124,7 @@ const mapItemProductToCatalog = (product: ProductItem): CatalogProduct => ({
   timerShowMinutes: product.timerShowMinutes ?? true,
   timerShowSeconds: product.timerShowSeconds ?? true,
   timerLinkSale: product.timerLinkSale ?? false,
-  tags: [],
+  tags: product.tags || [],
   variants: (product.variants || []).map((group) => ({
     group: group.groupName,
     required: group.options.some((option) => option.isRequired),
@@ -173,6 +175,7 @@ export const createEmptyProduct = (categoryId = ''): ProductItem => ({
   timerShowMinutes: true,
   timerShowSeconds: true,
   timerLinkSale: false,
+  tags: [],
   productRating: 0,
   productRatingCount: 0,
   createdAt: null,
@@ -246,6 +249,7 @@ export const useCatalogEngineStore = defineStore('catalog-engine', {
         timerShowMinutes: payload.timerShowMinutes ?? true,
         timerShowSeconds: payload.timerShowSeconds ?? true,
         timerLinkSale: payload.timerLinkSale ?? false,
+        tags: payload.tags ?? [],
         productRating: Number(payload.productRating || 0),
         productRatingCount: Number(payload.productRatingCount || 0),
         createdAt: payload.createdAt || nowIso(),

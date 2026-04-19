@@ -236,8 +236,28 @@
               <label class="toggle"><input v-model="draft.reviewsEnabled" type="checkbox" /><span>Reseñas activas</span></label>
               <label class="toggle"><input v-model="draft.reviewModeration" type="checkbox" /><span>Moderacion de reseñas</span></label>
               <label class="toggle"><input v-model="draft.cartEnabled" type="checkbox" /><span>Carrito habilitado</span></label>
+              <label class="toggle"><input v-model="draft.whatsappEnabled" type="checkbox" /><span>WhatsApp directo habilitado</span></label>
               <label class="toggle"><input v-model="draft.productCarouselEnabled" type="checkbox" /><span>Carrusel de producto</span></label>
               <label class="full"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Mensaje principal cuando el negocio queda fuera de servicio.</small></label>
+            </div>
+          </section>
+
+          <section class="px-2 py-3">
+            <div class="mb-4">
+              <p class="eyebrow">Pantalla de cierre</p>
+              <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Acciones del menú cerrado</h3>
+            </div>
+            <div class="grid-form">
+              <label class="toggle"><input v-model="draft.closedShowMenuBtn" type="checkbox" /><span>Mostrar boton Ver menu</span></label>
+              <label class="toggle"><input v-model="draft.closedShowWhatsapp" type="checkbox" /><span>Mostrar boton WhatsApp</span></label>
+              <label class="toggle"><input v-model="draft.closedShowCall" type="checkbox" /><span>Mostrar boton Llamar</span></label>
+              <label class="toggle"><input v-model="draft.closedTextBox" type="checkbox" /><span>Usar caja de texto</span></label>
+              <label><span>Color del texto</span><input v-model="draft.closedTextColor" type="color" /></label>
+              <label><span>Fondo boton Ver menu</span><input v-model="draft.closedMenuBtnBg" type="color" /></label>
+              <label><span>Texto boton Ver menu</span><input v-model="draft.closedMenuBtnText" type="color" /></label>
+              <label><span>Fondo caja de texto</span><input v-model="draft.closedTextBoxColor" type="color" /></label>
+              <label><span>Opacidad caja (%)</span><input v-model.number="draft.closedTextBoxOpacity" type="number" min="0" max="100" step="1" /></label>
+              <label><span>Tamano texto principal</span><input v-model.number="draft.closedTextSizeLarge" type="number" min="12" step="1" /></label>
             </div>
           </section>
 

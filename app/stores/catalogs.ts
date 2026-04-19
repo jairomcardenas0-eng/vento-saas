@@ -94,7 +94,7 @@ export const useCatalogStore = defineStore('catalogs', {
 
       this.activeCatalog.settings = { ...this.activeCatalog.settings, ...payload }
       const backend = useSupabaseBackend()
-      await backend.updateSettings(this.activeCatalog.id, payload)
+      await backend.updateSettings(this.activeCatalog.id, this.activeCatalog.settings)
     },
     async updateTheme(payload: Partial<CatalogRecord['theme']>) {
       if (!this.activeCatalog) {
@@ -103,7 +103,7 @@ export const useCatalogStore = defineStore('catalogs', {
 
       this.activeCatalog.theme = { ...this.activeCatalog.theme, ...payload }
       const backend = useSupabaseBackend()
-      await backend.updateTheme(this.activeCatalog.id, payload)
+      await backend.updateTheme(this.activeCatalog.id, this.activeCatalog.theme)
     },
     async updateStorefrontLayout(layout: CatalogRecord['settings']['storefrontLayout']) {
       if (!this.activeCatalog) {
@@ -112,7 +112,7 @@ export const useCatalogStore = defineStore('catalogs', {
 
       this.activeCatalog.settings.storefrontLayout = layout
       const backend = useSupabaseBackend()
-      await backend.updateStorefrontLayout(this.activeCatalog.id, layout)
+      await backend.updateSettings(this.activeCatalog.id, this.activeCatalog.settings)
     },
     async upsertCategory(category: CatalogCategory) {
       if (!this.activeCatalog) {

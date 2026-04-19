@@ -14,7 +14,7 @@
   </section>
 
   <StorefrontClassic v-else-if="layout === 'classic'" :storefront="storefront" :slug-key="slugKey" />
-  <StorefrontListPremium v-else-if="layout === 'list'" :storefront="storefront" :slug-key="slugKey" />
+  <StorefrontList v-else-if="layout === 'list'" :storefront="storefront" :slug-key="slugKey" />
   <StorefrontSaas v-else :storefront="storefront" :slug-key="slugKey" />
 </template>
 
@@ -66,6 +66,7 @@ const mapProduct = (product: any): ProductItem => ({
   timerShowMinutes: product.timerShowMinutes ?? true,
   timerShowSeconds: product.timerShowSeconds ?? false,
   timerLinkSale: product.timerLinkSale ?? false,
+  tags: product.tags || [],
   productRating: Number(product.productRating || 0),
   productRatingCount: Number(product.productRatingCount || 0),
   createdAt: null,
@@ -102,7 +103,7 @@ const { data, pending } = await useAsyncData<StorefrontPayload | null>(
         .filter((product) => product.active)
         .sort((left, right) => left.order - right.order)
         .map(mapProduct),
-      reviews: catalog.reviews.filter((review) => review.approved),
+      reviews: catalog.reviews,
       coupons,
     }
   },

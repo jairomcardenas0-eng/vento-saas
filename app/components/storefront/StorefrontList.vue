@@ -1,5 +1,5 @@
 <template>
-  <StorefrontMenuBase :storefront="storefront" :slug-key="slugKey" layout="classic" />
+  <StorefrontMenuBase :storefront="storefront" :slug-key="slugKey" layout="list" />
 </template>
 
 <script setup lang="ts">

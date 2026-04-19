@@ -40,7 +40,7 @@
           </div>
           <div v-else class="mx-auto max-w-md bg-white dark:bg-zinc-950 min-h-full">
             <StorefrontClassic v-if="layout === 'classic'" :storefront="previewPayload" :slug-key="previewPayload.slug" />
-            <StorefrontListPremium v-else-if="layout === 'list'" :storefront="previewPayload" :slug-key="previewPayload.slug" />
+            <StorefrontList v-else-if="layout === 'list'" :storefront="previewPayload" :slug-key="previewPayload.slug" />
             <StorefrontSaas v-else :storefront="previewPayload" :slug-key="previewPayload.slug" />
           </div>
         </div>
@@ -108,6 +108,7 @@ const mapProduct = (product: any): ProductItem => {
     timerShowMinutes: product.timerShowMinutes ?? true,
     timerShowSeconds: product.timerShowSeconds ?? false,
     timerLinkSale: product.timerLinkSale ?? false,
+    tags: product.tags || [],
     productRating: Number(product.productRating || 0),
     productRatingCount: Number(product.productRatingCount || 0),
     createdAt: null,
@@ -147,7 +148,7 @@ const previewPayload = computed<StorefrontPayload | null>(() => {
     theme: mergedTheme,
     categories,
     products,
-    reviews: (catalog.value.reviews || []).filter((r: any) => r.approved),
+    reviews: catalog.value.reviews || [],
     coupons: [],
   }
 })
