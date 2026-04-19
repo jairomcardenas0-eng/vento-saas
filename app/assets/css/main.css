@@ -163,18 +163,26 @@ select {
 .hero-copy,
 .hero-preview,
 .auth-card,
-.market-card,
-.panel-card {
+.market-card {
   padding: 1rem;
+}
+
+.panel-card {
+  padding: 0.5rem;
 }
 
 @media (max-width: 640px) {
   .hero-copy,
   .hero-preview,
   .auth-card,
-  .market-card,
-  .panel-card {
+  .market-card {
     padding: 1rem;
+    border-radius: 20px;
+    backdrop-filter: none;
+  }
+
+  .panel-card {
+    padding: 0.5rem;
     border-radius: 20px;
     backdrop-filter: none;
   }

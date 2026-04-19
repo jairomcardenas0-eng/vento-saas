@@ -165,7 +165,7 @@
           </div>
         </header>
 
-        <div class="px-3 py-4 sm:px-6 sm:py-5 lg:px-8">
+        <div class="px-2 py-3 sm:px-4 sm:py-4 lg:px-6">
           <slot />
         </div>
       </main>
