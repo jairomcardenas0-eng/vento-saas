@@ -28,11 +28,11 @@
             </button>
             <button
               type="button"
-              class="flex h-[46px] flex-1 items-center gap-3 rounded-full border border-stone-200/80 bg-stone-950 px-4 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
+              class="flex h-[46px] flex-1 min-w-0 items-center gap-3 rounded-full border border-stone-200/80 bg-stone-950 px-4 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
               @click="openSearch"
             >
-              <span class="text-base text-white/50 dark:text-stone-950/50">⌕</span>
-              <span class="truncate text-sm font-medium">
+              <span class="shrink-0 text-base text-white/50 dark:text-stone-950/50">⌕</span>
+              <span class="block min-w-0 flex-1 truncate text-sm font-medium">
                 {{ searchQuery || 'Busca tacos, sushi, café o una región...' }}
               </span>
             </button>

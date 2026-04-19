@@ -56,13 +56,31 @@
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Funciones activas del negocio</h3>
             </div>
             <div class="grid-form">
-              <label class="toggle"><input v-model="draft.closed" type="checkbox" /><span>Forzar cierre total</span></label>
-              <label class="toggle"><input v-model="draft.reviewsEnabled" type="checkbox" /><span>Reseñas activas</span></label>
-              <label class="toggle"><input v-model="draft.reviewModeration" type="checkbox" /><span>Moderación de reseñas</span></label>
-              <label class="toggle"><input v-model="draft.cartEnabled" type="checkbox" /><span>Carrito habilitado</span></label>
-              <label class="toggle"><input v-model="draft.whatsappEnabled" type="checkbox" /><span>WhatsApp directo habilitado</span></label>
-              <label class="toggle"><input v-model="draft.productCarouselEnabled" type="checkbox" /><span>Carrusel de productos</span></label>
-              <label class="full"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Texto principal cuando el negocio no está disponible.</small></label>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.closed" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Forzar cierre total</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.reviewsEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Reseñas activas</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.reviewModeration" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Moderación de reseñas</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.cartEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrito habilitado</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.whatsappEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">WhatsApp directo habilitado</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.productCarouselEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrusel de productos</span>
+              </div>
+              <label class="full mt-4"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Texto principal cuando el negocio no está disponible.</small></label>
             </div>
           </section>
 
