@@ -134,6 +134,48 @@ create index if not exists idx_reviews_catalog_created on public.reviews (catalo
 create index if not exists idx_orders_catalog_created on public.orders (catalog_id, created_at desc);
 create index if not exists idx_coupons_catalog_created on public.coupons (catalog_id, created_at desc);
 
+create table if not exists public.catalog_team_members (
+  id uuid primary key default gen_random_uuid(),
+  catalog_id uuid not null references public.catalogs (id) on delete cascade,
+  email text not null,
+  name text not null,
+  role text not null check (role in ('admin', 'editor', 'viewer')),
+  status text not null default 'pending' check (status in ('active', 'pending', 'suspended')),
+  permissions jsonb not null default '{}'::jsonb,
+  invited_by uuid references public.user_profiles (uid) on delete set null,
+  created_at timestamptz not null default timezone('utc', now()),
+  updated_at timestamptz not null default timezone('utc', now()),
+  unique (catalog_id, email)
+);
+
+alter table public.catalog_team_members enable row level security;
+
+-- El dueño del catálogo puede hacerlo todo
+drop policy if exists "owner_manage_team" on public.catalog_team_members;
+create policy "owner_manage_team"
+  on public.catalog_team_members for all
+  using (
+    exists (
+      select 1 from public.catalogs
+      where id = catalog_team_members.catalog_id
+      and owner_uid = auth.uid()
+    )
+  );
+
+-- Los miembros del equipo pueden verse entre sí
+drop policy if exists "member_view_team" on public.catalog_team_members;
+create policy "member_view_team"
+  on public.catalog_team_members for select
+  using (
+    email = (select email from auth.users where id = auth.uid())
+    or 
+    exists (
+      select 1 from public.catalog_team_members as self
+      where self.catalog_id = catalog_team_members.catalog_id
+      and self.email = (select email from auth.users where id = auth.uid())
+    )
+  );
+
 create table if not exists public.catalog_analytics_sessions (
   catalog_id uuid not null references public.catalogs (id) on delete cascade,
   session_uuid uuid not null,

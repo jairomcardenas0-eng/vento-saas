@@ -17,11 +17,50 @@
         <input v-model="password" type="password" minlength="8" required />
       </label>
 
-      <!-- Código de referido (opcional, visible si fue referido) -->
-      <label v-if="refCode">
-        <span>Código de referido</span>
-        <input :value="refCode" readonly class="opacity-60 cursor-not-allowed" />
-      </label>
+      <!-- Código de referido: opcional, se puede escribir manualmente -->
+      <div>
+        <button
+          v-if="!showRefField"
+          type="button"
+          class="ghost-btn small w-full !justify-center !text-zinc-500"
+          @click="showRefField = true"
+        >
+          <svg class="mr-2 h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke-width="2" stroke-linecap="round"/>
+            <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke-width="2" stroke-linecap="round"/>
+          </svg>
+          Tengo un código de referido
+        </button>
+
+        <label v-else>
+          <div class="flex items-center justify-between">
+            <span>Código de referido <em class="font-normal text-zinc-400">(opcional)</em></span>
+            <button
+              v-if="!autoFilled"
+              type="button"
+              class="text-xs text-zinc-400 hover:text-zinc-600 dark:hover:text-zinc-300"
+              @click="showRefField = false; manualRefCode = ''"
+            >
+              Quitar
+            </button>
+          </div>
+          <input
+            v-model="manualRefCode"
+            type="text"
+            placeholder="Ej: ABCDE1234"
+            maxlength="12"
+            :class="{ 'uppercase': true, 'opacity-70 cursor-not-allowed': autoFilled }"
+            :readonly="autoFilled"
+            @input="manualRefCode = manualRefCode.toUpperCase()"
+          />
+          <small v-if="autoFilled" class="text-emerald-600 dark:text-emerald-400">
+            ✓ Código aplicado desde tu enlace de invitación
+          </small>
+          <small v-else class="text-zinc-400">
+            Ingresa el código de quien te invitó.
+          </small>
+        </label>
+      </div>
 
       <p v-if="error" class="form-error">{{ error }}</p>
 
@@ -42,23 +81,30 @@ const email = ref('')
 const password = ref('')
 const error = ref('')
 
-// Leer código de referido de la cookie (guardado por el middleware referral.global.ts)
+// Cookie puesta por el middleware referral.global.ts cuando llega con ?ref=
 const refCookie = useCookie<string | null>('_ref_code')
-const refCode = computed(() => refCookie.value || '')
+
+// Si hay código en cookie se muestra el campo pre-llenado automáticamente
+const autoFilled = computed(() => !!refCookie.value)
+const showRefField = ref(autoFilled.value)
+const manualRefCode = ref(refCookie.value || '')
+
+// El código final a usar: el manual o el de la cookie
+const effectiveCode = computed(() => manualRefCode.value.trim().toUpperCase())
 
 const submit = async () => {
   error.value = ''
   try {
     const user = await authStore.register(name.value, email.value, password.value)
 
-    // Vincular referido si había un código en la cookie
-    if (refCookie.value && user?.uid) {
+    // Vincular referido si hay código (ya sea manual o automático de cookie)
+    if (effectiveCode.value && user?.uid) {
       try {
-        await backend.linkReferral(user.uid, refCookie.value)
+        await backend.linkReferral(user.uid, effectiveCode.value)
       } catch {
-        // Error de referido no bloquea el registro
+        // No bloquea el registro si falla
       }
-      refCookie.value = null // Limpiar cookie después de usarla
+      refCookie.value = null
     }
 
     // Generar código de referido propio para el nuevo usuario
@@ -76,3 +122,4 @@ const submit = async () => {
   }
 }
 </script>
+
