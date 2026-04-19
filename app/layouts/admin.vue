@@ -158,7 +158,18 @@
               <h2 class="text-[17px] font-bold tracking-tight leading-tight text-slate-900 dark:text-slate-100">{{ pageTitle }}</h2>
               <p class="text-[11px] text-slate-400 font-medium">{{ authStore.displayName }}<span v-if="activeCatalog"> · {{ activeCatalog.slug }}</span></p>
             </div>
-            <div class="flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10">
+            <button
+              class="flex items-center gap-1.5 px-3 py-2 rounded-full bg-blue-500 text-white hover:bg-blue-600 transition shadow-sm shadow-blue-500/30"
+              title="Ver vista previa"
+              @click="previewStore.openPreview()"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z" />
+              </svg>
+              <span class="text-[11px] font-bold hidden sm:inline">Vista previa</span>
+            </button>
+            <div class="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10">
               <div class="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
               <span class="text-[10px] font-bold text-emerald-600 dark:text-emerald-400">Online</span>
             </div>
@@ -170,6 +181,8 @@
         </div>
       </main>
     </div>
+
+    <AdminPreviewModal />
   </div>
 </template>
 
@@ -222,6 +235,14 @@ const catalogStore = useCatalogStore()
 
 const sidebarOpen = ref(false)
 const openAccordion = ref<string | null>('Comercial')
+const previewStore = usePreviewStore()
+
+// Clear preview overrides on route change so each page has fresh state
+watch(() => route.fullPath, () => {
+  previewStore.setSettings(null)
+  previewStore.setTheme(null)
+  previewStore.closePreview()
+})
 
 // Lock body scroll when sidebar is open on mobile
 watch(sidebarOpen, (isOpen) => {

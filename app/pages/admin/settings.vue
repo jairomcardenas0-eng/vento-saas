@@ -265,11 +265,21 @@ const timezones = [
 ]
 
 const catalogStore = useCatalogStore()
+const previewStore = usePreviewStore()
 const catalog = computed(() => catalogStore.activeCatalog)
 const isPaywalled = computed(() => false)
 const draft = ref<CatalogOperationalSettings>(defaultSettings())
 const saving = ref(false)
 const saveError = ref('')
+
+// Sync draft settings to preview store in real-time
+watch(draft, (value) => {
+  previewStore.setSettings(JSON.parse(JSON.stringify(value)))
+}, { deep: true })
+
+onUnmounted(() => {
+  previewStore.setSettings(null)
+})
 
 const scheduleAlwaysOpen = computed({
   get: () => draft.value.scheduleMode === 'always',

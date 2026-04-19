@@ -131,12 +131,24 @@ import type { CatalogOperationalSettings, CatalogThemeSettings } from '~/types/c
 definePageMeta({ layout: 'admin' })
 
 const catalogStore = useCatalogStore()
+const previewStore = usePreviewStore()
 const catalog = computed(() => catalogStore.activeCatalog)
 const isPaywalled = computed(() => false)
 const draft = ref<CatalogThemeSettings>(defaultTheme())
 const layoutDraft = ref<CatalogOperationalSettings['storefrontLayout']>('classic')
 const saving = ref(false)
 const saveError = ref('')
+
+// Sync theme draft and layout to preview store in real-time
+watch([draft, layoutDraft], ([themeValue, layoutValue]) => {
+  previewStore.setTheme(JSON.parse(JSON.stringify(themeValue)))
+  previewStore.setSettings({ storefrontLayout: layoutValue } as any)
+}, { deep: true })
+
+onUnmounted(() => {
+  previewStore.setTheme(null)
+  previewStore.setSettings(null)
+})
 
 const layoutOptions: Array<{ value: CatalogOperationalSettings['storefrontLayout'], label: string, description: string }> = [
   { value: 'classic', label: 'Clásico', description: 'Diseño tradicional con categorías en la parte superior, productos en cuadrícula de 2 columnas y botón de carrito fijo abajo. Ideal para negocios con fotos de productos grandes.' },
