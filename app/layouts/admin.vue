@@ -82,35 +82,38 @@
             >
               Catálogo activo
             </label>
-            <div class="relative">
-              <select
-                id="catalog-select"
-                :value="catalogStore.activeCatalogId || ''"
-                class="w-full appearance-none rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 pr-10 text-sm text-slate-700 dark:text-slate-200 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
-                @change="changeCatalog(($event.target as HTMLSelectElement).value)"
-              >
-                <option v-for="catalog in catalogStore.ownerCatalogs" :key="catalog.id" :value="catalog.id">
-                  {{ catalog.settings.businessName }}
-                </option>
-              </select>
-              <svg
-                class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
-                fill="none" stroke="currentColor" viewBox="0 0 24 24"
-              >
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-              </svg>
-            </div>
+            <div class="flex min-w-0 items-stretch gap-2">
+              <div class="relative min-w-0 flex-1">
+                <select
+                  id="catalog-select"
+                  :value="catalogStore.activeCatalogId || ''"
+                  class="w-full appearance-none rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-4 py-3 pr-10 text-sm text-slate-700 dark:text-slate-200 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20"
+                  @change="changeCatalog(($event.target as HTMLSelectElement).value)"
+                >
+                  <option v-for="catalog in catalogStore.ownerCatalogs" :key="catalog.id" :value="catalog.id">
+                    {{ catalog.settings.businessName }}
+                  </option>
+                </select>
+                <svg
+                  class="pointer-events-none absolute right-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400"
+                  fill="none" stroke="currentColor" viewBox="0 0 24 24"
+                >
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+              </div>
 
-            <NuxtLink
-              to="/onboarding/create-catalog"
-              class="mt-2 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/70 px-3 text-xs font-bold uppercase tracking-wide text-blue-700 transition hover:bg-blue-100/80 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
-              @click="sidebarOpen = false"
-            >
-              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
-              </svg>
-              <span>Agregar nuevo catálogo</span>
-            </NuxtLink>
+              <NuxtLink
+                to="/onboarding/create-catalog"
+                class="inline-flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/70 text-blue-700 transition hover:bg-blue-100/80 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+                title="Agregar nuevo catálogo"
+                aria-label="Agregar nuevo catálogo"
+                @click="sidebarOpen = false"
+              >
+                <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
+                </svg>
+              </NuxtLink>
+            </div>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -307,9 +310,9 @@ const navGroups: NavGroup[] = [
     items: [
       { to: '/admin/settings', label: 'Ajustes', icon: 'settings' },
       { to: '/admin/schedule', label: 'Horarios', icon: 'schedule' },
-      { to: '/admin/delivery', label: 'Delivery', icon: 'delivery' },
+      { to: '/admin/delivery', label: 'Entrega', icon: 'delivery' },
       { to: '/admin/pickup', label: 'Recogida', icon: 'pickup' },
-      { to: '/admin/checkout', label: 'Checkout', icon: 'checkout' },
+      { to: '/admin/checkout', label: 'Pedido', icon: 'checkout' },
       { to: '/admin/coupons', label: 'Cupones', icon: 'coupons' },
       { to: '/admin/appearance', label: 'Apariencia', icon: 'appearance' },
       { to: '/admin/share', label: 'Compartir', icon: 'share' },
@@ -327,9 +330,9 @@ const titleMap: Record<string, string> = {
   '/admin/appearance': 'Apariencia',
   '/admin/settings': 'Ajustes del negocio',
   '/admin/schedule': 'Horarios',
-  '/admin/delivery': 'Delivery',
+  '/admin/delivery': 'Entrega a domicilio',
   '/admin/pickup': 'Recogida en tienda',
-  '/admin/checkout': 'Checkout y visibilidad',
+  '/admin/checkout': 'Pedido y visibilidad',
   '/admin/share': 'Compartir',
   '/admin/reviews': 'Reseñas',
   '/admin/orders': 'Pedidos',

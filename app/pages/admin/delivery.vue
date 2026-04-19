@@ -1,17 +1,17 @@
 <template>
   <div v-if="catalog" class="admin-grid">
     <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Operación" title="Delivery" description="Configura el servicio de entrega a domicilio, tarifas y zonas de cobertura.">
+      <UiSectionHeader eyebrow="Operación" title="Entrega a domicilio" description="Configura el servicio de entrega a domicilio, tarifas y zonas de cobertura.">
         <template #actions>
           <button class="solid-btn" :disabled="saving" @click="save">
-            {{ saving ? 'Guardando...' : 'Guardar delivery' }}
+            {{ saving ? 'Guardando...' : 'Guardar entrega' }}
           </button>
         </template>
       </UiSectionHeader>
 
       <fieldset class="contents">
         <div class="grid-form">
-          <label class="toggle"><input v-model="draft.deliveryEnabled" type="checkbox" /><span>Servicio de delivery activo</span></label>
+          <label class="toggle"><input v-model="draft.deliveryEnabled" type="checkbox" /><span>Servicio de entrega activo</span></label>
           <label class="toggle"><input v-model="draft.deliveryPaused" type="checkbox" /><span>Pausa temporal de pedidos</span></label>
           <label>
             <span>Tipo de tarifa</span>
@@ -21,8 +21,8 @@
             </select>
             <small>Define si toda la ciudad comparte un costo o si usarás zonas.</small>
           </label>
-          <label v-if="draft.deliveryFeeType === 'flat'"><span>Costo fijo de envío</span><input v-model.number="draft.deliveryFlatFee" type="number" min="0" step="0.01" /><small>Se suma al total cuando el cliente elige delivery.</small></label>
-          <label v-if="draft.deliveryFeeType === 'flat'"><span>Pedido mínimo global</span><input v-model.number="draft.deliveryMinimumOrder" type="number" min="0" step="0.01" /><small>Bloquea el checkout si el subtotal no llega a este monto.</small></label>
+          <label v-if="draft.deliveryFeeType === 'flat'"><span>Costo fijo de envío</span><input v-model.number="draft.deliveryFlatFee" type="number" min="0" step="0.01" /><small>Se suma al total cuando el cliente elige entrega.</small></label>
+          <label v-if="draft.deliveryFeeType === 'flat'"><span>Pedido mínimo global</span><input v-model.number="draft.deliveryMinimumOrder" type="number" min="0" step="0.01" /><small>Bloquea el pedido si el subtotal no llega a este monto.</small></label>
           <label class="full"><span>Instrucciones para el repartidor</span><textarea v-model="draft.riderInstructions" rows="3" /><small>Notas internas para reparto y preparación de salida.</small></label>
         </div>
 
@@ -92,7 +92,7 @@ const save = async () => {
       })),
     })
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : 'No se pudo guardar el delivery.'
+    saveError.value = error instanceof Error ? error.message : 'No se pudo guardar la entrega.'
   } finally {
     saving.value = false
   }

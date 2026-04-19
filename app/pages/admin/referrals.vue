@@ -8,11 +8,11 @@
       />
 
       <!-- Código y enlace -->
-      <div class="mt-6 rounded-[24px] border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-6 dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-950">
-        <div class="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-          <div>
+      <div class="mt-6 min-w-0 rounded-[24px] border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-4 sm:p-6 dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-950">
+        <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+          <div class="min-w-0">
             <p class="text-[11px] font-bold uppercase tracking-widest text-zinc-400">Tu código de referido</p>
-            <p class="mt-2 text-4xl font-bold tracking-widest text-zinc-900 dark:text-zinc-50">
+            <p class="mt-2 break-all text-3xl font-bold tracking-widest text-zinc-900 sm:text-4xl dark:text-zinc-50">
               {{ loading ? '...' : referralCode }}
             </p>
             <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
@@ -20,9 +20,9 @@
             </p>
           </div>
 
-          <div class="flex flex-col gap-2 sm:items-end">
+          <div class="flex w-full flex-col gap-2 sm:w-auto sm:items-end">
             <button
-              class="solid-btn"
+              class="solid-btn w-full sm:w-auto"
               :disabled="loading || !referralCode"
               @click="copyLink"
             >
@@ -34,7 +34,7 @@
             </button>
 
             <button
-              class="ghost-btn small"
+              class="ghost-btn small w-full sm:w-auto"
               :disabled="loading || !referralCode"
               @click="shareNative"
             >
@@ -51,7 +51,7 @@
         </div>
 
         <!-- Vista previa del enlace -->
-        <div class="mt-4 flex items-center gap-2 rounded-[14px] bg-zinc-100 px-4 py-3 dark:bg-zinc-800">
+        <div class="mt-4 flex min-w-0 items-center gap-2 rounded-[14px] bg-zinc-100 px-4 py-3 dark:bg-zinc-800">
           <svg class="h-4 w-4 flex-shrink-0 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71" stroke-width="2" stroke-linecap="round" />
             <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71" stroke-width="2" stroke-linecap="round" />
@@ -61,7 +61,7 @@
       </div>
 
       <!-- Stats rápidas -->
-      <div class="mt-6 grid grid-cols-2 gap-4 sm:grid-cols-3">
+      <div class="mt-6 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
         <article class="rounded-[20px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
           <p class="text-sm text-zinc-500 dark:text-zinc-400">Total referidos</p>
           <p class="mt-2 text-3xl font-bold text-zinc-900 dark:text-zinc-50">{{ loading ? '–' : referrals.length }}</p>
@@ -101,42 +101,72 @@
           <p class="mt-1 text-xs text-zinc-400 dark:text-zinc-500">Comparte tu código y aquí verás a tu red crecer.</p>
         </div>
 
-        <div v-else class="overflow-hidden rounded-[20px] border border-zinc-200 dark:border-zinc-800">
-          <table class="w-full text-sm">
-            <thead>
-              <tr class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
-                <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Usuario</th>
-                <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Correo</th>
-                <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Estado</th>
-                <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Fecha</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="ref in referrals"
-                :key="ref.uid"
-                class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/50"
-              >
-                <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ ref.displayName }}</td>
-                <td class="px-4 py-3 text-zinc-500 dark:text-zinc-400">{{ ref.email }}</td>
-                <td class="px-4 py-3">
-                  <span
-                    class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
-                    :class="{
-                      'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': ref.status === 'active',
-                      'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': ref.status === 'rewarded',
-                      'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400': ref.status === 'pending',
-                    }"
-                  >
-                    {{ ref.status === 'active' ? 'Activo' : ref.status === 'rewarded' ? 'Recompensado' : 'Pendiente' }}
-                  </span>
-                </td>
-                <td class="px-4 py-3 text-zinc-500 dark:text-zinc-400">
-                  {{ new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ref.createdAt)) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else class="rounded-[20px] border border-zinc-200 dark:border-zinc-800">
+          <div class="hidden md:block overflow-x-auto">
+            <table class="w-full min-w-[680px] text-sm">
+              <thead>
+                <tr class="border-b border-zinc-200 bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900">
+                  <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Usuario</th>
+                  <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Correo</th>
+                  <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Estado</th>
+                  <th class="px-4 py-3 text-left font-semibold text-zinc-600 dark:text-zinc-400">Fecha</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr
+                  v-for="ref in referrals"
+                  :key="ref.uid"
+                  class="border-b border-zinc-100 last:border-0 dark:border-zinc-800/50"
+                >
+                  <td class="px-4 py-3 font-medium text-zinc-900 dark:text-zinc-100">{{ ref.displayName }}</td>
+                  <td class="px-4 py-3 text-zinc-500 dark:text-zinc-400">{{ ref.email }}</td>
+                  <td class="px-4 py-3">
+                    <span
+                      class="inline-flex items-center rounded-full px-2.5 py-0.5 text-[11px] font-semibold uppercase tracking-wide"
+                      :class="{
+                        'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': ref.status === 'active',
+                        'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': ref.status === 'rewarded',
+                        'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400': ref.status === 'pending',
+                      }"
+                    >
+                      {{ ref.status === 'active' ? 'Activo' : ref.status === 'rewarded' ? 'Recompensado' : 'Pendiente' }}
+                    </span>
+                  </td>
+                  <td class="px-4 py-3 text-zinc-500 dark:text-zinc-400">
+                    {{ new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ref.createdAt)) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="space-y-3 p-3 md:hidden">
+            <article
+              v-for="ref in referrals"
+              :key="`${ref.uid}-mobile`"
+              class="rounded-[14px] border border-zinc-200 bg-white p-3 dark:border-zinc-800 dark:bg-zinc-950"
+            >
+              <div class="flex items-start justify-between gap-3">
+                <div class="min-w-0">
+                  <p class="truncate font-semibold text-zinc-900 dark:text-zinc-100">{{ ref.displayName }}</p>
+                  <p class="truncate text-xs text-zinc-500 dark:text-zinc-400">{{ ref.email }}</p>
+                </div>
+                <span
+                  class="inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide"
+                  :class="{
+                    'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400': ref.status === 'active',
+                    'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400': ref.status === 'rewarded',
+                    'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400': ref.status === 'pending',
+                  }"
+                >
+                  {{ ref.status === 'active' ? 'Activo' : ref.status === 'rewarded' ? 'Recompensado' : 'Pendiente' }}
+                </span>
+              </div>
+              <p class="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+                {{ new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(ref.createdAt)) }}
+              </p>
+            </article>
+          </div>
         </div>
       </div>
 

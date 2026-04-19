@@ -1,10 +1,10 @@
 <template>
   <div v-if="catalog" class="admin-grid">
     <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Operación" title="Recogida en tienda" description="Configura el servicio de pickup para que los clientes recojan sus pedidos.">
+      <UiSectionHeader eyebrow="Operación" title="Recogida en tienda" description="Configura el servicio de recogida para que los clientes retiren sus pedidos.">
         <template #actions>
           <button class="solid-btn" :disabled="saving" @click="save">
-            {{ saving ? 'Guardando...' : 'Guardar pickup' }}
+            {{ saving ? 'Guardando...' : 'Guardar recogida' }}
           </button>
         </template>
       </UiSectionHeader>
@@ -49,7 +49,7 @@ const save = async () => {
   try {
     await catalogStore.updateSettings({ ...draft.value })
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : 'No se pudo guardar el pickup.'
+    saveError.value = error instanceof Error ? error.message : 'No se pudo guardar la recogida.'
   } finally {
     saving.value = false
   }

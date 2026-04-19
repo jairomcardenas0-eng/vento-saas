@@ -1,10 +1,10 @@
 <template>
   <div v-if="catalog" class="admin-grid">
     <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Operación" title="Checkout y visibilidad" description="Controla qué datos se requieren al hacer un pedido y opciones del negocio.">
+      <UiSectionHeader eyebrow="Operación" title="Pedido y visibilidad" description="Controla qué datos se requieren al hacer un pedido y opciones del negocio.">
         <template #actions>
           <button class="solid-btn" :disabled="saving" @click="save">
-            {{ saving ? 'Guardando...' : 'Guardar checkout' }}
+            {{ saving ? 'Guardando...' : 'Guardar ajustes' }}
           </button>
         </template>
       </UiSectionHeader>
@@ -31,7 +31,7 @@
                   <option value="obligatorio">Obligatorio</option>
                   <option value="opcional">Opcional</option>
                 </select>
-                <small>Solo aplica a pedidos de delivery.</small>
+                <small>Solo aplica a pedidos a domicilio.</small>
               </label>
               <label>
                 <span>Método de pago</span>
@@ -112,7 +112,7 @@ const save = async () => {
   try {
     await catalogStore.updateSettings({ ...draft.value })
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : 'No se pudo guardar el checkout.'
+    saveError.value = error instanceof Error ? error.message : 'No se pudieron guardar los ajustes.'
   } finally {
     saving.value = false
   }

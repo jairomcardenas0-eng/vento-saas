@@ -1,5 +1,6 @@
 <template>
-  <div class="space-y-6">
+  <div v-if="catalog" class="admin-grid">
+    <section class="panel-card span-2 space-y-6">
     <!-- Header -->
     <UiSectionHeader
       eyebrow="Equipo"
@@ -288,6 +289,18 @@
         </div>
       </Transition>
     </Teleport>
+    </section>
+  </div>
+
+  <div v-else class="admin-grid">
+    <section class="panel-card span-2">
+      <div class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center dark:border-zinc-700">
+        <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">No hay un catálogo activo</h3>
+        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          Selecciona un catálogo para gestionar tu equipo.
+        </p>
+      </div>
+    </section>
   </div>
 </template>
 
@@ -300,6 +313,7 @@ definePageMeta({ layout: 'admin' })
 const supabase = useSupabaseClient()
 const catalogStore = useCatalogStore()
 const authStore = useAuthStore()
+const catalog = computed(() => catalogStore.activeCatalog)
 const catalogId = computed(() => catalogStore.activeCatalog?.id ?? '')
 
 // ─── State ────────────────────────────────────────────────────────────────────
@@ -314,9 +328,9 @@ const deletingMember = ref<CatalogTeamMember | null>(null)
 
 // ─── Role definitions ─────────────────────────────────────────────────────────
 const roles = [
-  { key: 'admin' as TeamMemberRole,  label: 'Admin',   desc: 'Acceso casi total', dot: 'bg-violet-500' },
-  { key: 'editor' as TeamMemberRole, label: 'Editor',  desc: 'Edita productos y pedidos', dot: 'bg-blue-500' },
-  { key: 'viewer' as TeamMemberRole, label: 'Viewer',  desc: 'Solo lectura', dot: 'bg-zinc-400' },
+  { key: 'admin' as TeamMemberRole,  label: 'Administrador', desc: 'Acceso casi total', dot: 'bg-violet-500' },
+  { key: 'editor' as TeamMemberRole, label: 'Editor',        desc: 'Edita productos y pedidos', dot: 'bg-blue-500' },
+  { key: 'viewer' as TeamMemberRole, label: 'Lector',        desc: 'Solo lectura', dot: 'bg-zinc-400' },
 ]
 
 const rolePermMap: Record<TeamMemberRole, Partial<TeamMemberPermissions>> = {
@@ -326,9 +340,9 @@ const rolePermMap: Record<TeamMemberRole, Partial<TeamMemberPermissions>> = {
 }
 
 const roleConfig = (role: TeamMemberRole) => ({
-  admin:  { label: 'Admin',  badge: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300', avatarBg: 'bg-gradient-to-br from-violet-400 to-purple-600 text-white' },
+  admin:  { label: 'Administrador', badge: 'bg-violet-100 text-violet-700 dark:bg-violet-950/50 dark:text-violet-300', avatarBg: 'bg-gradient-to-br from-violet-400 to-purple-600 text-white' },
   editor: { label: 'Editor', badge: 'bg-blue-100 text-blue-700 dark:bg-blue-950/50 dark:text-blue-300', avatarBg: 'bg-gradient-to-br from-blue-400 to-indigo-500 text-white' },
-  viewer: { label: 'Viewer', badge: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400', avatarBg: 'bg-gradient-to-br from-zinc-300 to-zinc-500 text-white' },
+  viewer: { label: 'Lector', badge: 'bg-zinc-100 text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400', avatarBg: 'bg-gradient-to-br from-zinc-300 to-zinc-500 text-white' },
 }[role])
 
 const statusConfig = (status: TeamMemberStatus) => ({
@@ -393,7 +407,11 @@ const activePermissions = (perms: TeamMemberPermissions) =>
 
 // ─── Load members ─────────────────────────────────────────────────────────────
 const loadMembers = async () => {
-  if (!catalogId.value) return
+  if (!catalogId.value) {
+    members.value = []
+    loading.value = false
+    return
+  }
   loading.value = true
   try {
     const { data, error } = await supabase
