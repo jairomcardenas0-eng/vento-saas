@@ -11,7 +11,7 @@
 
       <fieldset class="contents">
         <div class="space-y-8 transition duration-200">
-          <section class="p-5">
+          <section class="p-4">
             <div class="mb-4">
               <p class="eyebrow">General</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Identidad comercial</h3>
@@ -94,7 +94,7 @@
           </section>
           <AdminAddressMapEditor v-model="draft.address" />
 
-          <section class="p-3 sm:p-5">
+          <section class="p-3 sm:p-4">
             <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p class="eyebrow">Horarios</p>
@@ -137,8 +137,8 @@
                         <input v-model="range.end" type="time" class="w-full bg-transparent text-lg font-medium outline-none dark:text-zinc-100" />
                       </div>
                     </div>
-                    <button v-if="day.ranges.length > 1" class="h-10 w-10 flex-shrink-0 items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400" type="button" @click="removeScheduleRange(dayIndex, rangeIndex)">
-                      <svg width="20" height="20" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
+                    <button v-if="day.ranges.length > 1" class="h-10 w-10 flex-shrink-0 flex items-center justify-center rounded-xl bg-rose-50 text-rose-600 transition hover:bg-rose-100 dark:bg-rose-950/30 dark:text-rose-400" type="button" @click="removeScheduleRange(dayIndex, rangeIndex)">
+                      <svg width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path d="M6 18L18 6M6 6l12 12" /></svg>
                     </button>
                   </div>
                 </div>
@@ -150,7 +150,7 @@
             </div>
           </section>
 
-          <section class="p-5">
+          <section class="p-4">
             <div class="mb-4">
               <p class="eyebrow">Delivery</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Zonas, tarifa y pedido minimo</h3>
@@ -192,7 +192,7 @@
             </div>
           </section>
 
-          <section class="p-5">
+          <section class="p-4">
             <div class="mb-4">
               <p class="eyebrow">Pickup</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Recogida en tienda</h3>
@@ -205,7 +205,7 @@
             </div>
           </section>
 
-          <section class="p-5">
+          <section class="p-4">
             <div class="mb-4">
               <p class="eyebrow">Checkout</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Politicas de captura y visibilidad</h3>

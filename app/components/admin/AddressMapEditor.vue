@@ -1,5 +1,5 @@
 <template>
-  <div class="rounded-[24px] border border-zinc-200 bg-white shadow-sm p-5 dark:border-zinc-800 dark:bg-zinc-950">
+  <div class="p-5">
     <div class="mb-5">
       <h3 class="text-xl font-bold text-zinc-900 dark:text-zinc-100">Dirección</h3>
       <p class="mt-1 text-sm text-zinc-500 dark:text-zinc-400">Selecciona la ubicación exacta de tu negocio para activar las zonas de entrega y cálculo de distancias.</p>
