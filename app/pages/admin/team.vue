@@ -310,7 +310,7 @@ import type { CatalogTeamMember, TeamMemberRole, TeamMemberStatus, TeamMemberPer
 definePageMeta({ layout: 'admin' })
 
 // ─── Supabase ─────────────────────────────────────────────────────────────────
-const supabase = useSupabaseClient()
+const { $supabase: supabase } = useNuxtApp()
 const catalogStore = useCatalogStore()
 const authStore = useAuthStore()
 const catalog = computed(() => catalogStore.activeCatalog)
