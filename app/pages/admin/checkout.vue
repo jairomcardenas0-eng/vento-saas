@@ -90,10 +90,22 @@
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Botones y estilo del cierre</h3>
             </div>
             <div class="grid-form">
-              <label class="toggle"><input v-model="draft.closedShowMenuBtn" type="checkbox" /><span>Mostrar botón “Ver menú”</span></label>
-              <label class="toggle"><input v-model="draft.closedShowWhatsapp" type="checkbox" /><span>Mostrar botón de WhatsApp</span></label>
-              <label class="toggle"><input v-model="draft.closedShowCall" type="checkbox" /><span>Mostrar botón de llamada</span></label>
-              <label class="toggle"><input v-model="draft.closedTextBox" type="checkbox" /><span>Usar caja de texto</span></label>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.closedShowMenuBtn" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón "Ver menú"</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.closedShowWhatsapp" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de WhatsApp</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.closedShowCall" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de llamada</span>
+              </div>
+              <div class="flex items-center gap-3">
+                <label class="toggle-3d"><input v-model="draft.closedTextBox" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Usar caja de texto</span>
+              </div>
               <label><span>Color del texto</span><input v-model="draft.closedTextColor" type="color" /></label>
               <label><span>Fondo del botón “Ver menú”</span><input v-model="draft.closedMenuBtnBg" type="color" /></label>
               <label><span>Texto del botón “Ver menú”</span><input v-model="draft.closedMenuBtnText" type="color" /></label>
