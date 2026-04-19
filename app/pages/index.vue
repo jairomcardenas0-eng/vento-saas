@@ -3,17 +3,39 @@
     <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-10 pt-4">
       <header class="sticky top-0 z-40 -mx-1 mb-4 px-1 pt-safe">
         <div class="rounded-[28px] border border-white/65 bg-white/72 p-3 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.42)] backdrop-blur-md transition-colors dark:border-white/10 dark:bg-black/45">
-          <div class="mb-3 flex items-center justify-between">
-            <div>
-              <p class="text-[10px] font-semibold uppercase tracking-[0.34em] text-amber-600 dark:text-cyan-300">Marketplace Engine</p>
-              <h1 class="font-serif text-[1.75rem] leading-none">Descubre algo brutal</h1>
+          <div class="mb-3 flex items-center justify-between gap-3">
+            <div class="flex min-w-0 items-center gap-3">
+              <button
+                type="button"
+                aria-label="Abrir menú geográfico"
+                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
+                @click="isGeoMenuOpen = true"
+              >
+                ≡
+              </button>
+              <div class="min-w-0">
+                <p class="truncate text-[10px] font-semibold uppercase tracking-[0.34em] text-amber-600 dark:text-cyan-300">Marketplace Engine</p>
+                <h1 class="truncate font-serif text-[1.75rem] leading-none">Descubre algo brutal</h1>
+              </div>
             </div>
             <button
-              class="flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
+              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
               type="button"
               @click="toggleColorMode"
             >
               {{ colorMode.preference === 'dark' ? '☀' : '☾' }}
+            </button>
+          </div>
+
+          <div v-if="geoMenuTree.length" class="mb-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+            <button
+              v-for="country in geoMenuTree"
+              :key="country.countryCode"
+              type="button"
+              class="shrink-0 rounded-full border border-stone-300/80 bg-white/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-700 active:scale-95 dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+              @click="commitSearch(country.countryLabel)"
+            >
+              {{ country.countryLabel }}
             </button>
           </div>
 
@@ -188,7 +210,7 @@
               v-for="item in filteredFeed"
               :key="`${item.catalogId}-${item.productId}`"
               :to="`/b/${item.slug}`"
-              class="block overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_24px_80px_-36px_rgba(15,23,42,0.65)] backdrop-blur active:scale-95 dark:border-white/10 dark:bg-white/8"
+              class="block overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_24px_80px_-36px_rgba(15,23,42,0.65)] backdrop-blur active:scale-95 dark:border-white/10 dark:bg-slate-900/80"
               @click="trackFeedTap(item)"
             >
               <div class="relative aspect-[1.1] overflow-hidden">
@@ -219,9 +241,7 @@
                 <div class="flex items-end justify-between gap-3">
                   <div>
                     <p class="text-[11px] uppercase tracking-[0.24em] text-stone-400 dark:text-slate-500">Desde</p>
-                    <p class="text-2xl font-semibold">
-                      {{ money(item.promoPrice ?? item.price) }}
-                    </p>
+                    <p class="text-2xl font-semibold">{{ money(item.promoPrice ?? item.price) }}</p>
                   </div>
                   <div class="text-right text-[11px] text-stone-500 dark:text-slate-400">
                     <p>{{ item.orderCount }} ventas</p>
@@ -236,6 +256,47 @@
             No hubo coincidencias para "{{ searchQuery }}". Borra el término o toca una búsqueda reciente.
           </div>
         </section>
+
+        <footer class="mt-8 overflow-hidden rounded-[36px] border border-stone-900/10 bg-[linear-gradient(180deg,_#1c1917_0%,_#0f172a_100%)] text-white shadow-[0_32px_90px_-40px_rgba(2,6,23,0.95)]">
+          <div class="border-b border-white/10 px-5 py-6">
+            <p class="text-[11px] uppercase tracking-[0.34em] text-cyan-300">Lanza tu SaaS</p>
+            <h2 class="mt-3 text-3xl font-semibold leading-tight">¿Aún no tienes tu tienda? Crea una ahora mismo y comienza a vender en minutos.</h2>
+            <p class="mt-3 max-w-[28rem] text-sm leading-6 text-white/70">
+              Activa tu escaparate móvil, publica productos con imagen y convierte visitas del marketplace en pedidos reales.
+            </p>
+            <div class="mt-5 flex gap-3">
+              <NuxtLink to="/register" class="flex-1 rounded-full bg-white px-4 py-3 text-center text-sm font-semibold text-stone-950 active:scale-95">
+                Crear tienda
+              </NuxtLink>
+              <NuxtLink to="/login" class="flex-1 rounded-full border border-white/15 bg-white/5 px-4 py-3 text-center text-sm font-semibold text-white active:scale-95">
+                Ingresar
+              </NuxtLink>
+            </div>
+          </div>
+
+          <div class="grid grid-cols-2 gap-6 px-5 py-6">
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-white/45">Comunidad</p>
+              <div class="mt-4 space-y-3">
+                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Necesitas Ayuda')">¿Necesitas Ayuda?</button>
+                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('FAQ')">FAQ</button>
+                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Blog')">Blog</button>
+              </div>
+            </div>
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-white/45">Legal</p>
+              <div class="mt-4 space-y-3">
+                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Términos')">Términos</button>
+                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Privacidad')">Privacidad</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="flex items-center justify-between border-t border-white/10 px-5 py-4 text-[11px] text-white/40">
+            <p>© {{ currentYear }} Marketplace Engine</p>
+            <p>Built for mobile commerce</p>
+          </div>
+        </footer>
       </template>
     </div>
 
@@ -247,7 +308,7 @@
       leave-from-class="opacity-100"
       leave-to-class="opacity-0"
     >
-      <div v-if="isSearchOpen" class="fixed inset-0 z-50 bg-stone-950/55 backdrop-blur-sm" @click.self="closeSearch">
+      <div v-if="isSearchOpen" class="fixed inset-0 z-50 bg-stone-950/60 backdrop-blur-sm" @click.self="closeSearch">
         <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-6 pt-6">
           <div class="rounded-[32px] border border-white/10 bg-stone-950 p-4 text-white shadow-[0_28px_90px_-30px_rgba(0,0,0,0.75)]">
             <div class="mb-4 flex items-center gap-3">
@@ -258,14 +319,14 @@
                 type="search"
                 inputmode="search"
                 placeholder="Busca una tienda, producto o ciudad"
-                class="h-12 w-full rounded-full border border-white/10 bg-white/8 px-4 text-sm outline-none placeholder:text-white/35"
+                class="h-12 w-full rounded-full border border-white/10 bg-white/10 px-4 text-sm outline-none placeholder:text-white/40"
                 @keydown.enter.prevent="commitSearch(searchDraft)"
               >
             </div>
 
             <div class="mb-4 flex items-center justify-between">
-              <p class="text-[11px] uppercase tracking-[0.28em] text-white/45">Top 5 recientes</p>
-              <button type="button" class="text-xs text-white/65 active:scale-95" @click="closeSearch">Cerrar</button>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-white/50">Top 5 recientes</p>
+              <button type="button" class="text-xs text-white/70 active:scale-95" @click="closeSearch">Cerrar</button>
             </div>
 
             <div class="space-y-2">
@@ -273,11 +334,11 @@
                 v-for="term in recentSearches"
                 :key="term"
                 type="button"
-                class="flex w-full items-center justify-between rounded-[22px] border border-white/10 bg-white/6 px-4 py-3 text-left active:scale-95"
+                class="flex w-full items-center justify-between rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-left active:scale-95"
                 @click="commitSearch(term)"
               >
                 <span class="truncate text-sm">{{ term }}</span>
-                <span class="text-white/35">↗</span>
+                <span class="text-white/40">↗</span>
               </button>
               <button
                 v-if="searchDraft.trim()"
@@ -289,6 +350,89 @@
               </button>
             </div>
           </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition
+      enter-active-class="duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div v-if="isGeoMenuOpen" class="fixed inset-0 z-[60] bg-stone-950/55 backdrop-blur-sm" @click.self="isGeoMenuOpen = false">
+        <div class="h-full w-full max-w-[430px]">
+          <aside
+            class="h-full w-[88%] max-w-[360px] border-r border-white/10 bg-white/80 px-4 pb-6 pt-5 shadow-[0_24px_90px_-28px_rgba(15,23,42,0.75)] backdrop-blur-xl transition-transform duration-300 dark:bg-stone-950/90"
+            :class="isGeoMenuOpen ? 'translate-x-0' : '-translate-x-full'"
+          >
+            <div class="mb-4 flex items-center justify-between">
+              <div>
+                <p class="text-[11px] uppercase tracking-[0.3em] text-stone-500 dark:text-slate-400">Geo Menu</p>
+                <h2 class="mt-1 text-2xl font-semibold">Explora por región</h2>
+              </div>
+              <button
+                type="button"
+                class="flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-white active:scale-95 dark:border-white/10 dark:bg-white/10"
+                @click="isGeoMenuOpen = false"
+              >
+                ×
+              </button>
+            </div>
+
+            <div class="rounded-[26px] border border-stone-200/80 bg-white/70 p-3 text-sm text-stone-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
+              Toca un municipio para disparar la búsqueda y filtrar todo el feed al instante.
+            </div>
+
+            <div class="mt-4 space-y-3 overflow-y-auto pb-6">
+              <details
+                v-for="country in geoMenuTree"
+                :key="country.countryCode"
+                class="group rounded-[24px] border border-stone-200/80 bg-white/65 p-2 dark:border-white/10 dark:bg-white/5"
+              >
+                <summary class="flex cursor-pointer list-none items-center justify-between rounded-[18px] px-3 py-3 text-sm font-semibold marker:content-none">
+                  <div>
+                    <p>{{ country.countryLabel }}</p>
+                    <p class="mt-1 text-[11px] font-medium text-stone-500 dark:text-slate-400">{{ country.storeCount }} tiendas activas</p>
+                  </div>
+                  <span class="text-stone-400 transition group-open:rotate-90 dark:text-slate-500">›</span>
+                </summary>
+
+                <div class="mt-2 space-y-2 px-1 pb-1">
+                  <details
+                    v-for="state in country.states"
+                    :key="`${country.countryCode}-${state.stateCode}`"
+                    class="group/state rounded-[20px] border border-stone-200/80 bg-stone-50/80 p-2 dark:border-white/10 dark:bg-stone-900/40"
+                  >
+                    <summary class="flex cursor-pointer list-none items-center justify-between rounded-[16px] px-3 py-3 text-sm font-semibold marker:content-none">
+                      <div>
+                        <p>{{ state.stateLabel }}</p>
+                        <p class="mt-1 text-[11px] font-medium text-stone-500 dark:text-slate-400">{{ state.storeCount }} tiendas</p>
+                      </div>
+                      <span class="text-stone-400 transition group-open/state:rotate-90 dark:text-slate-500">›</span>
+                    </summary>
+
+                    <div class="mt-2 flex flex-col gap-2 px-1 pb-1">
+                      <button
+                        v-for="city in state.cities"
+                        :key="city.regionKey"
+                        type="button"
+                        class="flex items-center justify-between rounded-[16px] border border-stone-200/80 bg-white px-3 py-3 text-left text-sm font-medium active:scale-95 dark:border-white/10 dark:bg-white/5"
+                        @click="selectGeoCity(city.city)"
+                      >
+                        <span>{{ city.city }}</span>
+                        <span class="rounded-full bg-stone-950 px-2 py-1 text-[10px] font-semibold text-white dark:bg-cyan-400 dark:text-stone-950">
+                          {{ city.storeCount }}
+                        </span>
+                      </button>
+                    </div>
+                  </details>
+                </div>
+              </details>
+            </div>
+          </aside>
         </div>
       </div>
     </Transition>
@@ -304,6 +448,20 @@ definePageMeta({
     mode: 'out-in',
   },
 })
+
+type GeoStateNode = {
+  stateCode: string
+  stateLabel: string
+  storeCount: number
+  cities: MarketplaceHub[]
+}
+
+type GeoCountryNode = {
+  countryCode: string
+  countryLabel: string
+  storeCount: number
+  states: GeoStateNode[]
+}
 
 const backend = useSupabaseBackend()
 const trackerEngine = useAlgorithmicTracker()
@@ -328,6 +486,7 @@ const landingCache = useState<{
 const pending = ref(false)
 const errorMessage = ref('')
 const isSearchOpen = ref(false)
+const isGeoMenuOpen = ref(false)
 const searchQuery = ref('')
 const searchDraft = ref('')
 const scrollY = ref(0)
@@ -339,6 +498,8 @@ const hubs = computed(() => landingCache.value.hubs)
 const forYou = computed(() => landingCache.value.forYou)
 const preferredTags = trackerEngine.preferredTags
 const recentSearches = trackerEngine.recentSearches
+const currentYear = new Date().getFullYear()
+
 const hasContent = computed(() =>
   topStores.value.length > 0 || viralProducts.value.length > 0 || hubs.value.length > 0 || forYou.value.length > 0,
 )
@@ -394,6 +555,70 @@ const filteredFeed = computed(() => forYou.value.filter(item => matchText([
   ...item.businessTypes,
   ...item.matchedTags,
 ])))
+
+const geoMenuTree = computed<GeoCountryNode[]>(() => {
+  const countryMap = new Map<string, {
+    countryCode: string
+    countryLabel: string
+    storeCount: number
+    statesMap: Map<string, {
+      stateCode: string
+      stateLabel: string
+      storeCount: number
+      cities: MarketplaceHub[]
+    }>
+  }>()
+
+  hubs.value.forEach((hub) => {
+    if (!hub.city || hub.storeCount <= 0) {
+      return
+    }
+
+    const countryCode = (hub.countryCode || 'XX').trim().toUpperCase()
+    const stateCode = (hub.stateCode || 'NA').trim().toUpperCase()
+
+    if (!countryMap.has(countryCode)) {
+      countryMap.set(countryCode, {
+        countryCode,
+        countryLabel: countryCode,
+        storeCount: 0,
+        statesMap: new Map(),
+      })
+    }
+
+    const country = countryMap.get(countryCode)!
+    country.storeCount += hub.storeCount
+
+    if (!country.statesMap.has(stateCode)) {
+      country.statesMap.set(stateCode, {
+        stateCode,
+        stateLabel: stateCode,
+        storeCount: 0,
+        cities: [],
+      })
+    }
+
+    const state = country.statesMap.get(stateCode)!
+    state.storeCount += hub.storeCount
+    state.cities.push(hub)
+  })
+
+  return [...countryMap.values()]
+    .map(country => ({
+      countryCode: country.countryCode,
+      countryLabel: country.countryLabel,
+      storeCount: country.storeCount,
+      states: [...country.statesMap.values()]
+        .map(state => ({
+          stateCode: state.stateCode,
+          stateLabel: state.stateLabel,
+          storeCount: state.storeCount,
+          cities: [...state.cities].sort((left, right) => right.storeCount - left.storeCount || left.city.localeCompare(right.city)),
+        }))
+        .sort((left, right) => right.storeCount - left.storeCount || left.stateLabel.localeCompare(right.stateLabel)),
+    }))
+    .sort((left, right) => right.storeCount - left.storeCount || left.countryLabel.localeCompare(right.countryLabel))
+})
 
 const heroHeadline = computed(() => {
   if (errorMessage.value) {
@@ -476,8 +701,19 @@ const commitSearch = async (term: string) => {
   await refreshLanding(true)
 }
 
+const selectGeoCity = async (city: string) => {
+  isGeoMenuOpen.value = false
+  await commitSearch(city)
+}
+
 const toggleColorMode = () => {
   colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
+}
+
+const showComingSoon = (label: string) => {
+  if (import.meta.client) {
+    window.alert(`${label}: Próximamente`)
+  }
 }
 
 const trackStoreTap = (store: MarketplaceStoreCard) => {
