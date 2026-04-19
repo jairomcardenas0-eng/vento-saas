@@ -20,6 +20,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   const cartStore = useCartStore()
   const { encodeOrderToWhatsApp } = useCheckoutEngine()
   const backend = useSupabaseBackend()
+  const analytics = useAnalytics()
 
   const search = ref('')
   const selectedCategoryId = ref('')
@@ -183,6 +184,10 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   })
 
   const openProduct = (product: ProductItem) => {
+    if (storefront.value) {
+      analytics.trackProductClick(storefront.value.id, product.id)
+    }
+
     selectedProduct.value = product
     reviewTargetProductId.value = product.id
     singleSelections.value = {}
@@ -229,6 +234,10 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   }
 
   const quickAddProduct = (product: ProductItem) => {
+    if (storefront.value) {
+      analytics.trackProductClick(storefront.value.id, product.id)
+    }
+
     if (product.variants.length > 0) {
       openProduct(product)
       return

@@ -100,6 +100,17 @@
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
               </svg>
             </div>
+
+            <NuxtLink
+              to="/onboarding/create-catalog"
+              class="mt-2 inline-flex min-h-[40px] w-full items-center justify-center gap-2 rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/70 px-3 text-xs font-bold uppercase tracking-wide text-blue-700 transition hover:bg-blue-100/80 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
+              @click="sidebarOpen = false"
+            >
+              <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
+              </svg>
+              <span>Agregar nuevo catálogo</span>
+            </NuxtLink>
           </div>
 
           <div class="grid grid-cols-2 gap-2">
@@ -196,6 +207,7 @@ type NavIconKey =
   | 'coupons'
   | 'appearance'
   | 'share'
+  | 'team'
 
 type NavItem = {
   to: string
@@ -226,6 +238,9 @@ const navIcons: Record<NavIconKey, string> = {
   appearance: '<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.5 6.25 17.25 2 12 2z"/>',
   // Compartir: icono share
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
+  // Equipo: usuarios/personas
+  team: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
+
 }
 
 const route = useRoute()
@@ -280,6 +295,7 @@ const navGroups: NavGroup[] = [
       { to: '/admin/coupons', label: 'Cupones', icon: 'coupons' },
       { to: '/admin/appearance', label: 'Apariencia', icon: 'appearance' },
       { to: '/admin/share', label: 'Compartir', icon: 'share' },
+      { to: '/admin/team', label: 'Equipo', icon: 'team' },
     ],
   },
 ]
@@ -295,6 +311,7 @@ const titleMap: Record<string, string> = {
   '/admin/reviews': 'Reseñas',
   '/admin/orders': 'Pedidos',
   '/admin/coupons': 'Cupones',
+  '/admin/team': 'Equipo',
 }
 
 const pageTitle = computed(() => titleMap[route.path] || 'Panel')

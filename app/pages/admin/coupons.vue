@@ -9,13 +9,11 @@
         </template>
       </UiSectionHeader>
 
-      <div v-if="loading" class="form-hint">Sincronizando cupones...</div>
-
-      <div v-else-if="!coupons.length" class="rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
+      <div v-if="!loading && !coupons.length" class="rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
         Todavia no hay cupones activos en este catalogo.
       </div>
 
-      <div v-else class="grid gap-4 lg:grid-cols-2">
+      <div v-else-if="!loading" class="grid gap-4 lg:grid-cols-2">
         <article v-for="coupon in coupons" :key="coupon.id" class="rounded-[26px] border border-zinc-200 bg-zinc-50 p-5 shadow-sm ring-1 ring-black/5 dark:border-zinc-800 dark:bg-zinc-950">
           <div class="flex items-start justify-between gap-3">
             <div>

@@ -26,6 +26,7 @@ import type { CategoryItem, ProductItem } from '~/stores/catalog'
 const route = useRoute()
 const slugKey = computed(() => String(route.params.slug || ''))
 const backend = useSupabaseBackend()
+const analytics = useAnalytics()
 
 const mapCategory = (category: any): CategoryItem => ({
   id: category.id,
@@ -115,4 +116,15 @@ const { data, pending } = await useAsyncData<StorefrontPayload | null>(
 
 const storefront = computed(() => data.value)
 const layout = computed(() => storefront.value?.settings.storefrontLayout ?? 'classic')
+
+const trackedCatalogId = ref<string | null>(null)
+
+watch(storefront, (value) => {
+  if (!value || trackedCatalogId.value === value.id || import.meta.server) {
+    return
+  }
+
+  trackedCatalogId.value = value.id
+  analytics.trackPageView(value.id, `/b/${value.slug}`)
+}, { immediate: true })
 </script>

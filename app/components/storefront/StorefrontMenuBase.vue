@@ -418,6 +418,7 @@ const props = defineProps<{
 
 const cartStore = useCartStore()
 const backend = useSupabaseBackend()
+const analytics = useAnalytics()
 const { encodeOrderToWhatsApp } = useCheckoutEngine()
 
 const loadingVisible = ref(true)
@@ -672,6 +673,7 @@ const toggleTag = (tag: string) => {
 }
 
 const openDetail = (product: ProductItem) => {
+  analytics.trackProductClick(props.storefront.id, product.id)
   selectedProduct.value = product
   detailImageIndex.value = 0
   detailQty.value = 1
@@ -711,6 +713,7 @@ const validateDetailSelection = () => {
 }
 
 const quickAdd = (product: ProductItem) => {
+  analytics.trackProductClick(props.storefront.id, product.id)
   cartStore.addToCart(props.slugKey, product, [], 1)
 }
 

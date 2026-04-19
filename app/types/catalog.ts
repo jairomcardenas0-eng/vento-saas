@@ -274,3 +274,35 @@ export interface CatalogRecord {
   reviews: CatalogReview[]
   orders: CatalogOrder[]
 }
+
+// ─── Team Members ─────────────────────────────────────────────────────────────
+
+export type TeamMemberRole = 'admin' | 'editor' | 'viewer'
+export type TeamMemberStatus = 'active' | 'pending' | 'suspended'
+
+export interface TeamMemberPermissions {
+  viewOrders: boolean
+  manageOrders: boolean
+  viewProducts: boolean
+  manageProducts: boolean
+  viewReviews: boolean
+  manageReviews: boolean
+  viewCoupons: boolean
+  manageCoupons: boolean
+  viewStats: boolean
+  viewSettings: boolean
+}
+
+export interface CatalogTeamMember {
+  id: string
+  catalogId: string
+  email: string
+  name: string
+  role: TeamMemberRole
+  permissions: TeamMemberPermissions
+  status: TeamMemberStatus
+  invitedBy: string | null
+  createdAt: string
+  updatedAt: string
+}
+

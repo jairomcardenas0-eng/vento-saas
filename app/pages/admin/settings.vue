@@ -87,7 +87,76 @@
                 </select>
                 <small>Base para horarios dinamicos y sellos de tiempo.</small>
               </label>
-              <label><span>Moneda</span><input v-model="draft.currency" /><small>Moneda principal del catalogo.</small></label>
+              <!-- Currency Selector -->
+              <div class="full relative">
+                <span class="mb-2 block text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+                  💰 Moneda principal
+                </span>
+
+                <!-- Selected display / trigger -->
+                <div
+                  class="relative z-10 flex min-h-[48px] w-full cursor-pointer items-center gap-3 rounded-[16px] border border-zinc-200 bg-white px-4 py-2.5 transition hover:border-zinc-300 focus-within:ring-2 focus-within:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
+                  @click="showCurrencyDropdown = !showCurrencyDropdown"
+                >
+                  <span v-if="selectedCurrencyObj" class="flex items-center gap-2.5 flex-1">
+                    <span class="text-xl">{{ selectedCurrencyObj.flag }}</span>
+                    <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ selectedCurrencyObj.code }}</span>
+                    <span class="text-zinc-500 dark:text-zinc-400 text-sm">{{ selectedCurrencyObj.name }}</span>
+                  </span>
+                  <span v-else class="flex-1 text-zinc-400">Selecciona una moneda...</span>
+                  <svg class="h-4 w-4 text-zinc-400 flex-shrink-0 transition-transform" :class="{ 'rotate-180': showCurrencyDropdown }" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                  </svg>
+                </div>
+
+                <!-- Overlay to close -->
+                <div v-if="showCurrencyDropdown" class="fixed inset-0 z-40 bg-transparent" @click.stop="showCurrencyDropdown = false" />
+
+                <!-- Dropdown -->
+                <div v-if="showCurrencyDropdown" class="absolute left-0 right-0 top-[100%] z-50 mt-2 rounded-[20px] border border-zinc-200 bg-white/98 shadow-2xl backdrop-blur-md dark:border-zinc-800 dark:bg-zinc-900/98" style="max-height: 380px; display: flex; flex-direction: column;">
+                  <!-- Search -->
+                  <div class="p-3 border-b border-zinc-100 dark:border-zinc-800">
+                    <div class="flex items-center gap-2 rounded-xl bg-zinc-100 px-3 py-2 dark:bg-zinc-800">
+                      <svg class="h-4 w-4 text-zinc-400 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <circle cx="11" cy="11" r="8" stroke-width="2" /><line x1="21" y1="21" x2="16.65" y2="16.65" stroke-width="2" />
+                      </svg>
+                      <input
+                        v-model="currencySearch"
+                        type="text"
+                        placeholder="Buscar moneda..."
+                        class="flex-1 bg-transparent text-sm outline-none text-zinc-900 dark:text-zinc-100 placeholder:text-zinc-400"
+                        @click.stop
+                      />
+                      <button v-if="currencySearch" class="text-zinc-400 hover:text-zinc-700" @click.stop="currencySearch = ''" type="button">✕</button>
+                    </div>
+                  </div>
+                  <!-- List -->
+                  <div class="overflow-y-auto flex-1 p-2">
+                    <div
+                      v-for="cur in filteredCurrencies"
+                      :key="cur.code"
+                      class="flex items-center gap-3 rounded-[14px] px-3 py-2.5 cursor-pointer transition-colors"
+                      :class="draft.currency === cur.code
+                        ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900'
+                        : 'hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'"
+                      @click.stop="selectCurrency(cur.code)"
+                    >
+                      <span class="text-xl w-7 text-center flex-shrink-0">{{ cur.flag }}</span>
+                      <span class="font-bold text-[13px] w-12 flex-shrink-0">{{ cur.code }}</span>
+                      <span class="text-[13px] flex-1">{{ cur.name }}</span>
+                      <span class="text-[11px] opacity-50">{{ cur.symbol }}</span>
+                      <svg v-if="draft.currency === cur.code" class="h-4 w-4 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+                      </svg>
+                    </div>
+                    <div v-if="!filteredCurrencies.length" class="py-6 text-center text-sm text-zinc-400">
+                      No se encontró ninguna moneda con "{{ currencySearch }}"
+                    </div>
+                  </div>
+                </div>
+
+                <small class="mt-2 block text-[13px] text-zinc-500">Moneda en la que se expresan todos los precios del catálogo.</small>
+              </div>
               <label><span>OG Title</span><input v-model="draft.ogTitle" /><small>Titulo social para compartir.</small></label>
               <label class="full"><span>OG Description</span><textarea v-model="draft.ogDescription" rows="3" /><small>Descripcion de vista previa en buscadores y redes.</small></label>
             </div>
@@ -360,6 +429,88 @@ const businessTypeOptions = [
   'Ropa', 'Ropa deportiva', 'Salud / Farmacia', 'Servicio de fotografía', 'Servicio informático',
   'Sex Shop', 'Tienda de mascotas', 'Tienda de regalos', 'Tienda general', 'Tiendas de videojuegos'
 ]
+
+// ─── Currency selector ────────────────────────────────────────────────────────
+const allCurrencies = [
+  // LATAM & Cuba
+  { code: 'CUP', name: 'Peso cubano',            flag: '🇨🇺', symbol: '$' },
+  { code: 'MLC', name: 'MLC (Cuba)',              flag: '🇨🇺', symbol: 'MLC' },
+  { code: 'USD', name: 'Dólar estadounidense',    flag: '🇺🇸', symbol: '$' },
+  { code: 'MXN', name: 'Peso mexicano',           flag: '🇲🇽', symbol: '$' },
+  { code: 'ARS', name: 'Peso argentino',          flag: '🇦🇷', symbol: '$' },
+  { code: 'COP', name: 'Peso colombiano',         flag: '🇨🇴', symbol: '$' },
+  { code: 'CLP', name: 'Peso chileno',            flag: '🇨🇱', symbol: '$' },
+  { code: 'PEN', name: 'Sol peruano',             flag: '🇵🇪', symbol: 'S/' },
+  { code: 'VES', name: 'Bolívar venezolano',      flag: '🇻🇪', symbol: 'Bs.' },
+  { code: 'BRL', name: 'Real brasileño',          flag: '🇧🇷', symbol: 'R$' },
+  { code: 'BOB', name: 'Boliviano',               flag: '🇧🇴', symbol: 'Bs' },
+  { code: 'PYG', name: 'Guaraní paraguayo',       flag: '🇵🇾', symbol: '₲' },
+  { code: 'UYU', name: 'Peso uruguayo',           flag: '🇺🇾', symbol: '$' },
+  { code: 'GTQ', name: 'Quetzal guatemalteco',    flag: '🇬🇹', symbol: 'Q' },
+  { code: 'HNL', name: 'Lempira hondureño',       flag: '🇭🇳', symbol: 'L' },
+  { code: 'CRC', name: 'Colón costarricense',     flag: '🇨🇷', symbol: '₡' },
+  { code: 'DOP', name: 'Peso dominicano',         flag: '🇩🇴', symbol: 'RD$' },
+  { code: 'HTG', name: 'Gourde haitiano',         flag: '🇭🇹', symbol: 'G' },
+  { code: 'JMD', name: 'Dólar jamaicano',         flag: '🇯🇲', symbol: 'J$' },
+  { code: 'NIO', name: 'Córdoba nicaragüense',    flag: '🇳🇮', symbol: 'C$' },
+  { code: 'PAB', name: 'Balboa panameño',         flag: '🇵🇦', symbol: 'B/.' },
+  // Europa
+  { code: 'EUR', name: 'Euro',                   flag: '🇪🇺', symbol: '€' },
+  { code: 'GBP', name: 'Libra esterlina',         flag: '🇬🇧', symbol: '£' },
+  { code: 'CHF', name: 'Franco suizo',            flag: '🇨🇭', symbol: 'Fr' },
+  { code: 'SEK', name: 'Corona sueca',            flag: '🇸🇪', symbol: 'kr' },
+  { code: 'NOK', name: 'Corona noruega',          flag: '🇳🇴', symbol: 'kr' },
+  { code: 'DKK', name: 'Corona danesa',           flag: '🇩🇰', symbol: 'kr' },
+  { code: 'PLN', name: 'Złoty polaco',            flag: '🇵🇱', symbol: 'zł' },
+  { code: 'CZK', name: 'Corona checa',            flag: '🇨🇿', symbol: 'Kč' },
+  { code: 'HUF', name: 'Forinto húngaro',         flag: '🇭🇺', symbol: 'Ft' },
+  { code: 'RUB', name: 'Rublo ruso',              flag: '🇷🇺', symbol: '₽' },
+  // Norteamérica
+  { code: 'CAD', name: 'Dólar canadiense',        flag: '🇨🇦', symbol: 'CA$' },
+  // Asia & Oceanía
+  { code: 'CNY', name: 'Yuan chino',              flag: '🇨🇳', symbol: '¥' },
+  { code: 'JPY', name: 'Yen japonés',             flag: '🇯🇵', symbol: '¥' },
+  { code: 'KRW', name: 'Won surcoreano',          flag: '🇰🇷', symbol: '₩' },
+  { code: 'INR', name: 'Rupia india',             flag: '🇮🇳', symbol: '₹' },
+  { code: 'THB', name: 'Baht tailandés',          flag: '🇹🇭', symbol: '฿' },
+  { code: 'VND', name: 'Dong vietnamita',         flag: '🇻🇳', symbol: '₫' },
+  { code: 'AUD', name: 'Dólar australiano',       flag: '🇦🇺', symbol: 'A$' },
+  { code: 'NZD', name: 'Dólar neozelandés',       flag: '🇳🇿', symbol: 'NZ$' },
+  // Oriente Medio & África
+  { code: 'AED', name: 'Dírham emiratí',          flag: '🇦🇪', symbol: 'د.إ' },
+  { code: 'SAR', name: 'Riyal saudí',             flag: '🇸🇦', symbol: '﷼' },
+  { code: 'TRY', name: 'Lira turca',              flag: '🇹🇷', symbol: '₺' },
+  { code: 'ZAR', name: 'Rand sudafricano',        flag: '🇿🇦', symbol: 'R' },
+  { code: 'EGP', name: 'Libra egipcia',           flag: '🇪🇬', symbol: 'E£' },
+  { code: 'MAD', name: 'Dírham marroquí',         flag: '🇲🇦', symbol: 'د.م.' },
+  // Cripto & Digital
+  { code: 'USDT', name: 'Tether (USDT)',          flag: '💵', symbol: '₮' },
+  { code: 'ZELLE', name: 'Zelle (USD)',            flag: '💸', symbol: '$' },
+]
+
+const showCurrencyDropdown = ref(false)
+const currencySearch = ref('')
+
+const filteredCurrencies = computed(() => {
+  const q = currencySearch.value.toLowerCase().trim()
+  if (!q) return allCurrencies
+  return allCurrencies.filter(c =>
+    c.code.toLowerCase().includes(q) ||
+    c.name.toLowerCase().includes(q) ||
+    c.symbol.toLowerCase().includes(q)
+  )
+})
+
+const selectedCurrencyObj = computed(() =>
+  allCurrencies.find(c => c.code === draft.value.currency) ?? null
+)
+
+const selectCurrency = (code: string) => {
+  draft.value.currency = code
+  showCurrencyDropdown.value = false
+  currencySearch.value = ''
+}
+// ─────────────────────────────────────────────────────────────────────────────
 
 const showBusinessTypeDropdown = ref(false)
 const toggleBusinessType = (type: string) => {

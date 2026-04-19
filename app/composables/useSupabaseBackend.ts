@@ -1,4 +1,5 @@
 import { createCatalogRecord, defaultSettings, defaultTheme } from '~/data/defaults'
+import type { CatalogAnalyticsOverview } from '~/types/analytics'
 import type {
   CatalogCategory,
   CatalogCoupon,
@@ -195,6 +196,25 @@ const mapRowToUserProfile = (row: any): UserProfile => ({
   defaultCatalogId: row.default_catalog_id || null,
   systemRole: row.system_role === 'owner' ? 'owner' : 'merchant',
   createdAt: row.created_at || new Date().toISOString(),
+})
+
+const mapAnalyticsOverview = (payload: any, rangeDays: number): CatalogAnalyticsOverview => ({
+  rangeDays: Number(payload?.rangeDays || rangeDays),
+  totals: {
+    pageViews: Number(payload?.totals?.pageViews || 0),
+    activeUsers: Number(payload?.totals?.activeUsers || 0),
+    newUsers: Number(payload?.totals?.newUsers || 0),
+    productClicks: Number(payload?.totals?.productClicks || 0),
+  },
+  daily: Array.isArray(payload?.daily)
+    ? payload.daily.map((row: any) => ({
+      day: String(row.day || ''),
+      pageViews: Number(row.pageViews || 0),
+      activeUsers: Number(row.activeUsers || 0),
+      newUsers: Number(row.newUsers || 0),
+      productClicks: Number(row.productClicks || 0),
+    }))
+    : [],
 })
 
 const mapCatalogHeader = (row: any) => ({
@@ -467,6 +487,44 @@ export const useSupabaseBackend = () => {
       data: () => data,
     },
   })
+
+  const getCatalogAnalytics = async (catalogId: string, rangeDays = 7) => {
+    const { data, error } = await $supabase.rpc('get_catalog_analytics_snapshot', {
+      target_catalog_id: catalogId,
+      range_days: rangeDays,
+    })
+
+    ensureSuccess(error, 'No se pudieron cargar las metricas del catalogo')
+    return mapAnalyticsOverview(data, rangeDays)
+  }
+
+  const watchCatalogAnalytics = (
+    catalogId: string,
+    callback: (payload: CatalogAnalyticsOverview) => Promise<void> | void,
+    onError?: (error: Error) => void,
+    rangeDays = 7,
+  ) => {
+    const fetchAnalytics = async () => {
+      await callback(await getCatalogAnalytics(catalogId, rangeDays))
+    }
+
+    fetchAnalytics().catch((error) => onError?.(error as Error))
+
+    const channel = $supabase
+      .channel(`catalog-analytics:${catalogId}`)
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_analytics_daily', filter: `catalog_id=eq.${catalogId}` }, async () => {
+        try {
+          await fetchAnalytics()
+        } catch (error) {
+          onError?.(error as Error)
+        }
+      })
+      .subscribe()
+
+    return () => {
+      void $supabase.removeChannel(channel)
+    }
+  }
 
   return {
     async initPersistence() {},
@@ -887,6 +945,8 @@ export const useSupabaseBackend = () => {
       ensureSuccess(error, 'No se pudieron cargar los cupones')
       return (data || []).map(mapRowToCoupon)
     },
+    getCatalogAnalytics,
+    watchCatalogAnalytics,
     watchCoupons(catalogId: string, callback: (coupons: CatalogCoupon[]) => void, onError?: (error: Error) => void) {
       const fetchCoupons = async () => {
         const { data, error } = await $supabase
