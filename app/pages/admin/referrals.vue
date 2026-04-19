@@ -92,15 +92,18 @@
       <div class="mt-8">
         <h3 class="mb-4 text-base font-semibold text-zinc-900 dark:text-zinc-50">Personas que usaron tu código</h3>
 
-        <div v-if="!referrals.length" class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center dark:border-zinc-700">
-          <svg class="mx-auto mb-3 h-10 w-10 text-zinc-300 dark:text-zinc-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <div v-if="!referrals.length" class="flex flex-col items-center rounded-[20px] border border-dashed border-zinc-300 px-6 py-12 text-center dark:border-zinc-700">
+          <svg class="mb-4 h-12 w-12 text-zinc-200 dark:text-zinc-700" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2" stroke-width="1.5" stroke-linecap="round" />
             <circle cx="9" cy="7" r="4" stroke-width="1.5" />
             <path d="M23 21v-2a4 4 0 0 0-3-3.87" stroke-width="1.5" stroke-linecap="round" />
             <path d="M16 3.13a4 4 0 0 1 0 7.75" stroke-width="1.5" stroke-linecap="round" />
           </svg>
-          <p class="text-sm font-medium text-zinc-500 dark:text-zinc-400">Todavía nadie ha usado tu enlace</p>
-          <p class="mt-1 text-xs text-zinc-400 dark:text-zinc-500">Comparte tu código y aquí verás crecer tu red.</p>
+          <p class="text-sm font-semibold text-zinc-700 dark:text-zinc-300">Aún no tienes referidos</p>
+          <p class="mt-1 max-w-xs text-xs text-zinc-400 dark:text-zinc-500">Copia tu enlace y compártelo. Cada persona que se registre con él aparecerá aquí.</p>
+          <button class="solid-btn mt-5 text-sm" :disabled="!referralCode" @click="copyLink">
+            Copiar enlace ahora
+          </button>
         </div>
 
         <div v-else class="rounded-[20px] border border-zinc-200 p-3 dark:border-zinc-800">
@@ -126,14 +129,9 @@
                   {{ statusLabel(referral.status) }}
                 </span>
               </div>
-              <div class="mt-2 flex flex-wrap items-center justify-between gap-2">
-                <p class="text-[11px] text-zinc-400 dark:text-zinc-500">
-                  {{ new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(referral.createdAt)) }}
-                </p>
-                <p class="text-[11px] font-medium text-zinc-500 dark:text-zinc-400">
-                  {{ statusLabel(referral.status) }}
-                </p>
-              </div>
+              <p class="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
+                {{ new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(referral.createdAt)) }}
+              </p>
             </article>
           </div>
         </div>

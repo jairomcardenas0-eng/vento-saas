@@ -5,9 +5,9 @@
         <div class="top-banner-track">
           <span v-for="index in 2" :key="index" class="top-banner-item">
             {{ theme.bannerText }}
-            <span class="top-banner-sep">•</span>
+            <span class="top-banner-sep">â€¢</span>
             {{ theme.bannerText }}
-            <span class="top-banner-sep">•</span>
+            <span class="top-banner-sep">â€¢</span>
             {{ theme.bannerText }}
           </span>
         </div>
@@ -21,9 +21,9 @@
           <div class="top-banner-track">
             <span v-for="index in 2" :key="index" class="top-banner-item">
               {{ theme.bannerText }}
-              <span class="top-banner-sep">•</span>
+              <span class="top-banner-sep">â€¢</span>
               {{ theme.bannerText }}
-              <span class="top-banner-sep">•</span>
+              <span class="top-banner-sep">â€¢</span>
               {{ theme.bannerText }}
             </span>
           </div>
@@ -73,8 +73,8 @@
     <div v-if="loadingVisible" id="loading">
       <div class="loading-shell">
         <div class="loading-brand">{{ settings.logoUrl ? '???' : initials }}</div>
-        <div class="loading-title">Preparando tu menú</div>
-        <div class="loading-subtitle">Cargando tu menú digital...</div>
+        <div class="loading-title">Preparando tu menÃº</div>
+        <div class="loading-subtitle">Cargando tu menÃº digital...</div>
         <div class="loading-progress"></div>
       </div>
     </div>
@@ -91,7 +91,7 @@
             :style="closedMenuButtonStyle"
             @click="viewingMenuFromClosed = true"
           >
-            Ver menú
+            Ver menÃº
           </button>
           <a v-if="settings.closedShowWhatsapp && whatsappHref" id="closed-whatsapp-btn" :href="whatsappHref" target="_blank" rel="noopener noreferrer">WhatsApp</a>
           <a v-if="settings.closedShowCall && phoneHref" id="closed-call-btn" :href="phoneHref">Llamar</a>
@@ -165,7 +165,7 @@
     </div>
 
     <section v-if="hasMap" id="menu-map-section" class="menu-map-section">
-      <h3 class="menu-map-title">?? Ubicación</h3>
+      <h3 class="menu-map-title">?? UbicaciÃ³n</h3>
       <iframe id="menu-map-frame" class="menu-map-frame" :src="mapEmbedUrl" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen />
       <div class="menu-map-open-wrap">
         <a id="menu-map-open" class="menu-map-open" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">??? Abrir en Google Maps</a>
@@ -194,11 +194,11 @@
 
     <div v-if="filtersOpen" class="modal-overlay active" @click.self="filtersOpen = false">
       <div class="modal-header">
-        <span class="modal-title">Filtros del Menú</span>
-        <button class="close-btn" @click="filtersOpen = false">×</button>
+        <span class="modal-title">Filtros del MenÃº</span>
+        <button class="close-btn" @click="filtersOpen = false">Ã—</button>
       </div>
       <div class="detail-content modal-pad">
-        <p class="modal-copy">Selecciona una o más etiquetas para filtrar los platillos:</p>
+        <p class="modal-copy">Selecciona una o mÃ¡s etiquetas para filtrar los platillos:</p>
         <div class="tags-filter-bar">
           <button
             v-for="tag in availableTags"
@@ -219,15 +219,15 @@
     <div v-if="selectedProduct" class="modal-overlay active" @click.self="closeDetail">
       <div class="modal-header">
         <span class="modal-title">Detalle</span>
-        <button class="close-btn" @click="closeDetail">×</button>
+        <button class="close-btn" @click="closeDetail">Ã—</button>
       </div>
       <div class="detail-content">
         <div class="detail-gallery">
           <img :src="detailImages[detailImageIndex] || ''" :alt="selectedProduct.name" class="detail-img">
           <span v-if="showOfferOnImage(selectedProduct)" class="product-offer-badge image">{{ selectedProduct.offerLabel }}</span>
           <span v-if="timerMeta(selectedProduct) && timerMeta(selectedProduct)?.position === 'image-right'" class="product-timer-badge image-right">{{ timerMeta(selectedProduct)?.text }}</span>
-          <button v-if="detailImages.length > 1" class="detail-gallery-btn prev" @click="detailImageIndex = previousDetailImage">‹</button>
-          <button v-if="detailImages.length > 1" class="detail-gallery-btn next" @click="detailImageIndex = nextDetailImage">›</button>
+          <button v-if="detailImages.length > 1" class="detail-gallery-btn prev" @click="detailImageIndex = previousDetailImage">â€¹</button>
+          <button v-if="detailImages.length > 1" class="detail-gallery-btn next" @click="detailImageIndex = nextDetailImage">â€º</button>
           <div v-if="detailImages.length > 1" class="detail-gallery-count">{{ detailImageIndex + 1 }}/{{ detailImages.length }}</div>
         </div>
         <div v-if="detailImages.length > 1" class="detail-gallery-dots">
@@ -292,7 +292,7 @@
 
           <div v-if="settings.reviewsEnabled" class="reviews-section">
             <div class="reviews-section-title">
-              ?? Reseñas
+              ?? ReseÃ±as
               <span class="reviews-count-badge">{{ currentApprovedReviewCount }}</span>
             </div>
 
@@ -302,7 +302,7 @@
                 <input v-model="reviewForm.name" class="review-form-input" type="text" maxlength="20" placeholder="Escribe tu nombre" autocomplete="off">
               </div>
               <div class="review-form-row">
-                <label class="review-form-label">Tu calificación</label>
+                <label class="review-form-label">Tu calificaciÃ³n</label>
                 <select v-model.number="reviewForm.rating" class="review-form-input">
                   <option :value="5">????? (5)</option>
                   <option :value="4">????? (4)</option>
@@ -311,7 +311,7 @@
                   <option :value="1">????? (1)</option>
                 </select>
                 <label class="review-form-label">Tu comentario</label>
-                <textarea v-model="reviewForm.comment" class="review-form-input" maxlength="300" rows="3" placeholder="¿Qué te pareció este platillo?&#10;Compártenos tu opinión" />
+                <textarea v-model="reviewForm.comment" class="review-form-input" maxlength="300" rows="3" placeholder="Â¿QuÃ© te pareciÃ³ este platillo?&#10;CompÃ¡rtenos tu opiniÃ³n" />
                 <div class="char-counter-wrap">
                   <span class="char-counter-text">{{ reviewForm.comment.length }} / 300</span>
                   <div class="char-progress-bar">
@@ -320,7 +320,7 @@
                 </div>
               </div>
               <button class="review-submit-btn" :disabled="reviewSubmitting" :class="{ loading: reviewSubmitting }" @click="submitReview">
-                <span class="btn-text">Enviar Reseña</span>
+                <span class="btn-text">Enviar ReseÃ±a</span>
                 <span class="spinner"></span>
               </button>
             </div>
@@ -328,7 +328,7 @@
             <div class="review-list">
               <div v-if="!currentVisibleReviews.length" class="review-empty">
                 <div class="review-empty-icon">??</div>
-                <div class="review-empty-text">Sé el primero en dejar una reseña</div>
+                <div class="review-empty-text">SÃ© el primero en dejar una reseÃ±a</div>
               </div>
               <div
                 v-for="review in currentVisibleReviews"
@@ -339,16 +339,16 @@
                 <div class="review-header">
                   <div class="review-avatar" :style="{ background: avatarGradient(review.name) }">{{ reviewInitials(review.name) }}</div>
                   <div class="review-meta">
-                    <div class="review-author">{{ review.name || 'Anónimo' }}</div>
-                    <div class="review-date">{{ formatReviewDate(review.createdAt) }} · {{ reviewStars(review.rating) }}</div>
+                    <div class="review-author">{{ review.name || 'AnÃ³nimo' }}</div>
+                    <div class="review-date">{{ formatReviewDate(review.createdAt) }} Â· {{ reviewStars(review.rating) }}</div>
                   </div>
-                  <span v-if="review.approved === false" class="review-pending-badge">Pendiente de aprobación</span>
+                  <span v-if="review.approved === false" class="review-pending-badge">Pendiente de aprobaciÃ³n</span>
                 </div>
                 <div class="review-text">{{ review.comment }}</div>
               </div>
             </div>
 
-            <button v-if="canLoadMoreReviews" class="review-load-more" @click="reviewPage += 1">Ver más comentarios ?</button>
+            <button v-if="canLoadMoreReviews" class="review-load-more" @click="reviewPage += 1">Ver mÃ¡s comentarios ?</button>
           </div>
         </div>
       </div>
@@ -361,12 +361,12 @@
     <div v-if="cartOpen" class="modal-overlay active" @click.self="cartOpen = false">
       <div class="modal-header">
         <span class="modal-title">Tu Pedido ??</span>
-        <button class="close-btn" @click="cartOpen = false">×</button>
+        <button class="close-btn" @click="cartOpen = false">Ã—</button>
       </div>
       <div class="cart-list">
         <div v-if="!cartStore.items.length" class="review-empty">
           <div class="review-empty-icon">??</div>
-          <div class="review-empty-text">Tu carrito está vacío</div>
+          <div class="review-empty-text">Tu carrito estÃ¡ vacÃ­o</div>
         </div>
         <div v-for="item in cartStore.items" :key="item.cartItemId" class="cart-item">
           <img v-if="cartItemImage(item.productId)" :src="cartItemImage(item.productId)!" class="cart-item-img">
@@ -396,7 +396,7 @@
         </div>
         <div v-if="mapsSearchUrl" class="cart-location-row">
           <span class="cart-location-text">{{ settings.address.details || settings.address.city }}</span>
-          <a class="cart-location-link" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">?? Ver ubicación</a>
+          <a class="cart-location-link" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">?? Ver ubicaciÃ³n</a>
         </div>
       </div>
     </div>
@@ -706,7 +706,7 @@ const validateDetailSelection = () => {
     return !(selectedMulti.value[group.id] || []).length
   })
   if (missing) {
-    window.alert(`Selecciona una opción para ${missing.groupName}`)
+    window.alert(`Selecciona una opciÃ³n para ${missing.groupName}`)
     return false
   }
   return true
@@ -857,7 +857,7 @@ const timerMeta = (product: ProductItem) => {
   if (!product.timerHours || !timerStarts.value[product.id]) {
     return null
   }
-  const remaining = timerStarts.value[product.id] - Date.now()
+  const remaining = timerStarts.value[product.id]! - Date.now()
   if (remaining <= 0) {
     return null
   }

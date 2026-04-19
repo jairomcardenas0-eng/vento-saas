@@ -162,19 +162,11 @@ create policy "owner_manage_team"
     )
   );
 
--- Los miembros del equipo pueden verse entre sí
+-- Los miembros del equipo pueden ver su propia fila (sin recursión)
 drop policy if exists "member_view_team" on public.catalog_team_members;
 create policy "member_view_team"
   on public.catalog_team_members for select
-  using (
-    email = (select email from auth.users where id = auth.uid())
-    or 
-    exists (
-      select 1 from public.catalog_team_members as self
-      where self.catalog_id = catalog_team_members.catalog_id
-      and self.email = (select email from auth.users where id = auth.uid())
-    )
-  );
+  using (email = auth.email());
 
 create table if not exists public.catalog_analytics_sessions (
   catalog_id uuid not null references public.catalogs (id) on delete cascade,

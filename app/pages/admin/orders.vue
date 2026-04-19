@@ -201,7 +201,7 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
 .order-filters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 0.5rem;
   margin-bottom: 1.25rem;
 }
 
@@ -209,17 +209,19 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.6rem;
+  gap: 0.4rem;
   border-radius: 18px;
   border: 1.5px solid rgba(148, 163, 184, 0.25);
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));
   color: #1e293b;
-  padding: 1rem 1.1rem;
-  font-size: 0.95rem;
+  padding: 0.65rem 0.6rem;
+  font-size: 0.78rem;
   font-weight: 700;
   letter-spacing: 0.01em;
   transition: all 0.2s ease;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  min-width: 0;
+  overflow: hidden;
 }
 
 .order-filter:hover {
@@ -239,6 +241,9 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
 
 .order-filter-label {
   white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  min-width: 0;
 }
 
 .dark .order-filter {
@@ -260,9 +265,18 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
   box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
 }
 
+@media (min-width: 480px) {
+  .order-filter {
+    font-size: 0.95rem;
+    padding: 1rem 1.1rem;
+    gap: 0.6rem;
+  }
+}
+
 @media (min-width: 900px) {
   .order-filters {
     grid-template-columns: repeat(5, minmax(0, 1fr));
+    gap: 1rem;
   }
 }
 </style>
