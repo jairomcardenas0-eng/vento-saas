@@ -25,7 +25,10 @@
       >
         <div class="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 px-5 py-5">
           <div class="flex items-center gap-3">
-            <div class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
+            <div v-if="activeCatalog?.settings.logoUrl" class="h-10 w-10 overflow-hidden rounded-2xl border border-slate-200 dark:border-slate-800 shadow-lg">
+              <img :src="activeCatalog.settings.logoUrl" :alt="activeCatalog.settings.businessName" class="h-full w-full object-cover" />
+            </div>
+            <div v-else class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
               <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M13 10V3L4 14h7v7l9-11h-7z" />
               </svg>

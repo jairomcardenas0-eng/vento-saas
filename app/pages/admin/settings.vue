@@ -18,6 +18,18 @@
             </div>
             <div class="grid-form">
               <label><span>Nombre del negocio</span><input v-model="draft.businessName" /><small>Nombre visible en el storefront publico.</small></label>
+              <label class="full">
+                <span>Logo del negocio</span>
+                <div v-if="draft.logoUrl" class="mb-3 flex items-center gap-3">
+                  <img :src="draft.logoUrl" alt="Logo" class="h-16 w-16 rounded-xl object-cover border border-zinc-200 dark:border-zinc-800" />
+                  <button class="ghost-btn small !text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" type="button" @click="clearLogo">Quitar logo</button>
+                </div>
+                <input id="logo-file" type="file" accept="image/*" class="hidden" @change="onLogoSelected" />
+                <label for="logo-file" class="ghost-btn small !w-full !cursor-pointer !justify-center">
+                  {{ draft.logoUrl ? 'Cambiar logo' : 'Subir logo' }}
+                </label>
+                <small class="mt-2 block">Este logo aparece en la tienda y en el panel de administración.</small>
+              </label>
               
               <div class="full relative">
                  <span class="mb-2 block text-sm font-semibold text-zinc-900 dark:text-zinc-100">Tipo de negocio</span>
@@ -326,6 +338,31 @@ const toggleBusinessType = (type: string) => {
   } else if (draft.value.businessType.length < 3) {
     draft.value.businessType.push(type)
   }
+}
+
+const storageEngine = useStorageEngine()
+const uploadingLogo = ref(false)
+
+const onLogoSelected = async (event: Event) => {
+  if (!catalog.value) return
+
+  const target = event.target as HTMLInputElement
+  const file = target.files?.[0]
+  if (!file) return
+
+  uploadingLogo.value = true
+  try {
+    draft.value.logoUrl = await storageEngine.uploadProductImage(catalog.value.id, file)
+  } catch (error) {
+    console.error('Error al subir logo:', error)
+  } finally {
+    uploadingLogo.value = false
+    target.value = ''
+  }
+}
+
+const clearLogo = () => {
+  draft.value.logoUrl = ''
 }
 
 const describeDay = (day: BusinessDaySchedule) => {
