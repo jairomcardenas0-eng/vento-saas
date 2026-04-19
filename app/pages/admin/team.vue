@@ -1,5 +1,16 @@
 <template>
-  <div v-if="catalog" class="admin-grid">
+  <div v-if="!catalog" class="admin-grid">
+    <section class="panel-card span-2">
+      <div class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center dark:border-zinc-700">
+        <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">No hay un catálogo activo</h3>
+        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+          Selecciona un catálogo para gestionar tu equipo.
+        </p>
+      </div>
+    </section>
+  </div>
+
+  <div v-else class="admin-grid">
     <section class="panel-card span-2 space-y-6">
     <!-- Header -->
     <UiSectionHeader
@@ -173,7 +184,7 @@
                   <input v-model="form.name" required placeholder="Ej: María García" class="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20" />
                 </label>
                 <label class="flex flex-col gap-1.5">
-                  <span class="text-xs font-bold uppercase tracking-wide text-zinc-500">Email</span>
+                  <span class="text-xs font-bold uppercase tracking-wide text-zinc-500">Correo</span>
                   <input v-model="form.email" type="email" required :disabled="!!editingMember" placeholder="correo@ejemplo.com" class="rounded-[12px] border border-zinc-200 dark:border-zinc-800 bg-white dark:bg-zinc-900 px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50" />
                 </label>
               </div>
@@ -289,17 +300,6 @@
         </div>
       </Transition>
     </Teleport>
-    </section>
-  </div>
-
-  <div v-else class="admin-grid">
-    <section class="panel-card span-2">
-      <div class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center dark:border-zinc-700">
-        <h3 class="text-lg font-semibold text-zinc-900 dark:text-zinc-100">No hay un catálogo activo</h3>
-        <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
-          Selecciona un catálogo para gestionar tu equipo.
-        </p>
-      </div>
     </section>
   </div>
 </template>
