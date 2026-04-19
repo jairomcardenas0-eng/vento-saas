@@ -1,22 +1,12 @@
 <template>
-  <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(253,224,71,0.2),_transparent_34%),linear-gradient(180deg,_#fffaf2_0%,_#fff_42%,_#fff7ed_100%)] text-stone-950 transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#111827_100%)] dark:text-white">
+  <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(253,224,71,0.2),_transparent_34%),linear-gradient(180deg,_#fffaf2_0%,_#fff_42%,_#fff7ed_100%)] text-stone-950 dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#111827_100%)] dark:text-white">
     <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-10 pt-4">
-      <header class="sticky top-0 z-40 -mx-1 mb-4 px-1 pt-safe">
-        <div class="rounded-[28px] border border-white/65 bg-white/72 p-3 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.42)] backdrop-blur-md transition-colors dark:border-white/10 dark:bg-black/45">
-          <div class="mb-3 flex items-center justify-between gap-3">
-            <div class="flex min-w-0 items-center gap-3">
-              <button
-                type="button"
-                aria-label="Abrir menú geográfico"
-                class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
-                @click="isGeoMenuOpen = true"
-              >
-                ≡
-              </button>
-              <div class="min-w-0">
-                <p class="truncate text-[10px] font-semibold uppercase tracking-[0.34em] text-amber-600 dark:text-cyan-300">Marketplace Engine</p>
-                <h1 class="truncate font-serif text-[1.75rem] leading-none">Descubre algo brutal</h1>
-              </div>
+      <header class="sticky top-0 z-40 -mx-1 mb-4 px-1 pt-safe" style="will-change: transform;">
+        <div class="rounded-[28px] border border-white/65 bg-white/95 p-3 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-stone-950/95">
+          <div class="mb-4 flex items-center justify-between gap-3">
+            <div class="min-w-0">
+              <p class="truncate text-[10px] font-semibold uppercase tracking-[0.34em] text-amber-600 dark:text-cyan-300">Marketplace Engine</p>
+              <h1 class="truncate font-serif text-[1.75rem] leading-none">Descubre algo brutal</h1>
             </div>
             <button
               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
@@ -27,28 +17,26 @@
             </button>
           </div>
 
-          <div v-if="geoMenuTree.length" class="mb-3 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+          <div class="flex items-center gap-2">
             <button
-              v-for="country in geoMenuTree"
-              :key="country.countryCode"
               type="button"
-              class="shrink-0 rounded-full border border-stone-300/80 bg-white/80 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-700 active:scale-95 dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
-              @click="commitSearch(country.countryLabel)"
+              aria-label="Abrir destinos"
+              class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full border border-stone-200/80 bg-stone-950 text-xl text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
+              @click="isGeoMenuOpen = true"
             >
-              {{ country.countryLabel }}
+              ≡
+            </button>
+            <button
+              type="button"
+              class="flex h-[46px] flex-1 items-center gap-3 rounded-full border border-stone-200/80 bg-stone-950 px-4 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
+              @click="openSearch"
+            >
+              <span class="text-base text-white/50 dark:text-stone-950/50">⌕</span>
+              <span class="truncate text-sm font-medium">
+                {{ searchQuery || 'Busca tacos, sushi, café o una región...' }}
+              </span>
             </button>
           </div>
-
-          <button
-            type="button"
-            class="flex w-full items-center gap-3 rounded-full border border-stone-200/80 bg-stone-950 px-4 py-3 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
-            @click="openSearch"
-          >
-            <span class="text-base">⌕</span>
-            <span class="truncate text-sm font-medium">
-              {{ searchQuery || 'Busca tacos, sushi, café o una zona...' }}
-            </span>
-          </button>
         </div>
       </header>
 
@@ -178,8 +166,7 @@
                 <img
                   :src="hub.sampleImageUrl"
                   :alt="hub.regionLabel"
-                  class="h-full w-full object-cover transition-transform duration-300"
-                  :style="{ transform: `scale(1.18) translate3d(0, ${parallaxOffset(index)}px, 0)` }"
+                  class="h-full w-full scale-110 object-cover"
                   loading="lazy"
                 >
               </div>
@@ -443,10 +430,7 @@
 import type { MarketplaceFeedEntry, MarketplaceHub, MarketplaceProductCard, MarketplaceStoreCard } from '~/types/catalog'
 
 definePageMeta({
-  pageTransition: {
-    name: 'page',
-    mode: 'out-in',
-  },
+  pageTransition: false,
 })
 
 type GeoStateNode = {
@@ -489,7 +473,6 @@ const isSearchOpen = ref(false)
 const isGeoMenuOpen = ref(false)
 const searchQuery = ref('')
 const searchDraft = ref('')
-const scrollY = ref(0)
 const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
 
 const topStores = computed(() => landingCache.value.topStores)
@@ -642,12 +625,6 @@ const money = (value: number) => new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
 }).format(value || 0)
 
-const touchScroll = () => {
-  scrollY.value = window.scrollY || 0
-}
-
-const parallaxOffset = (index: number) => Math.round(((scrollY.value * 0.08) + index * 2) % 18)
-
 const trackerSignature = computed(() => preferredTags.value.join('|'))
 
 const refreshLanding = async (force = false) => {
@@ -758,13 +735,5 @@ watch(preferredTags, async () => {
 onMounted(async () => {
   trackerEngine.hydrate()
   await refreshLanding()
-  touchScroll()
-  window.addEventListener('scroll', touchScroll, { passive: true })
-})
-
-onBeforeUnmount(() => {
-  if (import.meta.client) {
-    window.removeEventListener('scroll', touchScroll)
-  }
 })
 </script>
