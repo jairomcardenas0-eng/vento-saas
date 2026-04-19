@@ -1,179 +1,534 @@
 <template>
-  <section class="mx-auto flex min-h-screen w-full max-w-7xl flex-col gap-8 px-4 py-6 sm:px-6 lg:px-8">
-    <header class="flex flex-col gap-4 rounded-[32px] border border-zinc-200 bg-white/90 px-6 py-5 shadow-[0_20px_60px_rgba(24,24,27,0.08)] backdrop-blur dark:border-zinc-800 dark:bg-zinc-900/90 md:flex-row md:items-center md:justify-between">
-      <div>
-        <p class="eyebrow">Marketplace SaaS</p>
-        <h1 class="m-0 text-4xl font-semibold tracking-tight text-zinc-900 dark:text-zinc-100 sm:text-5xl">Cientos de Menus, a un Clic</h1>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <NuxtLink to="/catalogos" class="ghost-btn">Explorar todo</NuxtLink>
-        <NuxtLink to="/login" class="solid-btn">Entrar al admin</NuxtLink>
-      </div>
-    </header>
-
-    <section class="grid gap-6 lg:grid-cols-[minmax(0,1.15fr)_minmax(320px,0.85fr)]">
-      <div class="relative overflow-hidden rounded-[36px] border border-zinc-200 bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.9),_rgba(228,228,231,0.72))] p-6 shadow-[0_24px_80px_rgba(24,24,27,0.08)] dark:border-zinc-800 dark:bg-[radial-gradient(circle_at_top_left,_rgba(63,63,70,0.55),_rgba(9,9,11,0.98))] sm:p-8">
-        <div class="absolute inset-y-0 right-0 hidden w-1/2 bg-[radial-gradient(circle_at_center,_rgba(255,255,255,0.65),_transparent_70%)] dark:bg-[radial-gradient(circle_at_center,_rgba(161,161,170,0.22),_transparent_70%)] lg:block" />
-        <div class="relative max-w-2xl">
-          <p class="eyebrow">Directorio en vivo</p>
-          <h2 class="m-0 text-3xl font-semibold leading-tight text-zinc-900 dark:text-zinc-100 sm:text-5xl">Descubre restaurantes activos, filtra por antojo y entra directo a pedir.</h2>
-          <p class="mt-4 max-w-xl text-base leading-7 text-zinc-600 dark:text-zinc-300">
-            La raiz publica ahora funciona como hub comercial: restaurantes publicados, carrusel editorial y salto inmediato al storefront por slug.
-          </p>
-          <div class="mt-6 flex flex-wrap gap-3">
-            <NuxtLink to="/register" class="solid-btn">Publicar mi negocio</NuxtLink>
-            <NuxtLink to="/catalogos" class="ghost-btn">Ver marketplace</NuxtLink>
-          </div>
-          <div class="mt-8 grid gap-3 sm:grid-cols-3">
-            <div class="rounded-3xl border border-zinc-200 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p class="text-sm uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Activos</p>
-              <strong class="mt-2 block text-3xl text-zinc-900 dark:text-zinc-100">{{ catalogs.length }}</strong>
+  <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(253,224,71,0.2),_transparent_34%),linear-gradient(180deg,_#fffaf2_0%,_#fff_42%,_#fff7ed_100%)] text-stone-950 transition-colors duration-300 dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#111827_100%)] dark:text-white">
+    <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-10 pt-4">
+      <header class="sticky top-0 z-40 -mx-1 mb-4 px-1 pt-safe">
+        <div class="rounded-[28px] border border-white/65 bg-white/72 p-3 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.42)] backdrop-blur-md transition-colors dark:border-white/10 dark:bg-black/45">
+          <div class="mb-3 flex items-center justify-between">
+            <div>
+              <p class="text-[10px] font-semibold uppercase tracking-[0.34em] text-amber-600 dark:text-cyan-300">Marketplace Engine</p>
+              <h1 class="font-serif text-[1.75rem] leading-none">Descubre algo brutal</h1>
             </div>
-            <div class="rounded-3xl border border-zinc-200 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p class="text-sm uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Productos</p>
-              <strong class="mt-2 block text-3xl text-zinc-900 dark:text-zinc-100">{{ totalProducts }}</strong>
-            </div>
-            <div class="rounded-3xl border border-zinc-200 bg-white/80 px-4 py-4 dark:border-zinc-800 dark:bg-zinc-900/80">
-              <p class="text-sm uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Resenas</p>
-              <strong class="mt-2 block text-3xl text-zinc-900 dark:text-zinc-100">{{ totalReviews }}</strong>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <aside class="rounded-[36px] border border-zinc-200 bg-white/90 p-6 shadow-[0_24px_80px_rgba(24,24,27,0.08)] dark:border-zinc-800 dark:bg-zinc-900/90">
-        <div class="flex items-center justify-between gap-3">
-          <div>
-            <p class="eyebrow">Ahora sonando</p>
-            <h3 class="m-0 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">Carrusel editorial</h3>
-          </div>
-          <span class="rounded-full border border-zinc-200 px-3 py-1 text-xs uppercase tracking-[0.18em] text-zinc-500 dark:border-zinc-800 dark:text-zinc-400">Live</span>
-        </div>
-
-        <div class="mt-5 overflow-hidden">
-          <div class="carousel-track">
-            <NuxtLink
-              v-for="catalog in carouselItems"
-              :key="`${catalog.id}-${catalog.slug}`"
-              :to="`/b/${catalog.slug}`"
-              class="group flex min-w-[260px] flex-col justify-between rounded-[28px] border border-zinc-200 bg-zinc-50 p-4 transition hover:-translate-y-1 hover:border-zinc-300 dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700"
+            <button
+              class="flex h-11 w-11 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
+              type="button"
+              @click="toggleColorMode"
             >
-              <div>
-                <p class="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{{ catalog.settings.businessType || 'Restaurante' }}</p>
-                <h4 class="mt-2 text-xl font-semibold text-zinc-900 dark:text-zinc-100">{{ catalog.settings.businessName }}</h4>
-                <p class="mt-2 text-sm leading-6 text-zinc-600 dark:text-zinc-300">{{ catalog.settings.tagline || 'Catalogo disponible para pedidos directos por WhatsApp.' }}</p>
+              {{ colorMode.preference === 'dark' ? '☀' : '☾' }}
+            </button>
+          </div>
+
+          <button
+            type="button"
+            class="flex w-full items-center gap-3 rounded-full border border-stone-200/80 bg-stone-950 px-4 py-3 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
+            @click="openSearch"
+          >
+            <span class="text-base">⌕</span>
+            <span class="truncate text-sm font-medium">
+              {{ searchQuery || 'Busca tacos, sushi, café o una zona...' }}
+            </span>
+          </button>
+        </div>
+      </header>
+
+      <section class="mb-5">
+        <div class="flex items-center justify-between">
+          <div>
+            <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Pulso del día</p>
+            <h2 class="text-2xl font-semibold leading-tight">{{ heroHeadline }}</h2>
+          </div>
+          <button
+            type="button"
+            class="rounded-full border border-stone-300 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] active:scale-95 dark:border-white/15"
+            @click="refreshLanding(true)"
+          >
+            Reset
+          </button>
+        </div>
+        <p class="mt-2 max-w-[24rem] text-sm leading-6 text-stone-600 dark:text-slate-300">
+          Feed curado por ventas, visitas recientes y el rastro local de este teléfono.
+        </p>
+        <div class="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+          <span
+            v-for="tag in chips"
+            :key="tag"
+            class="shrink-0 rounded-full border border-stone-300/80 bg-white/80 px-3 py-2 text-xs font-medium text-stone-700 active:scale-95 dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
+          >
+            {{ tag }}
+          </span>
+        </div>
+      </section>
+
+      <section v-if="pending && !hasContent" class="space-y-6">
+        <div class="grid grid-cols-4 gap-3">
+          <div v-for="item in 4" :key="`orbit-skeleton-${item}`" class="animate-pulse">
+            <div class="aspect-square rounded-full bg-stone-200 dark:bg-slate-800" />
+            <div class="mx-auto mt-2 h-3 w-16 rounded-full bg-stone-200 dark:bg-slate-800" />
+          </div>
+        </div>
+        <div class="grid grid-cols-2 gap-3">
+          <div v-for="item in 4" :key="`viral-skeleton-${item}`" class="animate-pulse overflow-hidden rounded-[26px] border border-stone-200/80 dark:border-white/10">
+            <div class="aspect-square bg-stone-200 dark:bg-slate-800" />
+            <div class="space-y-2 p-3">
+              <div class="h-4 rounded-full bg-stone-200 dark:bg-slate-800" />
+              <div class="h-3 w-2/3 rounded-full bg-stone-200 dark:bg-slate-800" />
+            </div>
+          </div>
+        </div>
+        <div v-for="item in 3" :key="`feed-skeleton-${item}`" class="animate-pulse overflow-hidden rounded-[30px] border border-stone-200/80 dark:border-white/10">
+          <div class="aspect-[1.12] bg-stone-200 dark:bg-slate-800" />
+          <div class="space-y-3 p-4">
+            <div class="h-4 rounded-full bg-stone-200 dark:bg-slate-800" />
+            <div class="h-4 w-3/4 rounded-full bg-stone-200 dark:bg-slate-800" />
+            <div class="h-3 w-1/2 rounded-full bg-stone-200 dark:bg-slate-800" />
+          </div>
+        </div>
+      </section>
+
+      <template v-else>
+        <section v-if="filteredTopStores.length" class="mb-7">
+          <div class="mb-3 flex items-end justify-between">
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Órbitas</p>
+              <h2 class="text-xl font-semibold">Tiendas encendidas</h2>
+            </div>
+            <span class="text-xs text-stone-500 dark:text-slate-400">{{ filteredTopStores.length }} activas</span>
+          </div>
+          <div class="flex snap-x gap-3 overflow-x-auto pb-2 pr-4 [-ms-overflow-style:none] [scrollbar-width:none]">
+            <NuxtLink
+              v-for="store in filteredTopStores"
+              :key="store.id"
+              :to="`/b/${store.slug}`"
+              class="group w-[92px] shrink-0 snap-start active:scale-95"
+              @click="trackStoreTap(store)"
+            >
+              <div class="relative aspect-square overflow-hidden rounded-full border border-white/70 shadow-[0_18px_44px_-24px_rgba(15,23,42,0.65)] dark:border-white/10">
+                <img :src="store.logoUrl || store.coverImage" :alt="store.businessName" class="h-full w-full object-cover transition duration-300 group-active:scale-95" loading="lazy">
+                <span class="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-[11px] text-white shadow-lg">✓</span>
               </div>
-              <div class="mt-5 flex items-center justify-between text-sm text-zinc-500 dark:text-zinc-400">
-                <span>{{ catalog.products.length }} productos</span>
-                <span>/b/{{ catalog.slug }}</span>
+              <p class="mt-2 truncate text-center text-[12px] font-semibold">{{ store.businessName }}</p>
+              <p class="truncate text-center text-[10px] text-stone-500 dark:text-slate-400">{{ store.city || store.businessTypes[0] }}</p>
+            </NuxtLink>
+          </div>
+        </section>
+
+        <section v-if="filteredViralProducts.length" class="mb-7">
+          <div class="mb-3 flex items-end justify-between">
+            <div>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Mosaicos</p>
+              <h2 class="text-xl font-semibold">Virales ahora</h2>
+            </div>
+            <span class="rounded-full bg-stone-950 px-3 py-1 text-[11px] font-semibold text-white dark:bg-orange-500">🔥 Hot</span>
+          </div>
+          <div class="grid grid-cols-2 gap-3">
+            <NuxtLink
+              v-for="product in filteredViralProducts"
+              :key="`${product.catalogId}-${product.productId}`"
+              :to="`/b/${product.catalogSlug}`"
+              class="overflow-hidden rounded-[28px] border border-white/70 bg-stone-950 text-white shadow-[0_20px_60px_-32px_rgba(15,23,42,0.9)] active:scale-95 dark:border-white/10 dark:bg-slate-900"
+              @click="trackProductTap(product)"
+            >
+              <div class="relative aspect-square">
+                <img :src="product.imageUrl" :alt="product.productName" class="h-full w-full object-cover" loading="lazy">
+                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent px-3 pb-3 pt-8">
+                  <p class="line-clamp-2 text-sm font-semibold">{{ product.productName }}</p>
+                  <p class="mt-1 text-[11px] text-white/70">{{ product.businessName }}</p>
+                </div>
+                <span class="absolute left-3 top-3 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-semibold text-white">🔥 {{ product.orderCount }}</span>
               </div>
             </NuxtLink>
           </div>
-        </div>
-      </aside>
-    </section>
+        </section>
 
-    <section class="rounded-[32px] border border-zinc-200 bg-white/90 p-6 shadow-[0_20px_60px_rgba(24,24,27,0.08)] dark:border-zinc-800 dark:bg-zinc-900/90">
-      <div class="flex flex-col gap-3 md:flex-row md:items-end md:justify-between">
-        <div>
-          <p class="eyebrow">Restaurantes activos</p>
-          <h2 class="m-0 text-3xl font-semibold text-zinc-900 dark:text-zinc-100">Tablero publico del marketplace</h2>
-          <p class="mt-2 text-zinc-600 dark:text-zinc-300">Selecciona cualquier tienda y entra directo a su menu publico.</p>
-        </div>
-        <NuxtLink to="/catalogos" class="ghost-btn">Ver directorio completo</NuxtLink>
-      </div>
+        <section v-if="filteredHubs.length" class="mb-7">
+          <div class="mb-3">
+            <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Destinos</p>
+            <h2 class="text-xl font-semibold">Zonas con tracción</h2>
+          </div>
+          <div class="space-y-3">
+            <NuxtLink
+              v-for="(hub, index) in filteredHubs"
+              :key="hub.regionKey"
+              :to="hub.sampleStoreSlug ? `/b/${hub.sampleStoreSlug}` : '/catalogos'"
+              class="relative block overflow-hidden rounded-[30px] active:scale-95"
+              @click="trackHubTap(hub)"
+            >
+              <div class="absolute inset-0">
+                <img
+                  :src="hub.sampleImageUrl"
+                  :alt="hub.regionLabel"
+                  class="h-full w-full object-cover transition-transform duration-300"
+                  :style="{ transform: `scale(1.18) translate3d(0, ${parallaxOffset(index)}px, 0)` }"
+                  loading="lazy"
+                >
+              </div>
+              <div class="relative overflow-hidden rounded-[30px] border border-white/70 bg-gradient-to-r from-stone-950/85 via-stone-950/50 to-stone-950/20 px-4 py-5 text-white dark:border-white/10 dark:from-slate-950/90 dark:via-slate-900/55">
+                <p class="text-[11px] uppercase tracking-[0.3em] text-cyan-200">{{ hub.city }}</p>
+                <h3 class="mt-2 text-2xl font-semibold leading-none">{{ hub.regionLabel }}</h3>
+                <div class="mt-4 flex items-center gap-2 text-[11px] text-white/80">
+                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.storeCount }} tiendas</span>
+                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.activeProducts }} productos</span>
+                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.recentVisits }} vistas</span>
+                </div>
+              </div>
+            </NuxtLink>
+          </div>
+        </section>
 
-      <div v-if="loading" class="mt-6 rounded-[28px] border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
-        Cargando catalogos publicados...
-      </div>
-
-      <div v-else-if="!catalogs.length" class="mt-6 rounded-[28px] border border-dashed border-zinc-300 bg-zinc-50 px-6 py-10 text-center text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
-        Aun no hay restaurantes publicados en el marketplace.
-      </div>
-
-      <div v-else class="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <NuxtLink
-          v-for="catalog in catalogs"
-          :key="catalog.id"
-          :to="`/b/${catalog.slug}`"
-          class="group overflow-hidden rounded-[30px] border border-zinc-200 bg-zinc-50 transition hover:-translate-y-1 hover:border-zinc-300 hover:bg-white dark:border-zinc-800 dark:bg-zinc-950 dark:hover:border-zinc-700 dark:hover:bg-zinc-900"
-        >
-          <div class="flex h-44 items-end bg-[radial-gradient(circle_at_top_left,_rgba(255,255,255,0.96),_rgba(228,228,231,0.8))] p-5 dark:bg-[radial-gradient(circle_at_top_left,_rgba(63,63,70,0.6),_rgba(9,9,11,1))]">
+        <section>
+          <div class="mb-3 flex items-end justify-between">
             <div>
-              <p class="text-xs uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">{{ catalog.settings.businessType || 'Restaurante' }}</p>
-              <h3 class="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{{ catalog.settings.businessName }}</h3>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Feed For You</p>
+              <h2 class="text-xl font-semibold">Recomendado para este teléfono</h2>
+            </div>
+            <span class="text-xs text-stone-500 dark:text-slate-400">{{ filteredFeed.length }} hallazgos</span>
+          </div>
+
+          <div v-if="filteredFeed.length" class="space-y-4">
+            <NuxtLink
+              v-for="item in filteredFeed"
+              :key="`${item.catalogId}-${item.productId}`"
+              :to="`/b/${item.slug}`"
+              class="block overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_24px_80px_-36px_rgba(15,23,42,0.65)] backdrop-blur active:scale-95 dark:border-white/10 dark:bg-white/8"
+              @click="trackFeedTap(item)"
+            >
+              <div class="relative aspect-[1.1] overflow-hidden">
+                <img :src="item.coverImage || item.productImageUrl" :alt="item.businessName" class="h-full w-full object-cover" loading="lazy">
+                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+                <div class="absolute inset-x-0 bottom-0 p-4 text-white">
+                  <div class="mb-2 flex items-center gap-2">
+                    <img :src="item.logoUrl" :alt="item.businessName" class="h-10 w-10 rounded-full border border-white/40 object-cover">
+                    <div>
+                      <p class="text-sm font-semibold">{{ item.businessName }}</p>
+                      <p class="text-[11px] text-white/70">{{ item.city }}{{ item.stateCode ? `, ${item.stateCode}` : '' }}</p>
+                    </div>
+                  </div>
+                  <p class="max-w-[85%] text-2xl font-semibold leading-tight">{{ item.productName }}</p>
+                </div>
+              </div>
+              <div class="space-y-3 p-4">
+                <p class="line-clamp-2 text-sm leading-6 text-stone-600 dark:text-slate-300">{{ item.productDescription || item.tagline }}</p>
+                <div class="flex flex-wrap gap-2">
+                  <span
+                    v-for="tag in item.matchedTags.slice(0, 3)"
+                    :key="`${item.productId}-${tag}`"
+                    class="rounded-full bg-amber-100 px-3 py-1 text-[11px] font-semibold text-amber-800 dark:bg-cyan-500/15 dark:text-cyan-200"
+                  >
+                    {{ tag }}
+                  </span>
+                </div>
+                <div class="flex items-end justify-between gap-3">
+                  <div>
+                    <p class="text-[11px] uppercase tracking-[0.24em] text-stone-400 dark:text-slate-500">Desde</p>
+                    <p class="text-2xl font-semibold">
+                      {{ money(item.promoPrice ?? item.price) }}
+                    </p>
+                  </div>
+                  <div class="text-right text-[11px] text-stone-500 dark:text-slate-400">
+                    <p>{{ item.orderCount }} ventas</p>
+                    <p>{{ item.recentVisits }} vistas</p>
+                  </div>
+                </div>
+              </div>
+            </NuxtLink>
+          </div>
+
+          <div v-else class="rounded-[30px] border border-dashed border-stone-300 bg-white/70 px-5 py-10 text-center text-sm text-stone-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+            No hubo coincidencias para "{{ searchQuery }}". Borra el término o toca una búsqueda reciente.
+          </div>
+        </section>
+      </template>
+    </div>
+
+    <Transition
+      enter-active-class="duration-300 ease-out"
+      enter-from-class="opacity-0"
+      enter-to-class="opacity-100"
+      leave-active-class="duration-200 ease-in"
+      leave-from-class="opacity-100"
+      leave-to-class="opacity-0"
+    >
+      <div v-if="isSearchOpen" class="fixed inset-0 z-50 bg-stone-950/55 backdrop-blur-sm" @click.self="closeSearch">
+        <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-6 pt-6">
+          <div class="rounded-[32px] border border-white/10 bg-stone-950 p-4 text-white shadow-[0_28px_90px_-30px_rgba(0,0,0,0.75)]">
+            <div class="mb-4 flex items-center gap-3">
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-lg">⌕</div>
+              <input
+                ref="searchInput"
+                v-model="searchDraft"
+                type="search"
+                inputmode="search"
+                placeholder="Busca una tienda, producto o ciudad"
+                class="h-12 w-full rounded-full border border-white/10 bg-white/8 px-4 text-sm outline-none placeholder:text-white/35"
+                @keydown.enter.prevent="commitSearch(searchDraft)"
+              >
+            </div>
+
+            <div class="mb-4 flex items-center justify-between">
+              <p class="text-[11px] uppercase tracking-[0.28em] text-white/45">Top 5 recientes</p>
+              <button type="button" class="text-xs text-white/65 active:scale-95" @click="closeSearch">Cerrar</button>
+            </div>
+
+            <div class="space-y-2">
+              <button
+                v-for="term in recentSearches"
+                :key="term"
+                type="button"
+                class="flex w-full items-center justify-between rounded-[22px] border border-white/10 bg-white/6 px-4 py-3 text-left active:scale-95"
+                @click="commitSearch(term)"
+              >
+                <span class="truncate text-sm">{{ term }}</span>
+                <span class="text-white/35">↗</span>
+              </button>
+              <button
+                v-if="searchDraft.trim()"
+                type="button"
+                class="mt-3 flex w-full items-center justify-center rounded-full bg-amber-400 px-4 py-3 text-sm font-semibold text-stone-950 active:scale-95 dark:bg-cyan-300"
+                @click="commitSearch(searchDraft)"
+              >
+                Buscar "{{ searchDraft.trim() }}"
+              </button>
             </div>
           </div>
-          <div class="space-y-4 p-5">
-            <p class="text-sm leading-6 text-zinc-600 dark:text-zinc-300">{{ catalog.settings.tagline || 'Menu digital activo y listo para recibir pedidos.' }}</p>
-            <div class="flex flex-wrap gap-2 text-sm text-zinc-500 dark:text-zinc-400">
-              <span class="rounded-full border border-zinc-200 px-3 py-1 dark:border-zinc-800">{{ catalog.products.length }} productos</span>
-              <span class="rounded-full border border-zinc-200 px-3 py-1 dark:border-zinc-800">{{ catalog.categories.length }} categorias</span>
-              <span class="rounded-full border border-zinc-200 px-3 py-1 dark:border-zinc-800">{{ Number(catalog.ratingAverage || 0).toFixed(1) }} rating</span>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-sm font-medium text-zinc-900 dark:text-zinc-100">Abrir menu</span>
-              <span class="text-sm text-zinc-500 transition group-hover:text-zinc-900 dark:text-zinc-400 dark:group-hover:text-zinc-100">/{{ catalog.slug }}</span>
-            </div>
-          </div>
-        </NuxtLink>
+        </div>
       </div>
-    </section>
-  </section>
+    </Transition>
+  </div>
 </template>
 
 <script setup lang="ts">
-import type { CatalogRecord } from '~/types/catalog'
+import type { MarketplaceFeedEntry, MarketplaceHub, MarketplaceProductCard, MarketplaceStoreCard } from '~/types/catalog'
+
+definePageMeta({
+  pageTransition: {
+    name: 'page',
+    mode: 'out-in',
+  },
+})
 
 const backend = useSupabaseBackend()
-const catalogs = ref<CatalogRecord[]>([])
-const loading = ref(true)
+const trackerEngine = useAlgorithmicTracker()
+const colorMode = useColorMode()
 
-const totalProducts = computed(() => catalogs.value.reduce((acc, catalog) => acc + catalog.products.length, 0))
-const totalReviews = computed(() => catalogs.value.reduce((acc, catalog) => acc + (catalog.ratingApprovedCount || 0), 0))
-const carouselItems = computed(() => {
-  if (!catalogs.value.length) {
-    return []
+const landingCache = useState<{
+  topStores: MarketplaceStoreCard[]
+  viralProducts: MarketplaceProductCard[]
+  hubs: MarketplaceHub[]
+  forYou: MarketplaceFeedEntry[]
+  fetchedAt: string | null
+  signature: string
+}>('marketplace-landing-cache', () => ({
+  topStores: [],
+  viralProducts: [],
+  hubs: [],
+  forYou: [],
+  fetchedAt: null,
+  signature: '',
+}))
+
+const pending = ref(false)
+const errorMessage = ref('')
+const isSearchOpen = ref(false)
+const searchQuery = ref('')
+const searchDraft = ref('')
+const scrollY = ref(0)
+const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
+
+const topStores = computed(() => landingCache.value.topStores)
+const viralProducts = computed(() => landingCache.value.viralProducts)
+const hubs = computed(() => landingCache.value.hubs)
+const forYou = computed(() => landingCache.value.forYou)
+const preferredTags = trackerEngine.preferredTags
+const recentSearches = trackerEngine.recentSearches
+const hasContent = computed(() =>
+  topStores.value.length > 0 || viralProducts.value.length > 0 || hubs.value.length > 0 || forYou.value.length > 0,
+)
+
+const chips = computed(() => {
+  const base = preferredTags.value.length ? preferredTags.value : ['delivery', 'viral', 'nuevo', 'cerca']
+  return base.slice(0, 6)
+})
+
+const searchNeedle = computed(() => searchQuery.value.trim().toLowerCase())
+
+const matchText = (fields: Array<string | number | null | undefined>) => {
+  if (!searchNeedle.value) {
+    return true
   }
 
-  return catalogs.value.length > 1
-    ? [...catalogs.value, ...catalogs.value]
-    : catalogs.value
+  return fields
+    .map(value => String(value || '').toLowerCase())
+    .some(value => value.includes(searchNeedle.value))
+}
+
+const filteredTopStores = computed(() => topStores.value.filter(store => matchText([
+  store.businessName,
+  store.tagline,
+  store.city,
+  store.stateCode,
+  ...store.businessTypes,
+])))
+
+const filteredViralProducts = computed(() => viralProducts.value.filter(product => matchText([
+  product.productName,
+  product.description,
+  product.businessName,
+  product.businessType,
+  product.city,
+  ...product.tags,
+])))
+
+const filteredHubs = computed(() => hubs.value.filter(hub => matchText([
+  hub.regionLabel,
+  hub.city,
+  hub.stateCode,
+  hub.countryCode,
+])))
+
+const filteredFeed = computed(() => forYou.value.filter(item => matchText([
+  item.businessName,
+  item.tagline,
+  item.city,
+  item.stateCode,
+  item.productName,
+  item.productDescription,
+  ...item.businessTypes,
+  ...item.matchedTags,
+])))
+
+const heroHeadline = computed(() => {
+  if (errorMessage.value) {
+    return 'Carga parcial disponible'
+  }
+
+  if (searchQuery.value) {
+    return `Explorando "${searchQuery.value.trim()}"`
+  }
+
+  if (preferredTags.value[0]) {
+    return `Afinado para ${preferredTags.value[0]}`
+  }
+
+  return 'Elige desde el feed premium'
 })
 
-useSeoMeta({
-  title: 'Marketplace | Cientos de Menus, a un Clic',
-  description: 'Directorio publico de restaurantes con menus digitales activos y acceso inmediato a cada storefront.',
-})
+const money = (value: number) => new Intl.NumberFormat('es-MX', {
+  style: 'currency',
+  currency: 'MXN',
+  maximumFractionDigits: 0,
+}).format(value || 0)
+
+const touchScroll = () => {
+  scrollY.value = window.scrollY || 0
+}
+
+const parallaxOffset = (index: number) => Math.round(((scrollY.value * 0.08) + index * 2) % 18)
+
+const trackerSignature = computed(() => preferredTags.value.join('|'))
+
+const refreshLanding = async (force = false) => {
+  const lastFetchMs = landingCache.value.fetchedAt ? Date.parse(landingCache.value.fetchedAt) : 0
+  const isFresh = lastFetchMs && Date.now() - lastFetchMs < 1000 * 60 * 8
+  const nextSignature = trackerSignature.value
+
+  if (!force && isFresh && landingCache.value.signature === nextSignature && hasContent.value) {
+    return
+  }
+
+  pending.value = true
+  errorMessage.value = ''
+
+  try {
+    const payload = await backend.getMarketplaceLanding(preferredTags.value)
+    landingCache.value = {
+      ...payload,
+      fetchedAt: new Date().toISOString(),
+      signature: nextSignature,
+    }
+  } catch (error: any) {
+    errorMessage.value = error?.message || 'No se pudo refrescar el feed'
+  } finally {
+    pending.value = false
+  }
+}
+
+const openSearch = async () => {
+  isSearchOpen.value = true
+  searchDraft.value = searchQuery.value
+  await nextTick()
+  searchInput.value?.focus()
+}
+
+const closeSearch = () => {
+  isSearchOpen.value = false
+}
+
+const commitSearch = async (term: string) => {
+  const normalized = term.trim()
+  if (!normalized) {
+    searchQuery.value = ''
+    closeSearch()
+    return
+  }
+
+  searchQuery.value = normalized
+  trackerEngine.rememberSearch(normalized)
+  closeSearch()
+  await refreshLanding(true)
+}
+
+const toggleColorMode = () => {
+  colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
+}
+
+const trackStoreTap = (store: MarketplaceStoreCard) => {
+  trackerEngine.trackStoreView({
+    store: store.businessName,
+    businessTypes: store.businessTypes,
+    city: store.city,
+    tagline: store.tagline,
+  })
+}
+
+const trackProductTap = (product: MarketplaceProductCard) => {
+  trackerEngine.trackProductView({
+    product: product.productName,
+    tags: product.tags,
+    businessName: product.businessName,
+    city: product.city,
+  })
+}
+
+const trackHubTap = (hub: MarketplaceHub) => {
+  trackerEngine.trackHubView({
+    region: hub.regionLabel,
+    city: hub.city,
+    stateCode: hub.stateCode,
+  })
+}
+
+const trackFeedTap = (item: MarketplaceFeedEntry) => {
+  trackerEngine.trackProductView({
+    product: item.productName,
+    tags: item.matchedTags,
+    businessName: item.businessName,
+    city: item.city,
+  })
+}
+
+watch(preferredTags, async () => {
+  await refreshLanding()
+}, { deep: true })
 
 onMounted(async () => {
-  try {
-    catalogs.value = await backend.getMarketplaceCatalogs()
-  } finally {
-    loading.value = false
+  trackerEngine.hydrate()
+  await refreshLanding()
+  touchScroll()
+  window.addEventListener('scroll', touchScroll, { passive: true })
+})
+
+onBeforeUnmount(() => {
+  if (import.meta.client) {
+    window.removeEventListener('scroll', touchScroll)
   }
 })
 </script>
-
-<style scoped>
-.carousel-track {
-  display: flex;
-  gap: 1rem;
-  width: max-content;
-  animation: marquee 32s linear infinite;
-}
-
-.carousel-track:hover {
-  animation-play-state: paused;
-}
-
-@keyframes marquee {
-  from {
-    transform: translateX(0);
-  }
-
-  to {
-    transform: translateX(calc(-50% - 0.5rem));
-  }
-}
-</style>

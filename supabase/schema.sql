@@ -916,3 +916,463 @@ drop policy if exists "referrals_public_insert" on public.referrals;
 create policy "referrals_public_insert"
   on public.referrals for insert
   with check (true);
+
+create index if not exists idx_products_active_visual
+  on public.products (catalog_id, is_active, image_url)
+  where is_active = true
+    and image_url is not null
+    and btrim(image_url) <> '';
+
+create or replace function public.catalog_visual_url(settings jsonb)
+returns text
+language sql
+immutable
+as $$
+  select nullif(
+    coalesce(
+      nullif(btrim(settings->>'coverImage'), ''),
+      nullif(btrim(settings->>'logoUrl'), ''),
+      nullif(btrim(settings->>'ogImageUrl'), '')
+    ),
+    ''
+  );
+$$;
+
+create or replace function public.catalog_has_visual(settings jsonb)
+returns boolean
+language sql
+immutable
+as $$
+  select public.catalog_visual_url(settings) is not null;
+$$;
+
+create or replace function public.get_top_stores(limit_count integer default 12)
+returns table (
+  id uuid,
+  slug text,
+  business_name text,
+  business_types jsonb,
+  tagline text,
+  city text,
+  state_code text,
+  logo_url text,
+  cover_image text,
+  rating_average numeric,
+  rating_approved_count integer,
+  recent_visits integer,
+  active_products integer,
+  score numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with catalog_pool as (
+    select
+      c.id,
+      c.slug,
+      c.rating_average,
+      c.rating_approved_count,
+      c.settings,
+      coalesce(
+        (
+          select count(*)
+          from public.products p
+          where p.catalog_id = c.id
+            and p.is_active = true
+            and p.image_url is not null
+            and btrim(p.image_url) <> ''
+        ),
+        0
+      )::integer as active_products
+    from public.catalogs c
+    where c.status = 'published'
+      and c.is_banned = false
+      and public.catalog_has_visual(c.settings)
+  ),
+  visits as (
+    select
+      d.catalog_id,
+      coalesce(sum(d.page_views + (d.product_clicks * 3)), 0)::integer as recent_visits
+    from public.catalog_analytics_daily d
+    where d.day_bucket >= current_date - 13
+    group by d.catalog_id
+  ),
+  scored as (
+    select
+      cp.*,
+      coalesce(v.recent_visits, 0) as recent_visits,
+      (
+        (
+          ((cp.rating_average / 5.0) * greatest(cp.rating_approved_count, 0))
+          + (4.2 * 10.0)
+        )
+        / nullif(greatest(cp.rating_approved_count, 0) + 10.0, 0)
+      ) * 0.72
+      + least(1.25, ln(coalesce(v.recent_visits, 0) + 1) / 4.8) * 0.28
+      + least(cp.active_products, 24) / 120.0 as score
+    from catalog_pool cp
+    left join visits v on v.catalog_id = cp.id
+    where cp.active_products > 0
+  )
+  select
+    s.id,
+    s.slug,
+    coalesce(s.settings->>'businessName', 'Tienda') as business_name,
+    case
+      when jsonb_typeof(s.settings->'businessType') = 'array' then s.settings->'businessType'
+      when nullif(btrim(s.settings->>'businessType'), '') is not null then jsonb_build_array(s.settings->>'businessType')
+      else '[]'::jsonb
+    end as business_types,
+    coalesce(s.settings->>'tagline', '') as tagline,
+    coalesce(s.settings->'address'->>'city', '') as city,
+    coalesce(s.settings->'address'->>'stateCode', '') as state_code,
+    coalesce(
+      nullif(btrim(s.settings->>'logoUrl'), ''),
+      public.catalog_visual_url(s.settings)
+    ) as logo_url,
+    public.catalog_visual_url(s.settings) as cover_image,
+    round(s.rating_average::numeric, 2) as rating_average,
+    s.rating_approved_count,
+    s.recent_visits,
+    s.active_products,
+    round(s.score::numeric, 4) as score
+  from scored s
+  order by s.score desc, s.recent_visits desc, s.rating_average desc
+  limit greatest(coalesce(limit_count, 12), 1);
+$$;
+
+create or replace function public.get_viral_products(limit_count integer default 12)
+returns table (
+  catalog_id uuid,
+  catalog_slug text,
+  product_id text,
+  product_name text,
+  description text,
+  image_url text,
+  price numeric,
+  promo_price numeric,
+  order_count integer,
+  rating numeric,
+  tags jsonb,
+  business_name text,
+  business_type text,
+  logo_url text,
+  city text,
+  score numeric
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with order_lines as (
+    select
+      o.catalog_id,
+      item->>'productId' as product_id,
+      sum(greatest(coalesce((item->>'qty')::integer, 0), 0))::integer as order_count
+    from public.orders o
+    cross join lateral jsonb_array_elements(coalesce(o.items, '[]'::jsonb)) as item
+    where o.status in ('new', 'preparing', 'completed', 'viewed', 'closed')
+      and item->>'productId' is not null
+      and btrim(item->>'productId') <> ''
+    group by o.catalog_id, item->>'productId'
+  ),
+  recent_clicks as (
+    select
+      e.catalog_id,
+      e.product_id,
+      count(*)::integer as click_count
+    from public.catalog_analytics_events e
+    where e.event_type = 'product_click'
+      and e.created_at >= timezone('utc', now()) - interval '21 days'
+      and e.product_id is not null
+    group by e.catalog_id, e.product_id
+  )
+  select
+    p.catalog_id,
+    c.slug as catalog_slug,
+    p.id as product_id,
+    p.name as product_name,
+    coalesce(p.description, '') as description,
+    p.image_url,
+    p.base_price as price,
+    p.promo_price,
+    coalesce(ol.order_count, 0) as order_count,
+    round(coalesce(p.product_rating, 0)::numeric, 2) as rating,
+    coalesce(p.tags, '[]'::jsonb) as tags,
+    coalesce(c.settings->>'businessName', 'Tienda') as business_name,
+    coalesce(
+      case
+        when jsonb_typeof(c.settings->'businessType') = 'array' then c.settings->'businessType'->>0
+        else c.settings->>'businessType'
+      end,
+      ''
+    ) as business_type,
+    coalesce(
+      nullif(btrim(c.settings->>'logoUrl'), ''),
+      public.catalog_visual_url(c.settings)
+    ) as logo_url,
+    coalesce(c.settings->'address'->>'city', '') as city,
+    round((
+      coalesce(ol.order_count, 0) * 0.68
+      + coalesce(rc.click_count, 0) * 0.16
+      + coalesce(p.product_rating, 0) * 4
+      + coalesce(p.reviews_approved_count, 0) * 0.35
+    )::numeric, 4) as score
+  from public.products p
+  join public.catalogs c on c.id = p.catalog_id
+  left join order_lines ol on ol.catalog_id = p.catalog_id and ol.product_id = p.id
+  left join recent_clicks rc on rc.catalog_id = p.catalog_id and rc.product_id = p.id
+  where c.status = 'published'
+    and c.is_banned = false
+    and public.catalog_has_visual(c.settings)
+    and p.is_active = true
+    and p.image_url is not null
+    and btrim(p.image_url) <> ''
+  order by score desc, order_count desc, rating desc
+  limit greatest(coalesce(limit_count, 12), 1);
+$$;
+
+create or replace function public.get_hubs_by_region()
+returns table (
+  region_key text,
+  region_label text,
+  city text,
+  state_code text,
+  country_code text,
+  store_count integer,
+  active_products integer,
+  recent_visits integer,
+  sample_image_url text,
+  sample_store_slug text
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with qualified_catalogs as (
+    select
+      c.id,
+      c.slug,
+      c.settings,
+      public.catalog_visual_url(c.settings) as sample_image_url,
+      coalesce(
+        (
+          select count(*)
+          from public.products p
+          where p.catalog_id = c.id
+            and p.is_active = true
+            and p.image_url is not null
+            and btrim(p.image_url) <> ''
+        ),
+        0
+      )::integer as active_products
+    from public.catalogs c
+    where c.status = 'published'
+      and c.is_banned = false
+      and public.catalog_has_visual(c.settings)
+  ),
+  visits as (
+    select
+      catalog_id,
+      coalesce(sum(page_views + product_clicks), 0)::integer as recent_visits
+    from public.catalog_analytics_daily
+    where day_bucket >= current_date - 20
+    group by catalog_id
+  ),
+  ranked as (
+    select
+      lower(
+        concat_ws(
+          '|',
+          coalesce(nullif(btrim(qc.settings->'address'->>'countryCode'), ''), 'xx'),
+          coalesce(nullif(btrim(qc.settings->'address'->>'stateCode'), ''), 'na'),
+          coalesce(nullif(btrim(qc.settings->'address'->>'city'), ''), 'sin-ciudad')
+        )
+      ) as region_key,
+      initcap(coalesce(nullif(btrim(qc.settings->'address'->>'city'), ''), 'Sin ciudad')) as city,
+      upper(coalesce(nullif(btrim(qc.settings->'address'->>'stateCode'), ''), 'NA')) as state_code,
+      upper(coalesce(nullif(btrim(qc.settings->'address'->>'countryCode'), ''), 'XX')) as country_code,
+      qc.slug,
+      qc.sample_image_url,
+      qc.active_products,
+      coalesce(v.recent_visits, 0) as recent_visits,
+      row_number() over (
+        partition by lower(
+          concat_ws(
+            '|',
+            coalesce(nullif(btrim(qc.settings->'address'->>'countryCode'), ''), 'xx'),
+            coalesce(nullif(btrim(qc.settings->'address'->>'stateCode'), ''), 'na'),
+            coalesce(nullif(btrim(qc.settings->'address'->>'city'), ''), 'sin-ciudad')
+          )
+        )
+        order by coalesce(v.recent_visits, 0) desc, qc.active_products desc, qc.slug
+      ) as hero_rank
+    from qualified_catalogs qc
+    left join visits v on v.catalog_id = qc.id
+    where qc.active_products > 0
+  )
+  select
+    r.region_key,
+    concat_ws(', ', r.city, nullif(r.state_code, 'NA')) as region_label,
+    r.city,
+    r.state_code,
+    r.country_code,
+    count(*)::integer as store_count,
+    sum(r.active_products)::integer as active_products,
+    sum(r.recent_visits)::integer as recent_visits,
+    max(r.sample_image_url) filter (where r.hero_rank = 1) as sample_image_url,
+    max(r.slug) filter (where r.hero_rank = 1) as sample_store_slug
+  from ranked r
+  group by r.region_key, r.city, r.state_code, r.country_code
+  order by recent_visits desc, store_count desc, active_products desc;
+$$;
+
+create or replace function public.get_personalized_feed(user_tags jsonb default '[]'::jsonb, limit_count integer default 18)
+returns table (
+  catalog_id uuid,
+  slug text,
+  product_id text,
+  business_name text,
+  business_types jsonb,
+  tagline text,
+  city text,
+  state_code text,
+  logo_url text,
+  cover_image text,
+  product_name text,
+  product_description text,
+  product_image_url text,
+  price numeric,
+  promo_price numeric,
+  rating_average numeric,
+  product_rating numeric,
+  recent_visits integer,
+  order_count integer,
+  relevance_score numeric,
+  matched_tags jsonb
+)
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  with normalized_tags as (
+    select distinct lower(value #>> '{}') as tag
+    from jsonb_array_elements(coalesce(user_tags, '[]'::jsonb)) value
+    where jsonb_typeof(value) in ('string')
+      and nullif(btrim(value #>> '{}'), '') is not null
+  ),
+  order_lines as (
+    select
+      o.catalog_id,
+      item->>'productId' as product_id,
+      sum(greatest(coalesce((item->>'qty')::integer, 0), 0))::integer as order_count
+    from public.orders o
+    cross join lateral jsonb_array_elements(coalesce(o.items, '[]'::jsonb)) as item
+    where o.status in ('new', 'preparing', 'completed', 'viewed', 'closed')
+      and item->>'productId' is not null
+      and btrim(item->>'productId') <> ''
+    group by o.catalog_id, item->>'productId'
+  ),
+  visits as (
+    select
+      catalog_id,
+      coalesce(sum(page_views + product_clicks * 2), 0)::integer as recent_visits
+    from public.catalog_analytics_daily
+    where day_bucket >= current_date - 20
+    group by catalog_id
+  ),
+  candidate_pool as (
+    select
+      c.id as catalog_id,
+      c.slug,
+      c.settings,
+      c.rating_average,
+      p.id as product_id,
+      p.name as product_name,
+      coalesce(p.description, '') as product_description,
+      p.image_url as product_image_url,
+      p.base_price as price,
+      p.promo_price,
+      p.product_rating,
+      coalesce(p.tags, '[]'::jsonb) as tags,
+      coalesce(ol.order_count, 0) as order_count,
+      coalesce(v.recent_visits, 0) as recent_visits
+    from public.catalogs c
+    join public.products p on p.catalog_id = c.id
+    left join order_lines ol on ol.catalog_id = p.catalog_id and ol.product_id = p.id
+    left join visits v on v.catalog_id = c.id
+    where c.status = 'published'
+      and c.is_banned = false
+      and public.catalog_has_visual(c.settings)
+      and p.is_active = true
+      and p.image_url is not null
+      and btrim(p.image_url) <> ''
+  ),
+  scored as (
+    select
+      cp.*,
+      coalesce(
+        (
+          select jsonb_agg(tag)
+          from (
+            select distinct nt.tag as tag
+            from normalized_tags nt
+            where exists (
+              select 1
+              from jsonb_array_elements_text(cp.tags) tag_value
+              where lower(tag_value) = nt.tag
+            )
+               or lower(coalesce(cp.settings->>'businessName', '')) like '%' || nt.tag || '%'
+               or lower(coalesce(cp.settings->>'tagline', '')) like '%' || nt.tag || '%'
+               or lower(coalesce(cp.settings->'address'->>'city', '')) like '%' || nt.tag || '%'
+               or lower(coalesce(cp.product_name, '')) like '%' || nt.tag || '%'
+          ) matched
+        ),
+        '[]'::jsonb
+      ) as matched_tags
+    from candidate_pool cp
+  )
+  select
+    s.catalog_id,
+    s.slug,
+    s.product_id,
+    coalesce(s.settings->>'businessName', 'Tienda') as business_name,
+    case
+      when jsonb_typeof(s.settings->'businessType') = 'array' then s.settings->'businessType'
+      when nullif(btrim(s.settings->>'businessType'), '') is not null then jsonb_build_array(s.settings->>'businessType')
+      else '[]'::jsonb
+    end as business_types,
+    coalesce(s.settings->>'tagline', '') as tagline,
+    coalesce(s.settings->'address'->>'city', '') as city,
+    coalesce(s.settings->'address'->>'stateCode', '') as state_code,
+    coalesce(
+      nullif(btrim(s.settings->>'logoUrl'), ''),
+      public.catalog_visual_url(s.settings)
+    ) as logo_url,
+    public.catalog_visual_url(s.settings) as cover_image,
+    s.product_name,
+    s.product_description,
+    s.product_image_url,
+    s.price,
+    s.promo_price,
+    round(coalesce(s.rating_average, 0)::numeric, 2) as rating_average,
+    round(coalesce(s.product_rating, 0)::numeric, 2) as product_rating,
+    s.recent_visits,
+    s.order_count,
+    round((
+      coalesce(jsonb_array_length(s.matched_tags), 0) * 12
+      + least(s.order_count, 40) * 0.9
+      + least(s.recent_visits, 3000) / 55.0
+      + coalesce(s.product_rating, 0) * 2.4
+      + coalesce(s.rating_average, 0) * 1.8
+    )::numeric, 4) as relevance_score,
+    s.matched_tags
+  from scored s
+  order by relevance_score desc, recent_visits desc, order_count desc
+  limit greatest(coalesce(limit_count, 18), 1);
+$$;

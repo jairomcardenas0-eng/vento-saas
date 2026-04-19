@@ -308,3 +308,82 @@ export interface CatalogRecord {
   orders: CatalogOrder[]
 }
 
+export interface MarketplaceStoreCard {
+  id: string
+  slug: string
+  businessName: string
+  businessTypes: string[]
+  tagline: string
+  city: string
+  stateCode: string
+  logoUrl: string
+  coverImage: string
+  ratingAverage: number
+  ratingApprovedCount: number
+  recentVisits: number
+  activeProducts: number
+  score: number
+}
+
+export interface MarketplaceProductCard {
+  catalogId: string
+  catalogSlug: string
+  productId: string
+  productName: string
+  description: string
+  imageUrl: string
+  price: number
+  promoPrice: number | null
+  orderCount: number
+  rating: number
+  tags: string[]
+  businessName: string
+  businessType: string
+  logoUrl: string
+  city: string
+  score: number
+}
+
+export interface MarketplaceHub {
+  regionKey: string
+  regionLabel: string
+  city: string
+  stateCode: string
+  countryCode: string
+  storeCount: number
+  activeProducts: number
+  recentVisits: number
+  sampleImageUrl: string
+  sampleStoreSlug: string
+}
+
+export interface MarketplaceFeedEntry {
+  catalogId: string
+  slug: string
+  productId: string
+  businessName: string
+  businessTypes: string[]
+  tagline: string
+  city: string
+  stateCode: string
+  logoUrl: string
+  coverImage: string
+  productName: string
+  productDescription: string
+  productImageUrl: string
+  price: number
+  promoPrice: number | null
+  ratingAverage: number
+  productRating: number
+  recentVisits: number
+  orderCount: number
+  relevanceScore: number
+  matchedTags: string[]
+}
+
+export interface MarketplaceLandingPayload {
+  topStores: MarketplaceStoreCard[]
+  viralProducts: MarketplaceProductCard[]
+  hubs: MarketplaceHub[]
+  forYou: MarketplaceFeedEntry[]
+}
