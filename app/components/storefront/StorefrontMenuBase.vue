@@ -452,6 +452,28 @@ const reviewForm = reactive({
   comment: '',
 })
 
+// Helper functions - must be defined before computed that use them
+const productsByCategory = (categoryId: string) => props.storefront.products.filter((product) => {
+  const matchesCategory = product.categoryId === categoryId
+  const needle = search.value.trim().toLowerCase()
+  const matchesSearch = !needle || `${product.name} ${product.description}`.toLowerCase().includes(needle)
+  const matchesTags = !activeTags.value.length || activeTags.value.every((tag) => product.tags.includes(tag))
+  return matchesCategory && matchesSearch && matchesTags
+})
+
+const activePrice = (product: ProductItem) => product.hasPromo && product.promoPrice !== null ? product.promoPrice : product.basePrice
+const primaryImage = (product: ProductItem) => product.imageUrl || product.imageUrls.find(Boolean) || ''
+const showOfferOnImage = (product: ProductItem) => Boolean(product.offerLabel && product.offerLabelPosition === 'image')
+const showOfferInline = (product: ProductItem) => Boolean(product.offerLabel && product.offerLabelPosition === 'price')
+const approvedReviewCount = (productId: string) => localReviews.value.filter((review) => review.productId === productId && review.approved).length
+const cartQty = (productId: string) => cartStore.items.filter((item) => item.productId === productId).reduce((sum, item) => sum + item.quantity, 0)
+const cartItemImage = (productId: string) => {
+  const product = props.storefront.products.find((entry) => entry.id === productId)
+  return product ? primaryImage(product) : ''
+}
+
+const groupRequired = (group: ProductVariantGroup) => group.options.some((option) => option.isRequired)
+
 const theme = computed(() => props.storefront.theme)
 const settings = computed(() => props.storefront.settings)
 const layout = computed(() => props.layout)
@@ -643,25 +665,6 @@ onMounted(() => {
   }, 650)
 })
 
-const productsByCategory = (categoryId: string) => props.storefront.products.filter((product) => {
-  const matchesCategory = product.categoryId === categoryId
-  const needle = search.value.trim().toLowerCase()
-  const matchesSearch = !needle || `${product.name} ${product.description}`.toLowerCase().includes(needle)
-  const matchesTags = !activeTags.value.length || activeTags.value.every((tag) => product.tags.includes(tag))
-  return matchesCategory && matchesSearch && matchesTags
-})
-
-const activePrice = (product: ProductItem) => product.hasPromo && product.promoPrice !== null ? product.promoPrice : product.basePrice
-const primaryImage = (product: ProductItem) => product.imageUrl || product.imageUrls.find(Boolean) || ''
-const showOfferOnImage = (product: ProductItem) => Boolean(product.offerLabel && product.offerLabelPosition === 'image')
-const showOfferInline = (product: ProductItem) => Boolean(product.offerLabel && product.offerLabelPosition === 'price')
-const approvedReviewCount = (productId: string) => localReviews.value.filter((review) => review.productId === productId && review.approved).length
-const cartQty = (productId: string) => cartStore.items.filter((item) => item.productId === productId).reduce((sum, item) => sum + item.quantity, 0)
-const cartItemImage = (productId: string) => {
-  const product = props.storefront.products.find((entry) => entry.id === productId)
-  return product ? primaryImage(product) : ''
-}
-
 const toggleSearch = () => {
   searchOpen.value = !searchOpen.value
   if (!searchOpen.value) {
@@ -693,8 +696,6 @@ const toggleMulti = (groupId: string, optionId: string) => {
     ? current.filter((id) => id !== optionId)
     : [...current, optionId]
 }
-
-const groupRequired = (group: ProductVariantGroup) => group.options.some((option) => option.isRequired)
 
 const validateDetailSelection = () => {
   if (!selectedProduct.value) {
