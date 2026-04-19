@@ -11,7 +11,7 @@
 
       <fieldset class="contents">
         <div class="space-y-8 transition duration-200">
-          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
+          <section class="p-5">
             <div class="mb-4">
               <p class="eyebrow">General</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Identidad comercial</h3>
@@ -94,7 +94,7 @@
           </section>
           <AdminAddressMapEditor v-model="draft.address" />
 
-          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-3 sm:p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
+          <section class="p-3 sm:p-5">
             <div class="mb-4 flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
               <div>
                 <p class="eyebrow">Horarios</p>
@@ -150,7 +150,7 @@
             </div>
           </section>
 
-          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
+          <section class="p-5">
             <div class="mb-4">
               <p class="eyebrow">Delivery</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Zonas, tarifa y pedido minimo</h3>
@@ -192,7 +192,7 @@
             </div>
           </section>
 
-          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
+          <section class="p-5">
             <div class="mb-4">
               <p class="eyebrow">Pickup</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Recogida en tienda</h3>
@@ -205,7 +205,7 @@
             </div>
           </section>
 
-          <section class="rounded-[24px] border border-zinc-200 bg-white/70 p-5 dark:border-zinc-800 dark:bg-zinc-950/70">
+          <section class="p-5">
             <div class="mb-4">
               <p class="eyebrow">Checkout</p>
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Politicas de captura y visibilidad</h3>
