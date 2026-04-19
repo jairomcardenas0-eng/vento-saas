@@ -157,3 +157,67 @@ const save = async () => {
   }
 }
 </script>
+
+<style scoped>
+.toggle-3d {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 48px;
+  height: 28px;
+}
+
+.toggle-checkbox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.slider-3d {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e4e4e7 0%, #d4d4d8 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, background 0.2s ease;
+}
+
+.slider-3d::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.toggle-checkbox:checked + .slider-3d {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+}
+
+.toggle-checkbox:checked + .slider-3d::after {
+  transform: translateX(20px);
+}
+
+.toggle-checkbox:focus-visible + .slider-3d {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+.dark .slider-3d {
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
+}
+
+.dark .toggle-checkbox:checked + .slider-3d {
+  background: linear-gradient(180deg, #22d3ee 0%, #0891b2 100%);
+}
+</style>
