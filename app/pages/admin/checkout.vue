@@ -56,29 +56,29 @@
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Funciones activas del negocio</h3>
             </div>
             <div class="grid-form">
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.closed" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Forzar cierre total</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Forzar cierre total</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.reviewsEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Reseñas activas</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Reseñas activas</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.reviewModeration" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Moderación de reseñas</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Moderación de reseñas</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.cartEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrito habilitado</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrito habilitado</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.whatsappEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">WhatsApp directo habilitado</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">WhatsApp directo habilitado</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.productCarouselEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrusel de productos</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrusel de productos</span>
               </div>
               <label class="full mt-4"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Texto principal cuando el negocio no está disponible.</small></label>
             </div>
@@ -90,21 +90,21 @@
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Botones y estilo del cierre</h3>
             </div>
             <div class="grid-form">
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.closedShowMenuBtn" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón "Ver menú"</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón "Ver menú"</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.closedShowWhatsapp" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de WhatsApp</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de WhatsApp</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.closedShowCall" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de llamada</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de llamada</span>
               </div>
-              <div class="flex items-center gap-3">
+              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.closedTextBox" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Usar caja de texto</span>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Usar caja de texto</span>
               </div>
               <label><span>Color del texto</span><input v-model="draft.closedTextColor" type="color" /></label>
               <label><span>Fondo del botón “Ver menú”</span><input v-model="draft.closedMenuBtnBg" type="color" /></label>
@@ -159,6 +159,24 @@ const save = async () => {
 </script>
 
 <style scoped>
+.toggle-row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  min-height: 32px;
+}
+
+.toggle-row-label {
+  margin: 0;
+  line-height: 1.2;
+}
+
+.grid-form .toggle-3d {
+  display: inline-flex !important;
+  margin-top: 0 !important;
+  flex: 0 0 auto;
+}
+
 .toggle-3d {
   position: relative;
   display: inline-flex;
