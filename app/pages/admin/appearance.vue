@@ -139,9 +139,9 @@ const saving = ref(false)
 const saveError = ref('')
 
 const layoutOptions: Array<{ value: CatalogOperationalSettings['storefrontLayout'], label: string, description: string }> = [
-  { value: 'classic', label: 'Clasico', description: 'Header + cuadrícula/lista con barra inferior de carrito' },
-  { value: 'list', label: 'Lista Veloz', description: 'Compacto, scroll rapido, ideal para menus largos' },
-  { value: 'saas', label: 'SaaS Pro', description: 'Diseño corporativo premium' },
+  { value: 'classic', label: 'Clásico', description: 'Diseño tradicional con categorías en la parte superior, productos en cuadrícula de 2 columnas y botón de carrito fijo abajo. Ideal para negocios con fotos de productos grandes.' },
+  { value: 'list', label: 'Lista Veloz', description: 'Lista compacta de productos uno debajo del otro. Muestra más productos por pantalla, scroll más rápido. Perfecto para menús largos con muchos productos.' },
+  { value: 'saas', label: 'SaaS Pro', description: 'Diseño moderno estilo app corporativa con gradientes, tarjetas con sombras y animaciones premium. Para negocios que quieren una imagen más profesional y elegante.' },
 ]
 
 const themeFields: Array<{ key: keyof CatalogThemeSettings, label: string }> = [
