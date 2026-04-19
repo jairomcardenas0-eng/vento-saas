@@ -1,6 +1,12 @@
 <template>
   <section class="auth-shell">
     <form class="auth-card wide-card" @submit.prevent="submit">
+      <div class="catalog-top-actions">
+        <button type="button" class="ghost-btn small" @click="goBack">
+          {{ authStore.user?.defaultCatalogId ? 'Volver al panel' : 'Cancelar' }}
+        </button>
+      </div>
+
       <p class="eyebrow">Configuración inicial</p>
       <h1>Crea tu primer catálogo</h1>
       <p>Crea tu tienda principal para comenzar a gestionar productos, pedidos y operaciones.</p>
@@ -74,9 +80,23 @@ const confirm = async () => {
     error.value = err instanceof Error ? err.message : 'No se pudo crear el catálogo'
   }
 }
+
+const goBack = async () => {
+  if (authStore.user?.defaultCatalogId) {
+    await navigateTo('/admin')
+    return
+  }
+  await navigateTo('/login')
+}
 </script>
 
 <style scoped>
+.catalog-top-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-bottom: 0.5rem;
+}
+
 .catalog-name-warning {
   margin-top: 0.75rem;
   padding: 0.65rem 0.9rem;

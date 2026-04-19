@@ -208,6 +208,11 @@ type NavIconKey =
   | 'appearance'
   | 'share'
   | 'team'
+  | 'schedule'
+  | 'delivery'
+  | 'pickup'
+  | 'checkout'
+  | 'referrals'
 
 type NavItem = {
   to: string
@@ -238,9 +243,18 @@ const navIcons: Record<NavIconKey, string> = {
   appearance: '<circle cx="13.5" cy="6.5" r="1"/><circle cx="17.5" cy="10.5" r="1"/><circle cx="8.5" cy="7.5" r="1"/><circle cx="6.5" cy="12.5" r="1"/><path d="M12 2C6.5 2 2 6.5 2 12s4.5 10 10 10c.926 0 1.648-.746 1.648-1.688 0-.437-.18-.835-.437-1.125-.29-.289-.438-.652-.438-1.125a1.64 1.64 0 0 1 1.668-1.668h1.996c3.051 0 5.555-2.503 5.555-5.554C21.5 6.25 17.25 2 12 2z"/>',
   // Compartir: icono share
   share: '<circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>',
-  // Equipo: usuarios/personas
+  // Equipo
   team: '<path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/>',
-
+  // Horarios
+  schedule: '<circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>',
+  // Delivery
+  delivery: '<path d="M5 17H3a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11a2 2 0 0 1 2 2v3"/><rect x="9" y="11" width="14" height="10" rx="2" ry="2"/><circle cx="12" cy="21" r="1"/><circle cx="20" cy="21" r="1"/>',
+  // Recogida (pickup)
+  pickup: '<path d="M6 2L3 6v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V6l-3-4z"/><line x1="3" y1="6" x2="21" y2="6"/><path d="M16 10a4 4 0 0 1-8 0"/>',
+  // Checkout
+  checkout: '<path d="M9 11l3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/>',
+  // Referidos
+  referrals: '<path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>',
 }
 
 const route = useRoute()
@@ -292,9 +306,14 @@ const navGroups: NavGroup[] = [
     icon: 'commerce',
     items: [
       { to: '/admin/settings', label: 'Ajustes', icon: 'settings' },
+      { to: '/admin/schedule', label: 'Horarios', icon: 'schedule' },
+      { to: '/admin/delivery', label: 'Delivery', icon: 'delivery' },
+      { to: '/admin/pickup', label: 'Recogida', icon: 'pickup' },
+      { to: '/admin/checkout', label: 'Checkout', icon: 'checkout' },
       { to: '/admin/coupons', label: 'Cupones', icon: 'coupons' },
       { to: '/admin/appearance', label: 'Apariencia', icon: 'appearance' },
       { to: '/admin/share', label: 'Compartir', icon: 'share' },
+      { to: '/admin/referrals', label: 'Referidos', icon: 'referrals' },
       { to: '/admin/team', label: 'Equipo', icon: 'team' },
     ],
   },
@@ -307,10 +326,15 @@ const titleMap: Record<string, string> = {
   '/admin/categories': 'Categorías',
   '/admin/appearance': 'Apariencia',
   '/admin/settings': 'Ajustes del negocio',
+  '/admin/schedule': 'Horarios',
+  '/admin/delivery': 'Delivery',
+  '/admin/pickup': 'Recogida en tienda',
+  '/admin/checkout': 'Checkout y visibilidad',
   '/admin/share': 'Compartir',
   '/admin/reviews': 'Reseñas',
   '/admin/orders': 'Pedidos',
   '/admin/coupons': 'Cupones',
+  '/admin/referrals': 'Programa de referidos',
   '/admin/team': 'Equipo',
 }
 

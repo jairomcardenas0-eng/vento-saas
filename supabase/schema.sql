@@ -6,8 +6,15 @@ create table if not exists public.user_profiles (
   display_name text not null default 'Owner',
   default_catalog_id uuid null,
   system_role text not null default 'merchant' check (system_role in ('owner', 'merchant')),
+  referral_code text unique,
+  referred_by uuid null references public.user_profiles (uid) on delete set null,
   created_at timestamptz not null default timezone('utc', now())
 );
+
+-- Asegurar que las columnas de referidos existen (por si la tabla ya estaba creada)
+alter table public.user_profiles 
+  add column if not exists referral_code text unique,
+  add column if not exists referred_by uuid null references public.user_profiles (uid) on delete set null;
 
 create table if not exists public.catalogs (
   id uuid primary key default gen_random_uuid(),
@@ -833,3 +840,45 @@ create policy "owner_delete_team"
   );
 
 
+
+-- ─── Referidos ───────────────────────────────────────────────────────────────
+
+create table if not exists public.referrals (
+  id uuid primary key default gen_random_uuid(),
+  referrer_uid uuid not null references public.user_profiles (uid) on delete cascade,
+  referred_uid uuid not null references public.user_profiles (uid) on delete cascade,
+  status text not null default 'pending' check (status in ('pending', 'active', 'rewarded')),
+  reward_granted boolean not null default false,
+  reward_meta jsonb null,
+  created_at timestamptz not null default timezone('utc', now()),
+  unique (referrer_uid, referred_uid)
+);
+
+alter table public.referrals enable row level security;
+
+create index if not exists idx_referrals_referrer on public.referrals (referrer_uid);
+create index if not exists idx_referrals_referred on public.referrals (referred_uid);
+create index if not exists idx_user_profiles_referral_code on public.user_profiles (referral_code);
+
+-- Función pública para buscar UID de un referral_code (sin auth)
+create or replace function public.get_uid_by_referral_code(code text)
+returns uuid
+language sql
+stable
+security definer
+set search_path = public
+as $$
+  select uid from public.user_profiles where referral_code = code limit 1;
+$$;
+
+-- Solo el referidor puede ver sus referidos
+drop policy if exists "referrals_owner_select" on public.referrals;
+create policy "referrals_owner_select"
+  on public.referrals for select
+  using (referrer_uid = auth.uid());
+
+-- Solo inserción desde backend (service_role) o el propio usuario
+drop policy if exists "referrals_public_insert" on public.referrals;
+create policy "referrals_public_insert"
+  on public.referrals for insert
+  with check (true);

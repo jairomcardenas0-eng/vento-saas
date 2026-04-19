@@ -996,5 +996,85 @@ export const useSupabaseBackend = () => {
       ensureSuccess(error, 'No se pudieron hidratar los catálogos')
       return Promise.all((data || []).map(assembleCatalog))
     },
+
+    // ─── Referidos ────────────────────────────────────────────────────────────
+
+    async ensureReferralCode(uid: string): Promise<string> {
+      // Si ya tiene código, retornarlo directo
+      const { data: existing } = await $supabase
+        .from('user_profiles')
+        .select('referral_code')
+        .eq('uid', uid)
+        .maybeSingle()
+
+      if (existing?.referral_code) {
+        return existing.referral_code
+      }
+
+      // Generar código único: 3 letras aleatorias + 5 chars del UUID
+      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
+      const prefix = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
+      const suffix = uid.replace(/-/g, '').slice(0, 5).toUpperCase()
+      const code = `${prefix}${suffix}`
+
+      const { error } = await $supabase
+        .from('user_profiles')
+        .update({ referral_code: code })
+        .eq('uid', uid)
+
+      ensureSuccess(error, 'No se pudo generar el código de referido')
+      return code
+    },
+
+    async linkReferral(newUserUid: string, referralCode: string): Promise<void> {
+      if (!referralCode) return
+
+      // Buscar el UID del referidor por su código
+      const { data: referrerData } = await $supabase
+        .rpc('get_uid_by_referral_code', { code: referralCode.toUpperCase() })
+
+      if (!referrerData || referrerData === newUserUid) return
+
+      // Guardar referred_by en el perfil del nuevo usuario
+      await $supabase
+        .from('user_profiles')
+        .update({ referred_by: referrerData })
+        .eq('uid', newUserUid)
+
+      // Insertar en la tabla de referidos (ignorar si ya existe)
+      await $supabase
+        .from('referrals')
+        .upsert({
+          referrer_uid: referrerData,
+          referred_uid: newUserUid,
+          status: 'active',
+        }, { onConflict: 'referrer_uid,referred_uid', ignoreDuplicates: true })
+    },
+
+    async getReferralData(uid: string): Promise<{
+      code: string
+      referrals: Array<{ uid: string; displayName: string; email: string; createdAt: string; status: string }>
+      total: number
+    }> {
+      const code = await this.ensureReferralCode(uid)
+
+      const { data, error } = await $supabase
+        .from('referrals')
+        .select('referred_uid, status, created_at, user_profiles!referrals_referred_uid_fkey(display_name, email)')
+        .eq('referrer_uid', uid)
+        .order('created_at', { ascending: false })
+
+      ensureSuccess(error, 'No se pudieron cargar los referidos')
+
+      const referrals = (data || []).map((row: any) => ({
+        uid: row.referred_uid,
+        displayName: row.user_profiles?.display_name || 'Sin nombre',
+        email: row.user_profiles?.email || '',
+        createdAt: row.created_at,
+        status: row.status,
+      }))
+
+      return { code, referrals, total: referrals.length }
+    },
   }
 }
