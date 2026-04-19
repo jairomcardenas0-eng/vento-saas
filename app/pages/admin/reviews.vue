@@ -1,7 +1,20 @@
 <template>
-  <div v-if="catalog" class="admin-grid">
-    <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Moderacion" title="Cluster de resenas" description="Bandeja dual para auditoria, aprobacion y respuesta del negocio." />
+  <AdminStatePanel
+    v-if="!catalog"
+    title="No hay un catálogo activo"
+    description="Selecciona un catálogo para revisar las reseñas."
+  />
+
+  <AdminStatePanel
+    v-else-if="reviewsStore.loading && !reviewsStore.items.length"
+    tone="loading"
+    title="Cargando reseñas"
+    description="Estamos sincronizando la moderación en tiempo real."
+  />
+
+  <div v-else class="admin-grid">
+    <section class="panel-card span-2 min-w-0">
+      <UiSectionHeader eyebrow="Moderación" title="Bandeja de reseñas" description="Aprueba, responde y limpia las reseñas del catálogo." />
 
       <div class="review-metrics">
         <article class="metric-card">
@@ -23,13 +36,16 @@
       </div>
 
       <div class="admin-grid">
-        <section class="panel-card">
-          <UiSectionHeader eyebrow="Inbox" title="Pendientes de auditoria" />
-          <div class="table-list">
-            <article v-for="review in reviewsStore.pending" :key="review.id" class="list-row">
-              <div>
-                <strong>{{ review.name }} · {{ review.productName }}</strong>
-                <p>{{ review.comment }}</p>
+        <section class="panel-card min-w-0">
+          <UiSectionHeader eyebrow="Pendientes" title="Por revisar" />
+          <div v-if="!reviewsStore.pending.length" class="rounded-[20px] border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+            No hay reseñas pendientes.
+          </div>
+          <div v-else class="table-list">
+            <article v-for="review in reviewsStore.pending" :key="review.id" class="list-row min-w-0">
+              <div class="min-w-0">
+                <strong class="block break-words">{{ review.name }} · {{ review.productName }}</strong>
+                <p class="break-words">{{ review.comment }}</p>
                 <small class="inline-muted">{{ '★'.repeat(review.rating) }}</small>
               </div>
               <div class="row-meta wrap">
@@ -41,17 +57,20 @@
           </div>
         </section>
 
-        <section class="panel-card">
-          <UiSectionHeader eyebrow="Publicadas" title="Resenas visibles" />
-          <div class="table-list">
-            <article v-for="review in reviewsStore.approved" :key="review.id" class="list-row">
-              <div>
-                <strong>{{ review.name }} · {{ review.productName }}</strong>
-                <p>{{ review.comment }}</p>
+        <section class="panel-card min-w-0">
+          <UiSectionHeader eyebrow="Publicadas" title="Reseñas visibles" />
+          <div v-if="!reviewsStore.approved.length" class="rounded-[20px] border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+            Aún no hay reseñas aprobadas.
+          </div>
+          <div v-else class="table-list">
+            <article v-for="review in reviewsStore.approved" :key="review.id" class="list-row min-w-0">
+              <div class="min-w-0">
+                <strong class="block break-words">{{ review.name }} · {{ review.productName }}</strong>
+                <p class="break-words">{{ review.comment }}</p>
                 <small class="inline-muted">{{ '★'.repeat(review.rating) }}</small>
                 <div v-if="review.adminReply" class="review-reply">
                   <strong>{{ review.adminReply.name }}</strong>
-                  <p>{{ review.adminReply.text }}</p>
+                  <p class="break-words">{{ review.adminReply.text }}</p>
                 </div>
               </div>
               <div class="row-meta wrap">
@@ -75,6 +94,7 @@ const catalog = computed(() => catalogStore.activeCatalog)
 
 watch(catalog, (value) => {
   if (!value) {
+    reviewsStore.stopRealtime()
     return
   }
 
@@ -89,6 +109,7 @@ const approve = async (reviewId: string) => {
   if (!catalog.value) {
     return
   }
+
   await reviewsStore.approve(catalog.value.id, reviewId)
 }
 
@@ -114,7 +135,7 @@ const remove = async (reviewId: string) => {
     return
   }
 
-  if (!window.confirm('Eliminar esta resena del cluster publico?')) {
+  if (!window.confirm('¿Eliminar esta reseña de la vista pública?')) {
     return
   }
 
@@ -167,4 +188,4 @@ const remove = async (reviewId: string) => {
 .dark .metric-value {
   color: #f8fafc;
 }
- </style>
+</style>

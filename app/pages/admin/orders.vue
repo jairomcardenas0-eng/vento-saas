@@ -1,7 +1,20 @@
 <template>
-  <div v-if="catalog" class="admin-grid">
-    <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="POS" title="Caja registradora en tiempo real" description="Pedidos entrando por snapshot con detalle expandible y control de estados." />
+  <AdminStatePanel
+    v-if="!catalog"
+    title="No hay un catálogo activo"
+    description="Selecciona un catálogo para revisar los pedidos."
+  />
+
+  <AdminStatePanel
+    v-else-if="ordersStore.loading && !ordersStore.items.length"
+    tone="loading"
+    title="Cargando pedidos"
+    description="Estamos sincronizando la caja en tiempo real."
+  />
+
+  <div v-else class="admin-grid">
+    <section class="panel-card span-2 min-w-0">
+      <UiSectionHeader eyebrow="Operación" title="Pedidos en tiempo real" description="Bandeja de pedidos con detalle expandible y control de estados." />
 
       <div class="order-filters" role="tablist" aria-label="Filtros de pedidos">
         <button
@@ -12,20 +25,26 @@
           @click="activeTab = tab.key"
         >
           <span class="order-filter-label">{{ tab.label }}</span>
+          <span class="text-xs opacity-70">{{ tab.count }}</span>
         </button>
       </div>
 
+      <div v-if="!filteredOrders.length" class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+        No hay pedidos en este estado.
+      </div>
 
-      <div class="table-list">
-        <article v-for="order in filteredOrders" :key="order.id" class="list-row">
-          <div>
-            <strong>#{{ order.id }} · {{ order.customerName || 'Cliente sin nombre' }}</strong>
-            <p>{{ order.items.map(item => `${item.qty}x ${item.productName}`).join(', ') }}</p>
-            <small class="inline-muted">{{ new Date(order.createdAt).toLocaleString('es-MX') }} · {{ order.deliveryMode }} · {{ order.deliveryZoneName || 'Sin zona' }}</small>
+      <div v-else class="table-list">
+        <article v-for="order in filteredOrders" :key="order.id" class="list-row min-w-0">
+          <div class="min-w-0">
+            <strong class="block break-words">#{{ order.id }} · {{ order.customerName || 'Cliente sin nombre' }}</strong>
+            <p class="break-words">{{ order.items.map(item => `${item.qty}x ${item.productName}`).join(', ') }}</p>
+            <small class="inline-muted block break-words">
+              {{ new Date(order.createdAt).toLocaleString('es-MX') }} · {{ deliveryModeLabel(order.deliveryMode) }} · {{ order.deliveryZoneName || 'Sin zona' }}
+            </small>
           </div>
-          <div class="row-meta wrap">
+          <div class="row-meta wrap min-w-0">
             <span>{{ money(order.total, catalog.settings.currency) }}</span>
-            <select :value="normalizeStatus(order.status)" @change="changeStatus(order.id, ($event.target as HTMLSelectElement).value as any)">
+            <select :value="normalizeStatus(order.status)" @change="changeStatus(order.id, ($event.target as HTMLSelectElement).value as OrderStatus)">
               <option value="new">Nuevo</option>
               <option value="preparing">Preparando</option>
               <option value="completed">Completado</option>
@@ -46,11 +65,11 @@
       leave-to-class="opacity-0"
     >
       <div v-if="selectedOrder" class="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" @click.self="selectedOrder = null">
-        <div class="absolute inset-y-4 right-4 left-4 mx-auto max-w-3xl overflow-y-auto rounded-[32px] border border-zinc-200 bg-white/95 p-6 shadow-[0_30px_90px_rgba(16,12,10,0.28)] dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div class="absolute inset-x-4 inset-y-4 mx-auto max-w-3xl overflow-y-auto rounded-[32px] border border-zinc-200 bg-white/95 p-6 shadow-[0_30px_90px_rgba(16,12,10,0.28)] dark:border-zinc-800 dark:bg-zinc-950/95">
           <div class="mb-5 flex items-start justify-between gap-4">
-            <div>
+            <div class="min-w-0">
               <p class="eyebrow">Pedido</p>
-              <h3 class="m-0 text-2xl text-zinc-900 dark:text-zinc-100">#{{ selectedOrder.id }}</h3>
+              <h3 class="m-0 break-all text-2xl text-zinc-900 dark:text-zinc-100">#{{ selectedOrder.id }}</h3>
               <p class="section-copy mt-2 text-sm">{{ new Date(selectedOrder.createdAt).toLocaleString('es-MX') }}</p>
             </div>
             <button class="ghost-btn small" @click="selectedOrder = null">Cerrar</button>
@@ -59,26 +78,26 @@
           <div class="grid gap-4 md:grid-cols-2">
             <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <strong class="block text-zinc-900 dark:text-zinc-100">Cliente</strong>
-              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerName || 'Sin nombre' }}</p>
-              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerAddress || 'Sin direccion' }}</p>
-              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Pago: {{ selectedOrder.paymentMethod }}</p>
+              <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerName || 'Sin nombre' }}</p>
+              <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerAddress || 'Sin dirección' }}</p>
+              <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">Pago: {{ selectedOrder.paymentMethod || 'Pendiente' }}</p>
             </div>
             <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <strong class="block text-zinc-900 dark:text-zinc-100">Operacion</strong>
-              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Modalidad: {{ selectedOrder.deliveryMode }}</p>
+              <strong class="block text-zinc-900 dark:text-zinc-100">Operación</strong>
+              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Modalidad: {{ deliveryModeLabel(selectedOrder.deliveryMode) }}</p>
               <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Zona: {{ selectedOrder.deliveryZoneName || 'No aplica' }}</p>
-              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Estado: {{ normalizeStatus(selectedOrder.status) }}</p>
+              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Estado: {{ statusLabel(normalizeStatus(selectedOrder.status)) }}</p>
             </div>
           </div>
 
           <div class="mt-5 rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <strong class="block text-zinc-900 dark:text-zinc-100">Lineas del pedido</strong>
+            <strong class="block text-zinc-900 dark:text-zinc-100">Líneas del pedido</strong>
             <div class="mt-4 space-y-3">
               <article v-for="item in selectedOrder.items" :key="`${selectedOrder.id}-${item.productId}-${item.productName}`" class="rounded-[18px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
-                <div class="flex items-start justify-between gap-4">
-                  <div>
-                    <strong class="block text-zinc-900 dark:text-zinc-100">{{ item.qty }}x {{ item.productName }}</strong>
-                    <p v-if="item.variantSummary.length" class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">{{ item.variantSummary.join(', ') }}</p>
+                <div class="flex flex-wrap items-start justify-between gap-4">
+                  <div class="min-w-0">
+                    <strong class="block break-words text-zinc-900 dark:text-zinc-100">{{ item.qty }}x {{ item.productName }}</strong>
+                    <p v-if="item.variantSummary.length" class="mt-2 break-words text-sm text-zinc-500 dark:text-zinc-400">{{ item.variantSummary.join(', ') }}</p>
                   </div>
                   <strong class="text-zinc-900 dark:text-zinc-100">{{ money(item.totalPrice, catalog.settings.currency) }}</strong>
                 </div>
@@ -91,7 +110,7 @@
             <div class="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
               <div class="flex items-center justify-between"><span>Subtotal</span><strong>{{ money(selectedOrder.subtotal || selectedOrder.total, catalog.settings.currency) }}</strong></div>
               <div class="flex items-center justify-between"><span>Descuento</span><strong>-{{ money(selectedOrder.discountTotal || 0, catalog.settings.currency) }}</strong></div>
-              <div class="flex items-center justify-between"><span>Envio</span><strong>{{ money(selectedOrder.deliveryFee || 0, catalog.settings.currency) }}</strong></div>
+              <div class="flex items-center justify-between"><span>Envío</span><strong>{{ money(selectedOrder.deliveryFee || 0, catalog.settings.currency) }}</strong></div>
               <div class="flex items-center justify-between border-t border-zinc-200 pt-2 dark:border-zinc-800"><span>Total</span><strong class="text-lg text-zinc-900 dark:text-zinc-100">{{ money(selectedOrder.total, catalog.settings.currency) }}</strong></div>
               <div v-if="selectedOrder.appliedCoupon?.code" class="pt-2 text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Cupón aplicado: {{ selectedOrder.appliedCoupon.code }}</div>
             </div>
@@ -118,11 +137,24 @@ const normalizeStatus = (status: OrderStatus) => {
   if (status === 'viewed') {
     return 'preparing'
   }
+
   if (status === 'closed') {
     return 'completed'
   }
+
   return status
 }
+
+const statusLabel = (status: string) => {
+  if (status === 'new') return 'Nuevo'
+  if (status === 'preparing') return 'Preparando'
+  if (status === 'completed') return 'Completado'
+  if (status === 'cancelled') return 'Cancelado'
+  return status
+}
+
+const deliveryModeLabel = (mode: CatalogOrder['deliveryMode']) =>
+  mode === 'delivery' ? 'Entrega a domicilio' : 'Recogida'
 
 const tabs = computed(() => [
   { key: 'all' as const, label: 'Todos', count: ordersStore.items.length },
@@ -142,6 +174,7 @@ const filteredOrders = computed(() => {
 
 watch(catalog, (value) => {
   if (!value) {
+    ordersStore.stopRealtime()
     return
   }
 
@@ -176,7 +209,7 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.85rem;
+  gap: 0.6rem;
   border-radius: 18px;
   border: 1.5px solid rgba(148, 163, 184, 0.25);
   background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.9));

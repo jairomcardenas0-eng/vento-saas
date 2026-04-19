@@ -1,7 +1,19 @@
 <template>
-  <div v-if="catalog" class="admin-grid">
+  <div v-if="!catalog" class="admin-grid">
+    <AdminStatePanel
+      class="span-2"
+      title="No hay catálogo activo"
+      description="Selecciona o crea un catálogo para personalizar la apariencia del menú público."
+    />
+  </div>
+
+  <div v-else class="admin-grid">
     <section class="panel-card span-2 relative overflow-hidden">
-      <UiSectionHeader eyebrow="Storefront" title="Layout del catalogo" description="Selecciona la experiencia visual que veran tus clientes en el menu publico.">
+      <UiSectionHeader
+        eyebrow="Apariencia"
+        title="Diseño del catálogo"
+        description="Selecciona la experiencia visual que verán tus clientes en el menú público."
+      >
         <template #actions>
           <button class="solid-btn" :disabled="saving" @click="save">
             {{ saving ? 'Guardando...' : 'Guardar apariencia' }}
@@ -68,10 +80,16 @@
         </button>
       </div>
 
-      <p class="mt-4 text-sm text-zinc-500 dark:text-zinc-400">El layout se aplica al instante en tu catalogo publico.</p>
+      <p class="mt-4 text-sm text-zinc-500 dark:text-zinc-400">
+        El diseño se aplica al instante en tu catálogo público.
+      </p>
 
       <div class="relative mt-8 border-t border-zinc-200 pt-8 dark:border-zinc-800">
-        <UiSectionHeader eyebrow="Tema visual" title="Variables del tema" description="Colores, banner y superficies del layout publico." />
+        <UiSectionHeader
+          eyebrow="Tema visual"
+          title="Variables del tema"
+          description="Colores, banner y superficies del catálogo público."
+        />
 
         <fieldset class="contents">
           <div class="transition duration-200">
@@ -103,13 +121,13 @@
                 <select v-model="draft.cardStyle">
                   <option value="flat">Plano</option>
                   <option value="shadow">Sombra</option>
-                  <option value="glass-premium">Glass</option>
-                  <option value="holographic">Holografico</option>
+                  <option value="glass-premium">Vidrio</option>
+                  <option value="holographic">Holográfico</option>
                 </select>
               </label>
               <label><span>Modo del banner</span>
                 <select v-model="draft.bannerMode">
-                  <option value="static">Estatico</option>
+                  <option value="static">Estático</option>
                   <option value="loop">Loop</option>
                 </select>
               </label>
@@ -125,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import AdminStatePanel from '~/components/admin/AdminStatePanel.vue'
 import { defaultTheme } from '~/data/defaults'
 import type { CatalogOperationalSettings, CatalogThemeSettings } from '~/types/catalog'
 
@@ -139,10 +158,9 @@ const layoutDraft = ref<CatalogOperationalSettings['storefrontLayout']>('classic
 const saving = ref(false)
 const saveError = ref('')
 
-// Sync theme draft and layout to preview store in real-time
 watch([draft, layoutDraft], ([themeValue, layoutValue]) => {
-  previewStore.setTheme(JSON.parse(JSON.stringify(themeValue)))
-  previewStore.setSettings({ storefrontLayout: layoutValue } as any)
+  previewStore.setTheme(JSON.parse(JSON.stringify(themeValue)) as Partial<CatalogThemeSettings>)
+  previewStore.setSettings({ storefrontLayout: layoutValue })
 }, { deep: true })
 
 onUnmounted(() => {
@@ -151,37 +169,37 @@ onUnmounted(() => {
 })
 
 const layoutOptions: Array<{ value: CatalogOperationalSettings['storefrontLayout'], label: string, description: string }> = [
-  { value: 'classic', label: 'Clásico', description: 'Diseño tradicional con categorías en la parte superior, productos en cuadrícula de 2 columnas y botón de carrito fijo abajo. Ideal para negocios con fotos de productos grandes.' },
-  { value: 'list', label: 'Lista Veloz', description: 'Lista compacta de productos uno debajo del otro. Muestra más productos por pantalla, scroll más rápido. Perfecto para menús largos con muchos productos.' },
-  { value: 'saas', label: 'SaaS Pro', description: 'Diseño moderno estilo app corporativa con gradientes, tarjetas con sombras y animaciones premium. Para negocios que quieren una imagen más profesional y elegante.' },
+  { value: 'classic', label: 'Clásico', description: 'Diseño tradicional con categorías en la parte superior, productos en cuadrícula de dos columnas y botón del carrito fijo abajo. Ideal para negocios con fotos de productos grandes.' },
+  { value: 'list', label: 'Lista veloz', description: 'Lista compacta de productos uno debajo del otro. Muestra más productos por pantalla y permite un desplazamiento más rápido. Perfecto para menús largos con muchos productos.' },
+  { value: 'saas', label: 'SaaS Pro', description: 'Diseño moderno con gradientes, tarjetas con sombras y animaciones premium. Ideal para negocios que quieren una imagen más profesional y elegante.' },
 ]
 
 const themeFields: Array<{ key: keyof CatalogThemeSettings, label: string }> = [
   { key: 'primary', label: 'Primario' },
   { key: 'bg', label: 'Fondo' },
-  { key: 'headerBg', label: 'Header' },
-  { key: 'headerText', label: 'Texto header' },
+  { key: 'headerBg', label: 'Encabezado' },
+  { key: 'headerText', label: 'Texto encabezado' },
   { key: 'cardBg', label: 'Tarjetas' },
-  { key: 'catNoteColor', label: 'Nota categoria' },
+  { key: 'catNoteColor', label: 'Nota categoría' },
   { key: 'priceColor', label: 'Precio' },
   { key: 'priceOldColor', label: 'Precio tachado' },
-  { key: 'descColor', label: 'Descripcion' },
-  { key: 'productTitleColor', label: 'Titulo producto' },
-  { key: 'offerBadgeBg', label: 'Badge oferta' },
-  { key: 'offerBadgeText', label: 'Texto badge oferta' },
-  { key: 'timerBadgeBg', label: 'Badge timer' },
-  { key: 'timerBadgeText', label: 'Texto badge timer' },
-  { key: 'tagBg', label: 'Tags fondo' },
-  { key: 'tagText', label: 'Tags texto' },
-  { key: 'searchInputBg', label: 'Busqueda fondo' },
-  { key: 'searchInputBorder', label: 'Busqueda borde' },
+  { key: 'descColor', label: 'Descripción' },
+  { key: 'productTitleColor', label: 'Título producto' },
+  { key: 'offerBadgeBg', label: 'Insignia oferta' },
+  { key: 'offerBadgeText', label: 'Texto insignia oferta' },
+  { key: 'timerBadgeBg', label: 'Insignia temporizador' },
+  { key: 'timerBadgeText', label: 'Texto insignia temporizador' },
+  { key: 'tagBg', label: 'Etiquetas fondo' },
+  { key: 'tagText', label: 'Etiquetas texto' },
+  { key: 'searchInputBg', label: 'Búsqueda fondo' },
+  { key: 'searchInputBorder', label: 'Búsqueda borde' },
   { key: 'detailBg', label: 'Modal fondo' },
   { key: 'detailNameColor', label: 'Modal nombre' },
-  { key: 'detailDescColor', label: 'Modal descripcion' },
+  { key: 'detailDescColor', label: 'Modal descripción' },
   { key: 'detailPriceColor', label: 'Modal precio' },
-  { key: 'btnCartBg', label: 'Boton carrito' },
+  { key: 'btnCartBg', label: 'Botón carrito' },
   { key: 'btnCartText', label: 'Texto carrito' },
-  { key: 'btnWaBg', label: 'Boton WhatsApp' },
+  { key: 'btnWaBg', label: 'Botón WhatsApp' },
   { key: 'btnWaText', label: 'Texto WhatsApp' },
   { key: 'bannerBg', label: 'Banner fondo' },
   { key: 'bannerTextColor', label: 'Banner texto' },
@@ -203,6 +221,7 @@ const save = async () => {
 
   saving.value = true
   saveError.value = ''
+
   try {
     await catalogStore.updateStorefrontLayout(layoutDraft.value)
 

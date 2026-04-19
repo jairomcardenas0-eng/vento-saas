@@ -1,7 +1,13 @@
 <template>
-  <div v-if="catalog" class="admin-grid">
-    <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Operación" title="Pedido y visibilidad" description="Controla qué datos se requieren al hacer un pedido y opciones del negocio.">
+  <AdminStatePanel
+    v-if="!catalog"
+    title="No hay un catálogo activo"
+    description="Selecciona un catálogo para definir cómo se capturan los pedidos."
+  />
+
+  <div v-else class="admin-grid">
+    <section class="panel-card span-2 min-w-0">
+      <UiSectionHeader eyebrow="Operación" title="Pedido y visibilidad" description="Controla qué datos se requieren al crear un pedido y qué funciones están visibles.">
         <template #actions>
           <button class="solid-btn" :disabled="saving" @click="save">
             {{ saving ? 'Guardando...' : 'Guardar ajustes' }}
@@ -23,7 +29,7 @@
                   <option value="obligatorio">Obligatorio</option>
                   <option value="opcional">Opcional</option>
                 </select>
-                <small>Define si el nombre se exige antes de enviar a WhatsApp.</small>
+                <small>Define si se exige antes de enviar el pedido.</small>
               </label>
               <label>
                 <span>Dirección de entrega</span>
@@ -31,7 +37,7 @@
                   <option value="obligatorio">Obligatorio</option>
                   <option value="opcional">Opcional</option>
                 </select>
-                <small>Solo aplica a pedidos a domicilio.</small>
+                <small>Solo aplica a pedidos con entrega a domicilio.</small>
               </label>
               <label>
                 <span>Método de pago</span>
@@ -39,7 +45,7 @@
                   <option value="obligatorio">Obligatorio</option>
                   <option value="opcional">Opcional</option>
                 </select>
-                <small>Captura del método de pago antes de enviar a WhatsApp.</small>
+                <small>Se captura antes de enviar a WhatsApp.</small>
               </label>
             </div>
           </section>
@@ -55,8 +61,8 @@
               <label class="toggle"><input v-model="draft.reviewModeration" type="checkbox" /><span>Moderación de reseñas</span></label>
               <label class="toggle"><input v-model="draft.cartEnabled" type="checkbox" /><span>Carrito habilitado</span></label>
               <label class="toggle"><input v-model="draft.whatsappEnabled" type="checkbox" /><span>WhatsApp directo habilitado</span></label>
-              <label class="toggle"><input v-model="draft.productCarouselEnabled" type="checkbox" /><span>Carrusel de producto</span></label>
-              <label class="full"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Mensaje principal cuando el negocio queda fuera de servicio.</small></label>
+              <label class="toggle"><input v-model="draft.productCarouselEnabled" type="checkbox" /><span>Carrusel de productos</span></label>
+              <label class="full"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Texto principal cuando el negocio no está disponible.</small></label>
             </div>
           </section>
 
@@ -66,16 +72,16 @@
               <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Botones y estilo del cierre</h3>
             </div>
             <div class="grid-form">
-              <label class="toggle"><input v-model="draft.closedShowMenuBtn" type="checkbox" /><span>Mostrar botón Ver menú</span></label>
-              <label class="toggle"><input v-model="draft.closedShowWhatsapp" type="checkbox" /><span>Mostrar botón WhatsApp</span></label>
-              <label class="toggle"><input v-model="draft.closedShowCall" type="checkbox" /><span>Mostrar botón Llamar</span></label>
+              <label class="toggle"><input v-model="draft.closedShowMenuBtn" type="checkbox" /><span>Mostrar botón “Ver menú”</span></label>
+              <label class="toggle"><input v-model="draft.closedShowWhatsapp" type="checkbox" /><span>Mostrar botón de WhatsApp</span></label>
+              <label class="toggle"><input v-model="draft.closedShowCall" type="checkbox" /><span>Mostrar botón de llamada</span></label>
               <label class="toggle"><input v-model="draft.closedTextBox" type="checkbox" /><span>Usar caja de texto</span></label>
               <label><span>Color del texto</span><input v-model="draft.closedTextColor" type="color" /></label>
-              <label><span>Fondo botón Ver menú</span><input v-model="draft.closedMenuBtnBg" type="color" /></label>
-              <label><span>Texto botón Ver menú</span><input v-model="draft.closedMenuBtnText" type="color" /></label>
-              <label><span>Fondo caja de texto</span><input v-model="draft.closedTextBoxColor" type="color" /></label>
-              <label><span>Opacidad caja (%)</span><input v-model.number="draft.closedTextBoxOpacity" type="number" min="0" max="100" step="1" /></label>
-              <label><span>Tamaño texto principal</span><input v-model.number="draft.closedTextSizeLarge" type="number" min="12" step="1" /></label>
+              <label><span>Fondo del botón “Ver menú”</span><input v-model="draft.closedMenuBtnBg" type="color" /></label>
+              <label><span>Texto del botón “Ver menú”</span><input v-model="draft.closedMenuBtnText" type="color" /></label>
+              <label><span>Fondo de la caja de texto</span><input v-model="draft.closedTextBoxColor" type="color" /></label>
+              <label><span>Opacidad de la caja (%)</span><input v-model.number="draft.closedTextBoxOpacity" type="number" min="0" max="100" step="1" /></label>
+              <label><span>Tamaño del texto principal</span><input v-model.number="draft.closedTextSizeLarge" type="number" min="12" step="1" /></label>
             </div>
           </section>
         </div>
@@ -99,7 +105,10 @@ const saving = ref(false)
 const saveError = ref('')
 
 watch(catalog, (value) => {
-  if (!value) return
+  if (!value) {
+    return
+  }
+
   draft.value = {
     ...defaultSettings(value.settings.businessName, value.slug),
     ...JSON.parse(JSON.stringify(value.settings)),
@@ -112,7 +121,7 @@ const save = async () => {
   try {
     await catalogStore.updateSettings({ ...draft.value })
   } catch (error) {
-    saveError.value = error instanceof Error ? error.message : 'No se pudieron guardar los ajustes.'
+    saveError.value = error instanceof Error ? error.message : 'No se pudieron guardar los ajustes de pedido.'
   } finally {
     saving.value = false
   }

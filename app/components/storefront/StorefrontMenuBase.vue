@@ -5,9 +5,9 @@
         <div class="top-banner-track">
           <span v-for="index in 2" :key="index" class="top-banner-item">
             {{ theme.bannerText }}
-            <span class="top-banner-sep">•</span>
+            <span class="top-banner-sep">�</span>
             {{ theme.bannerText }}
-            <span class="top-banner-sep">•</span>
+            <span class="top-banner-sep">�</span>
             {{ theme.bannerText }}
           </span>
         </div>
@@ -21,9 +21,9 @@
           <div class="top-banner-track">
             <span v-for="index in 2" :key="index" class="top-banner-item">
               {{ theme.bannerText }}
-              <span class="top-banner-sep">•</span>
+              <span class="top-banner-sep">�</span>
               {{ theme.bannerText }}
-              <span class="top-banner-sep">•</span>
+              <span class="top-banner-sep">�</span>
               {{ theme.bannerText }}
             </span>
           </div>
@@ -72,9 +72,9 @@
 
     <div v-if="loadingVisible" id="loading">
       <div class="loading-shell">
-        <div class="loading-brand">{{ settings.logoUrl ? '🍽️' : initials }}</div>
-        <div class="loading-title">Preparando tu menú</div>
-        <div class="loading-subtitle">Cargando tu menú digital...</div>
+        <div class="loading-brand">{{ settings.logoUrl ? '???' : initials }}</div>
+        <div class="loading-title">Preparando tu men�</div>
+        <div class="loading-subtitle">Cargando tu men� digital...</div>
         <div class="loading-progress"></div>
       </div>
     </div>
@@ -91,7 +91,7 @@
             :style="closedMenuButtonStyle"
             @click="viewingMenuFromClosed = true"
           >
-            Ver menú
+            Ver men�
           </button>
           <a v-if="settings.closedShowWhatsapp && whatsappHref" id="closed-whatsapp-btn" :href="whatsappHref" target="_blank" rel="noopener noreferrer">WhatsApp</a>
           <a v-if="settings.closedShowCall && phoneHref" id="closed-call-btn" :href="phoneHref">Llamar</a>
@@ -113,7 +113,7 @@
           >
             <div class="product-img-container" :class="{ list: layout === 'list' }">
               <span v-if="approvedReviewCount(product.id) > 0" class="product-review-badge">
-                <span class="icon">💬</span>
+                <span class="icon">??</span>
                 <span>{{ approvedReviewCount(product.id) }}</span>
               </span>
               <img v-if="primaryImage(product)" :src="primaryImage(product)" :alt="product.name" class="product-img">
@@ -152,7 +152,7 @@
                 <button v-if="!settings.cartEnabled" class="add-btn-mini hidden-action">+</button>
                 <button v-else-if="product.variants.length > 0" class="add-btn-mini" @click.stop="openDetail(product)">+</button>
                 <div v-else-if="cartQty(product.id) > 0" class="card-qty-control" @click.stop>
-                  <button class="card-qty-btn minus" @click="changeSimpleQty(product, -1)">{{ cartQty(product.id) === 1 ? '✕' : '−' }}</button>
+                  <button class="card-qty-btn minus" @click="changeSimpleQty(product, -1)">{{ cartQty(product.id) === 1 ? '?' : '-' }}</button>
                   <div class="card-qty-val">{{ cartQty(product.id) }}</div>
                   <button class="card-qty-btn plus" @click="changeSimpleQty(product, 1)">+</button>
                 </div>
@@ -165,10 +165,10 @@
     </div>
 
     <section v-if="hasMap" id="menu-map-section" class="menu-map-section">
-      <h3 class="menu-map-title">📍 Ubicación</h3>
+      <h3 class="menu-map-title">?? Ubicaci�n</h3>
       <iframe id="menu-map-frame" class="menu-map-frame" :src="mapEmbedUrl" loading="lazy" referrerpolicy="no-referrer-when-downgrade" allowfullscreen />
       <div class="menu-map-open-wrap">
-        <a id="menu-map-open" class="menu-map-open" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">🗺️ Abrir en Google Maps</a>
+        <a id="menu-map-open" class="menu-map-open" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">??? Abrir en Google Maps</a>
       </div>
     </section>
 
@@ -177,12 +177,12 @@
         <div v-for="item in cartStore.items.slice(0, 4)" :key="item.cartItemId" class="preview-tag">
           <span class="preview-qty">{{ item.quantity }}x</span>
           <span>{{ item.productName }}</span>
-          <button class="preview-remove" @click="removeFromCart(item.cartItemId)">✕</button>
+          <button class="preview-remove" @click="removeFromCart(item.cartItemId)">?</button>
         </div>
       </div>
       <div class="cart-main-row">
         <div class="cart-info">
-          <div class="cart-icon">🛒 <span class="cart-badge">{{ cartStore.totalItems }}</span></div>
+          <div class="cart-icon">?? <span class="cart-badge">{{ cartStore.totalItems }}</span></div>
           <div>
             <div class="cart-total">{{ money(cartStore.totalPrice, settings.currency) }}</div>
             <div class="cart-subtext">Total estimado</div>
@@ -194,11 +194,11 @@
 
     <div v-if="filtersOpen" class="modal-overlay active" @click.self="filtersOpen = false">
       <div class="modal-header">
-        <span class="modal-title">Filtros del Menú</span>
-        <button class="close-btn" @click="filtersOpen = false">×</button>
+        <span class="modal-title">Filtros del Men�</span>
+        <button class="close-btn" @click="filtersOpen = false">�</button>
       </div>
       <div class="detail-content modal-pad">
-        <p class="modal-copy">Selecciona una o más etiquetas para filtrar los platillos:</p>
+        <p class="modal-copy">Selecciona una o m�s etiquetas para filtrar los platillos:</p>
         <div class="tags-filter-bar">
           <button
             v-for="tag in availableTags"
@@ -219,15 +219,15 @@
     <div v-if="selectedProduct" class="modal-overlay active" @click.self="closeDetail">
       <div class="modal-header">
         <span class="modal-title">Detalle</span>
-        <button class="close-btn" @click="closeDetail">×</button>
+        <button class="close-btn" @click="closeDetail">�</button>
       </div>
       <div class="detail-content">
         <div class="detail-gallery">
           <img :src="detailImages[detailImageIndex] || ''" :alt="selectedProduct.name" class="detail-img">
           <span v-if="showOfferOnImage(selectedProduct)" class="product-offer-badge image">{{ selectedProduct.offerLabel }}</span>
           <span v-if="timerMeta(selectedProduct) && timerMeta(selectedProduct)?.position === 'image-right'" class="product-timer-badge image-right">{{ timerMeta(selectedProduct)?.text }}</span>
-          <button v-if="detailImages.length > 1" class="detail-gallery-btn prev" @click="detailImageIndex = previousDetailImage">‹</button>
-          <button v-if="detailImages.length > 1" class="detail-gallery-btn next" @click="detailImageIndex = nextDetailImage">›</button>
+          <button v-if="detailImages.length > 1" class="detail-gallery-btn prev" @click="detailImageIndex = previousDetailImage">�</button>
+          <button v-if="detailImages.length > 1" class="detail-gallery-btn next" @click="detailImageIndex = nextDetailImage">�</button>
           <div v-if="detailImages.length > 1" class="detail-gallery-count">{{ detailImageIndex + 1 }}/{{ detailImages.length }}</div>
         </div>
         <div v-if="detailImages.length > 1" class="detail-gallery-dots">
@@ -285,14 +285,14 @@
           </div>
 
           <div class="detail-qty-row">
-            <button class="card-qty-btn minus" @click="detailQty = Math.max(1, detailQty - 1)">−</button>
+            <button class="card-qty-btn minus" @click="detailQty = Math.max(1, detailQty - 1)">-</button>
             <div class="card-qty-val detail">{{ detailQty }}</div>
             <button class="card-qty-btn plus" @click="detailQty += 1">+</button>
           </div>
 
           <div v-if="settings.reviewsEnabled" class="reviews-section">
             <div class="reviews-section-title">
-              💬 Reseñas
+              ?? Rese�as
               <span class="reviews-count-badge">{{ currentApprovedReviewCount }}</span>
             </div>
 
@@ -302,16 +302,16 @@
                 <input v-model="reviewForm.name" class="review-form-input" type="text" maxlength="20" placeholder="Escribe tu nombre" autocomplete="off">
               </div>
               <div class="review-form-row">
-                <label class="review-form-label">Tu calificación</label>
+                <label class="review-form-label">Tu calificaci�n</label>
                 <select v-model.number="reviewForm.rating" class="review-form-input">
-                  <option :value="5">★★★★★ (5)</option>
-                  <option :value="4">★★★★☆ (4)</option>
-                  <option :value="3">★★★☆☆ (3)</option>
-                  <option :value="2">★★☆☆☆ (2)</option>
-                  <option :value="1">★☆☆☆☆ (1)</option>
+                  <option :value="5">????? (5)</option>
+                  <option :value="4">????? (4)</option>
+                  <option :value="3">????? (3)</option>
+                  <option :value="2">????? (2)</option>
+                  <option :value="1">????? (1)</option>
                 </select>
                 <label class="review-form-label">Tu comentario</label>
-                <textarea v-model="reviewForm.comment" class="review-form-input" maxlength="300" rows="3" placeholder="¿Qué te pareció este platillo?&#10;Compártenos tu opinión" />
+                <textarea v-model="reviewForm.comment" class="review-form-input" maxlength="300" rows="3" placeholder="�Qu� te pareci� este platillo?&#10;Comp�rtenos tu opini�n" />
                 <div class="char-counter-wrap">
                   <span class="char-counter-text">{{ reviewForm.comment.length }} / 300</span>
                   <div class="char-progress-bar">
@@ -320,15 +320,15 @@
                 </div>
               </div>
               <button class="review-submit-btn" :disabled="reviewSubmitting" :class="{ loading: reviewSubmitting }" @click="submitReview">
-                <span class="btn-text">Enviar Reseña</span>
+                <span class="btn-text">Enviar Rese�a</span>
                 <span class="spinner"></span>
               </button>
             </div>
 
             <div class="review-list">
               <div v-if="!currentVisibleReviews.length" class="review-empty">
-                <div class="review-empty-icon">💬</div>
-                <div class="review-empty-text">Sé el primero en dejar una reseña</div>
+                <div class="review-empty-icon">??</div>
+                <div class="review-empty-text">S� el primero en dejar una rese�a</div>
               </div>
               <div
                 v-for="review in currentVisibleReviews"
@@ -339,34 +339,34 @@
                 <div class="review-header">
                   <div class="review-avatar" :style="{ background: avatarGradient(review.name) }">{{ reviewInitials(review.name) }}</div>
                   <div class="review-meta">
-                    <div class="review-author">{{ review.name || 'Anónimo' }}</div>
-                    <div class="review-date">{{ formatReviewDate(review.createdAt) }} · {{ reviewStars(review.rating) }}</div>
+                    <div class="review-author">{{ review.name || 'An�nimo' }}</div>
+                    <div class="review-date">{{ formatReviewDate(review.createdAt) }} � {{ reviewStars(review.rating) }}</div>
                   </div>
-                  <span v-if="review.approved === false" class="review-pending-badge">Pendiente de aprobación</span>
+                  <span v-if="review.approved === false" class="review-pending-badge">Pendiente de aprobaci�n</span>
                 </div>
                 <div class="review-text">{{ review.comment }}</div>
               </div>
             </div>
 
-            <button v-if="canLoadMoreReviews" class="review-load-more" @click="reviewPage += 1">Ver más comentarios ▾</button>
+            <button v-if="canLoadMoreReviews" class="review-load-more" @click="reviewPage += 1">Ver m�s comentarios ?</button>
           </div>
         </div>
       </div>
       <div class="detail-actions">
-        <button v-if="settings.cartEnabled" class="btn-large btn-add-cart" @click="addSelectedToCart">🛒 Agregar al carrito</button>
-        <button v-if="settings.whatsappEnabled && whatsappHref" class="btn-large btn-whatsapp" @click="orderSelectedNow">💬 Pedir Ahora</button>
+        <button v-if="settings.cartEnabled" class="btn-large btn-add-cart" @click="addSelectedToCart">?? Agregar al carrito</button>
+        <button v-if="settings.whatsappEnabled && whatsappHref" class="btn-large btn-whatsapp" @click="orderSelectedNow">?? Pedir Ahora</button>
       </div>
     </div>
 
     <div v-if="cartOpen" class="modal-overlay active" @click.self="cartOpen = false">
       <div class="modal-header">
-        <span class="modal-title">Tu Pedido 🛒</span>
-        <button class="close-btn" @click="cartOpen = false">×</button>
+        <span class="modal-title">Tu Pedido ??</span>
+        <button class="close-btn" @click="cartOpen = false">�</button>
       </div>
       <div class="cart-list">
         <div v-if="!cartStore.items.length" class="review-empty">
-          <div class="review-empty-icon">🛒</div>
-          <div class="review-empty-text">Tu carrito está vacío</div>
+          <div class="review-empty-icon">??</div>
+          <div class="review-empty-text">Tu carrito est� vac�o</div>
         </div>
         <div v-for="item in cartStore.items" :key="item.cartItemId" class="cart-item">
           <img v-if="cartItemImage(item.productId)" :src="cartItemImage(item.productId)!" class="cart-item-img">
@@ -377,7 +377,7 @@
             <div class="cart-item-price">{{ money(item.finalUnitPrice * item.quantity, settings.currency) }}</div>
           </div>
           <div class="card-qty-control vertical">
-            <button class="card-qty-btn minus" @click="changeCartQty(item.cartItemId, -1)">{{ item.quantity === 1 ? '✕' : '−' }}</button>
+            <button class="card-qty-btn minus" @click="changeCartQty(item.cartItemId, -1)">{{ item.quantity === 1 ? '?' : '-' }}</button>
             <div class="card-qty-val">{{ item.quantity }}</div>
             <button class="card-qty-btn plus" @click="changeCartQty(item.cartItemId, 1)">+</button>
           </div>
@@ -389,14 +389,14 @@
           <span>{{ money(cartStore.totalPrice, settings.currency) }}</span>
         </div>
         <div class="cart-footer-btns">
-          <a v-if="phoneHref" class="btn-large btn-call" :href="phoneHref">📞 Llamar</a>
+          <a v-if="phoneHref" class="btn-large btn-call" :href="phoneHref">?? Llamar</a>
           <button class="btn-large btn-whatsapp" :disabled="!cartStore.items.length || sendingCartOrder" @click="sendCartOrder">
-            {{ sendingCartOrder ? 'Enviando...' : '💬 Enviar Pedido' }}
+            {{ sendingCartOrder ? 'Enviando...' : '?? Enviar Pedido' }}
           </button>
         </div>
         <div v-if="mapsSearchUrl" class="cart-location-row">
           <span class="cart-location-text">{{ settings.address.details || settings.address.city }}</span>
-          <a class="cart-location-link" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">📍 Ver ubicación</a>
+          <a class="cart-location-link" :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">?? Ver ubicaci�n</a>
         </div>
       </div>
     </div>
@@ -706,7 +706,7 @@ const validateDetailSelection = () => {
     return !(selectedMulti.value[group.id] || []).length
   })
   if (missing) {
-    window.alert(`Selecciona una opción para ${missing.groupName}`)
+    window.alert(`Selecciona una opci�n para ${missing.groupName}`)
     return false
   }
   return true
@@ -885,7 +885,7 @@ const avatarGradient = (name: string) => {
 }
 
 const reviewInitials = (name: string) => (name || 'A').split(' ').map((part) => part[0]).join('').slice(0, 2).toUpperCase()
-const reviewStars = (rating: number) => '★'.repeat(Math.max(1, Math.min(5, Number(rating) || 5))) + '☆'.repeat(5 - Math.max(1, Math.min(5, Number(rating) || 5)))
+const reviewStars = (rating: number) => '?'.repeat(Math.max(1, Math.min(5, Number(rating) || 5))) + '?'.repeat(5 - Math.max(1, Math.min(5, Number(rating) || 5)))
 const formatReviewDate = (date: string) => new Date(date).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
 
 function hexToRgba(hex: string, alpha: number) {
