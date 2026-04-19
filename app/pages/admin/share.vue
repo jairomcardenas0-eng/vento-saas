@@ -1,5 +1,5 @@
 <template>
-  <section v-if="catalog" class="panel-card span-2 !p-0">
+  <section v-if="catalog" class="panel-card span-2 !p-0 overflow-hidden">
     <div class="border-b border-zinc-100 p-6 dark:border-zinc-800">
       <UiSectionHeader eyebrow="Distribución" title="Tu catálogo al mundo" description="Copia tu link, descarga tu QR y personaliza cómo te ves en redes sociales." />
     </div>
@@ -12,9 +12,9 @@
           <div class="space-y-6">
             <div class="flex flex-col gap-2">
               <span class="text-sm font-semibold text-zinc-600 dark:text-zinc-400">URL del catálogo</span>
-              <div class="flex items-center gap-2 rounded-2xl bg-zinc-100 p-2 pl-4 dark:bg-zinc-900">
-                <span class="flex-1 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ publicUrl }}</span>
-                <button @click="copyToClipboard(publicUrl)" class="solid-btn small !rounded-xl !min-h-[38px]">
+              <div class="flex min-w-0 items-center gap-2 overflow-hidden rounded-2xl bg-zinc-100 p-2 pl-4 dark:bg-zinc-900">
+                <span class="min-w-0 flex-1 truncate text-sm font-medium text-zinc-900 dark:text-zinc-100">{{ publicUrl }}</span>
+                <button @click="copyToClipboard(publicUrl)" class="solid-btn small !min-h-[38px] !shrink-0 !rounded-xl">
                   Copiar
                 </button>
               </div>
@@ -23,7 +23,7 @@
             <div class="grid gap-6 sm:grid-cols-2">
               <div class="flex flex-col gap-2">
                 <span class="text-sm font-semibold text-zinc-600 dark:text-zinc-400">Identificador (Slug)</span>
-                <div class="rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-950">
+                <div class="break-all rounded-2xl border border-zinc-200 bg-white px-4 py-3 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-950">
                   {{ catalog.slug }}
                 </div>
               </div>

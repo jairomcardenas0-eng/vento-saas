@@ -14,17 +14,6 @@
         <NuxtLink to="/admin/settings" class="quick-link">Ir a ajustes</NuxtLink>
       </div>
     </section>
-
-    <section class="panel-card span-2">
-      <UiSectionHeader eyebrow="Vista previa" title="Cómo lo ven tus clientes" description="Revisión rápida de tu catálogo tal como lo ve el público en este momento.">
-        <template #actions>
-          <NuxtLink :to="`/b/${catalog.slug}`" class="ghost-btn small">Abrir en nueva pestaña</NuxtLink>
-        </template>
-      </UiSectionHeader>
-      <div class="admin-preview-frame">
-        <iframe :src="`/b/${catalog.slug}`" title="Catalog preview" />
-      </div>
-    </section>
   </div>
 </template>
 
