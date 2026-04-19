@@ -165,7 +165,7 @@ select {
 .auth-card,
 .market-card,
 .panel-card {
-  padding: 1.5rem;
+  padding: 1rem;
 }
 
 @media (max-width: 640px) {
@@ -563,7 +563,7 @@ select {
 .grid-form {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 1rem;
+  gap: 1.5rem;
 }
 
 .grid-form .full {
