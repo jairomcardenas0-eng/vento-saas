@@ -3,6 +3,11 @@ import type { CatalogAnalyticsOverview } from '~/types/analytics'
 import type {
   CatalogCategory,
   CatalogCoupon,
+  MarketplaceFeedEntry,
+  MarketplaceHub,
+  MarketplaceLandingPayload,
+  MarketplaceProductCard,
+  MarketplaceStoreCard,
   CatalogOperationalSettings,
   CatalogOrder,
   CatalogProduct,
@@ -235,6 +240,89 @@ const mapCatalogHeader = (row: any) => ({
     ...defaultSettings(row.settings?.businessName || 'Nueva Tienda', row.slug),
     ...(row.settings || {}),
   },
+})
+
+const asStringArray = (value: unknown): string[] => {
+  if (!Array.isArray(value)) {
+    return []
+  }
+
+  return value
+    .map(item => typeof item === 'string' ? item.trim() : '')
+    .filter(Boolean)
+}
+
+const mapRowToMarketplaceStore = (row: any): MarketplaceStoreCard => ({
+  id: row.id,
+  slug: row.slug,
+  businessName: row.business_name || 'Tienda',
+  businessTypes: asStringArray(row.business_types),
+  tagline: row.tagline || '',
+  city: row.city || '',
+  stateCode: row.state_code || '',
+  logoUrl: row.logo_url || '',
+  coverImage: row.cover_image || '',
+  ratingAverage: Number(row.rating_average || 0),
+  ratingApprovedCount: Number(row.rating_approved_count || 0),
+  recentVisits: Number(row.recent_visits || 0),
+  activeProducts: Number(row.active_products || 0),
+  score: Number(row.score || 0),
+})
+
+const mapRowToMarketplaceProduct = (row: any): MarketplaceProductCard => ({
+  catalogId: row.catalog_id,
+  catalogSlug: row.catalog_slug || '',
+  productId: row.product_id || '',
+  productName: row.product_name || '',
+  description: row.description || '',
+  imageUrl: row.image_url || '',
+  price: Number(row.price || 0),
+  promoPrice: row.promo_price === null || row.promo_price === undefined ? null : Number(row.promo_price),
+  orderCount: Number(row.order_count || 0),
+  rating: Number(row.rating || 0),
+  tags: asStringArray(row.tags),
+  businessName: row.business_name || 'Tienda',
+  businessType: row.business_type || '',
+  logoUrl: row.logo_url || '',
+  city: row.city || '',
+  score: Number(row.score || 0),
+})
+
+const mapRowToMarketplaceHub = (row: any): MarketplaceHub => ({
+  regionKey: row.region_key || '',
+  regionLabel: row.region_label || '',
+  city: row.city || '',
+  stateCode: row.state_code || '',
+  countryCode: row.country_code || '',
+  storeCount: Number(row.store_count || 0),
+  activeProducts: Number(row.active_products || 0),
+  recentVisits: Number(row.recent_visits || 0),
+  sampleImageUrl: row.sample_image_url || '',
+  sampleStoreSlug: row.sample_store_slug || '',
+})
+
+const mapRowToMarketplaceFeedEntry = (row: any): MarketplaceFeedEntry => ({
+  catalogId: row.catalog_id,
+  slug: row.slug || '',
+  productId: row.product_id || '',
+  businessName: row.business_name || 'Tienda',
+  businessTypes: asStringArray(row.business_types),
+  tagline: row.tagline || '',
+  city: row.city || '',
+  stateCode: row.state_code || '',
+  logoUrl: row.logo_url || '',
+  coverImage: row.cover_image || '',
+  productName: row.product_name || '',
+  productDescription: row.product_description || '',
+  productImageUrl: row.product_image_url || '',
+  price: Number(row.price || 0),
+  promoPrice: row.promo_price === null || row.promo_price === undefined ? null : Number(row.promo_price),
+  ratingAverage: Number(row.rating_average || 0),
+  productRating: Number(row.product_rating || 0),
+  recentVisits: Number(row.recent_visits || 0),
+  orderCount: Number(row.order_count || 0),
+  relevanceScore: Number(row.relevance_score || 0),
+  matchedTags: asStringArray(row.matched_tags),
 })
 
 const mapRowToCatalogRecord = (
@@ -498,6 +586,39 @@ export const useSupabaseBackend = () => {
     return mapAnalyticsOverview(data, rangeDays)
   }
 
+  const getMarketplaceLanding = async (userTags: string[] = [], options?: {
+    topStoresLimit?: number
+    viralProductsLimit?: number
+    feedLimit?: number
+  }): Promise<MarketplaceLandingPayload> => {
+    const topStoresLimit = Math.max(1, Math.min(options?.topStoresLimit ?? 10, 24))
+    const viralProductsLimit = Math.max(1, Math.min(options?.viralProductsLimit ?? 8, 24))
+    const feedLimit = Math.max(1, Math.min(options?.feedLimit ?? 18, 40))
+    const normalizedTags = [...new Set(userTags.map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 18)
+
+    const [topStoresRes, viralProductsRes, hubsRes, feedRes] = await Promise.all([
+      $supabase.rpc('get_top_stores', { limit_count: topStoresLimit }),
+      $supabase.rpc('get_viral_products', { limit_count: viralProductsLimit }),
+      $supabase.rpc('get_hubs_by_region'),
+      $supabase.rpc('get_personalized_feed', {
+        user_tags: normalizedTags,
+        limit_count: feedLimit,
+      }),
+    ])
+
+    ensureSuccess(topStoresRes.error, 'No se pudo cargar el ranking de tiendas')
+    ensureSuccess(viralProductsRes.error, 'No se pudo cargar la seccion viral')
+    ensureSuccess(hubsRes.error, 'No se pudieron cargar las zonas')
+    ensureSuccess(feedRes.error, 'No se pudo cargar el feed personalizado')
+
+    return {
+      topStores: (topStoresRes.data || []).map(mapRowToMarketplaceStore),
+      viralProducts: (viralProductsRes.data || []).map(mapRowToMarketplaceProduct),
+      hubs: (hubsRes.data || []).map(mapRowToMarketplaceHub),
+      forYou: (feedRes.data || []).map(mapRowToMarketplaceFeedEntry),
+    }
+  }
+
   const watchCatalogAnalytics = (
     catalogId: string,
     callback: (payload: CatalogAnalyticsOverview) => Promise<void> | void,
@@ -651,6 +772,7 @@ export const useSupabaseBackend = () => {
       ensureSuccess(error, 'No se pudo cargar el marketplace')
       return Promise.all((data || []).map(assembleCatalog))
     },
+    getMarketplaceLanding,
     async createCatalog(ownerUid: string, name: string, slug: string) {
       const { data: slugMatch, error: slugError } = await $supabase
         .from('catalogs')
