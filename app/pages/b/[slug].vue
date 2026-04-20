@@ -24,7 +24,15 @@ import type { StorefrontPayload } from '~/composables/useStorefrontExperience'
 import type { CategoryItem, ProductItem } from '~/stores/catalog'
 
 const route = useRoute()
-const slugKey = computed(() => String(route.params.slug || ''))
+// Normalizar el slug que viene de la URL: trim, lowercase, espacios → guiones
+const slugKey = computed(() => {
+  const raw = String(route.params.slug || '')
+  const normalized = raw.trim().toLowerCase().replace(/\s+/g, '-')
+  if (import.meta.client && raw !== normalized) {
+    console.warn(`[slug] Normalización aplicada: "${raw}" → "${normalized}"`)
+  }
+  return normalized
+})
 const backend = useSupabaseBackend()
 const analytics = useAnalytics()
 

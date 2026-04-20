@@ -145,7 +145,8 @@ export const useLocalPlatform = () => {
   }
 
   const getCatalogBySlug = (slug: string) => {
-    const item = readState().catalogs.find(entry => entry.slug === slug)
+    const normalized = slug.trim().toLowerCase().replace(/\s+/g, '-')
+    const item = readState().catalogs.find(entry => entry.slug.trim().toLowerCase() === normalized)
     return item ? clone(item) : null
   }
 

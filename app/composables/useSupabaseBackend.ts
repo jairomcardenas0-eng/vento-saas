@@ -743,10 +743,15 @@ export const useSupabaseBackend = () => {
       return Promise.all((data || []).map(assembleCatalog))
     },
     async getCatalogBySlug(slug: string) {
+      if (!slug) return null
+      
+      // Normalización preventiva del input
+      const normalizedSlug = slug.trim().toLowerCase().replace(/\s+/g, '-')
+      
       const { data, error } = await $supabase
         .from('catalogs')
         .select('*')
-        .eq('slug', slug)
+        .ilike('slug', normalizedSlug)
         .maybeSingle()
 
       ensureSuccess(error, 'No se pudo cargar el catálogo público')
