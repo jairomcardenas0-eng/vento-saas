@@ -624,6 +624,7 @@ export const useSupabaseBackend = () => {
     callback: (payload: CatalogAnalyticsOverview) => Promise<void> | void,
     onError?: (error: Error) => void,
     rangeDays = 7,
+    onRealtimeHit?: () => void,
   ) => {
     const fetchAnalytics = async () => {
       await callback(await getCatalogAnalytics(catalogId, rangeDays))
@@ -635,6 +636,8 @@ export const useSupabaseBackend = () => {
       .channel(`catalog-analytics:${catalogId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_analytics_daily', filter: `catalog_id=eq.${catalogId}` }, async () => {
         try {
+          // Notificar inmediatamente para animar el pulso antes de re-fetchear
+          onRealtimeHit?.()
           await fetchAnalytics()
         } catch (error) {
           onError?.(error as Error)

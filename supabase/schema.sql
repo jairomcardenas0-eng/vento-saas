@@ -1376,3 +1376,4 @@ as $$
   order by relevance_score desc, recent_visits desc, order_count desc
   limit greatest(coalesce(limit_count, 18), 1);
 $$;
+

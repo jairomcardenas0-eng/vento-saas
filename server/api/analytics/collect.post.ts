@@ -1,5 +1,20 @@
+/**
+ * POST /api/analytics/collect
+ *
+ * Server route que recibe eventos de analítica desde el cliente público.
+ * Usa la RPC atómica `track_analytics_event` para evitar race conditions.
+ *
+ * Seguridad:
+ *  - Valida UUIDs antes de tocar la base de datos.
+ *  - Valida event_type contra lista blanca.
+ *  - Siempre responde 202 (no revela errores internos al cliente).
+ *  - Usa anon key: la RPC tiene SECURITY DEFINER para bypassear RLS.
+ */
+
 import { createClient } from '@supabase/supabase-js'
 import type { H3Event } from 'h3'
+
+// ─── Tipos ───────────────────────────────────────────────────────────────────
 
 type AnalyticsRequestBody = {
   catalogId?: string
@@ -9,29 +24,48 @@ type AnalyticsRequestBody = {
   path?: string | null
 }
 
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+const VALID_EVENT_TYPES = new Set(['page_view', 'product_click'])
+
+const isValidUuid = (value: unknown): value is string =>
+  typeof value === 'string' && UUID_REGEX.test(value)
+
+const isValidEventType = (value: unknown): value is 'page_view' | 'product_click' =>
+  typeof value === 'string' && VALID_EVENT_TYPES.has(value)
+
 const parsePayload = async (event: H3Event): Promise<AnalyticsRequestBody> => {
-  const raw = await readRawBody(event)
-
-  if (!raw) {
-    return {}
-  }
-
   try {
+    const raw = await readRawBody(event)
+    if (!raw) return {}
     return JSON.parse(raw)
   } catch {
     return {}
   }
 }
 
+// ─── Handler ─────────────────────────────────────────────────────────────────
+
 export default defineEventHandler(async (event) => {
+  // Siempre responder 202 Accepted (fire-and-forget desde el cliente)
+  setResponseStatus(event, 202)
+
   const payload = await parsePayload(event)
 
-  if (!payload.catalogId || !payload.sessionUuid || !payload.eventType) {
-    setResponseStatus(event, 202)
-    return { ok: false }
+  // Validación estricta de campos requeridos
+  if (
+    !isValidUuid(payload.catalogId)
+    || !isValidUuid(payload.sessionUuid)
+    || !isValidEventType(payload.eventType)
+  ) {
+    return { ok: false, reason: 'invalid_payload' }
   }
 
   const config = useRuntimeConfig(event)
+
+  // Usamos anon key: la RPC track_analytics_event tiene SECURITY DEFINER
+  // y maneja sus propias validaciones internas.
   const supabase = createClient(
     config.public.supabaseUrl,
     config.public.supabaseAnonKey,
@@ -43,59 +77,23 @@ export default defineEventHandler(async (event) => {
     },
   )
 
-  const now = new Date().toISOString()
+  const userAgent = getHeader(event, 'user-agent') || null
 
-  const { error: sessionInsertError } = await supabase
-    .from('catalog_analytics_sessions')
-    .upsert({
-      catalog_id: payload.catalogId,
-      session_uuid: payload.sessionUuid,
-      first_seen_at: now,
-      last_seen_at: now,
-      user_agent: getHeader(event, 'user-agent') || null,
-      last_path: payload.path || null,
-    }, {
-      onConflict: 'catalog_id,session_uuid',
-      ignoreDuplicates: true,
-    })
+  // Llamada a la RPC atómica: upsert sesión + insert evento en una transacción
+  const { error } = await supabase.rpc('track_analytics_event', {
+    p_catalog_id: payload.catalogId,
+    p_session_uuid: payload.sessionUuid,
+    p_event_type: payload.eventType,
+    p_product_id: payload.productId || null,
+    p_path: payload.path || null,
+    p_user_agent: userAgent,
+  })
 
-  if (sessionInsertError) {
-    console.warn('[analytics] session insert failed', sessionInsertError.message)
-    setResponseStatus(event, 202)
+  if (error) {
+    // Log interno sin exponer detalles al cliente
+    console.warn('[analytics:collect] RPC error:', error.message)
     return { ok: false }
   }
 
-  const { error: sessionUpdateError } = await supabase
-    .from('catalog_analytics_sessions')
-    .update({
-      last_seen_at: now,
-      user_agent: getHeader(event, 'user-agent') || null,
-      last_path: payload.path || null,
-    })
-    .eq('catalog_id', payload.catalogId)
-    .eq('session_uuid', payload.sessionUuid)
-
-  if (sessionUpdateError) {
-    console.warn('[analytics] session update failed', sessionUpdateError.message)
-    setResponseStatus(event, 202)
-    return { ok: false }
-  }
-
-  const { error: eventError } = await supabase
-    .from('catalog_analytics_events')
-    .insert({
-      catalog_id: payload.catalogId,
-      session_uuid: payload.sessionUuid,
-      event_type: payload.eventType,
-      product_id: payload.productId || null,
-      path: payload.path || null,
-      created_at: now,
-    })
-
-  if (eventError) {
-    console.warn('[analytics] event insert failed', eventError.message)
-  }
-
-  setResponseStatus(event, 202)
-  return { ok: !eventError }
+  return { ok: true }
 })

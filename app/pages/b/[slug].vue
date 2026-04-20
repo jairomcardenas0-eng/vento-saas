@@ -117,14 +117,10 @@ const { data, pending } = await useAsyncData<StorefrontPayload | null>(
 const storefront = computed(() => data.value)
 const layout = computed(() => storefront.value?.settings.storefrontLayout ?? 'classic')
 
-const trackedCatalogId = ref<string | null>(null)
-
-watch(storefront, (value) => {
-  if (!value || trackedCatalogId.value === value.id || import.meta.server) {
-    return
-  }
-
-  trackedCatalogId.value = value.id
-  analytics.trackPageView(value.id, `/b/${value.slug}`)
-}, { immediate: true })
+// Disparo de analítica: solo en el cliente, post-hidratación, idempotente por TAB.
+// onMounted garantiza que nunca corre en SSR ni durante la hidratación.
+onMounted(() => {
+  if (!storefront.value) return
+  analytics.trackPageView(storefront.value.id, `/b/${storefront.value.slug}`)
+})
 </script>

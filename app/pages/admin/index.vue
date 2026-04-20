@@ -23,11 +23,30 @@
           <article
             v-for="item in topCards"
             :key="item.label"
-            class="rounded-[22px] border border-slate-200 bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:border-slate-800 dark:bg-slate-950"
+            class="rounded-[22px] border bg-white p-4 shadow-[0_16px_40px_rgba(15,23,42,0.05)] dark:bg-slate-950 transition-all duration-300"
+            :class="item.isLive && realtimePulse
+              ? 'border-blue-400 shadow-[0_0_0_3px_rgba(59,130,246,0.18),0_16px_40px_rgba(15,23,42,0.05)] dark:border-blue-500'
+              : 'border-slate-200 dark:border-slate-800'"
           >
             <div class="flex items-start justify-between gap-4">
               <div>
-                <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ item.label }}</p>
+                <div class="flex items-center gap-2">
+                  <p class="text-sm font-medium text-slate-500 dark:text-slate-400">{{ item.label }}</p>
+                  <!-- Badge "En vivo" palpitante: solo en el card de visitas totales -->
+                  <span
+                    v-if="item.isLive"
+                    class="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide transition-all duration-300"
+                    :class="realtimePulse
+                      ? 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300'
+                      : 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400'"
+                  >
+                    <span
+                      class="h-1.5 w-1.5 rounded-full transition-all duration-300"
+                      :class="realtimePulse ? 'bg-blue-500 animate-ping' : 'bg-slate-400'"
+                    />
+                    En vivo
+                  </span>
+                </div>
                 <p class="mt-3 text-3xl font-semibold tracking-tight text-slate-950 dark:text-slate-50">{{ item.value }}</p>
               </div>
 
@@ -143,11 +162,24 @@ import type { CatalogAnalyticsOverview } from '~/types/analytics'
 definePageMeta({ layout: 'admin' })
 
 const RANGE_DAYS = 7
+const PULSE_DURATION_MS = 2500
 
 const catalogStore = useCatalogStore()
 const backend = useSupabaseBackend()
 const catalog = computed(() => catalogStore.activeCatalog)
 const analytics = ref<CatalogAnalyticsOverview | null>(null)
+
+/** Controla la animación de pulso cuando llega un hit en tiempo real */
+const realtimePulse = ref(false)
+let pulseTimer: ReturnType<typeof setTimeout> | null = null
+
+const triggerPulse = () => {
+  realtimePulse.value = true
+  if (pulseTimer) clearTimeout(pulseTimer)
+  pulseTimer = setTimeout(() => {
+    realtimePulse.value = false
+  }, PULSE_DURATION_MS)
+}
 
 let stopAnalyticsWatch: (() => void) | null = null
 
@@ -161,6 +193,7 @@ const topCards = computed(() => {
       caption: 'Page views registradas en los ultimos 7 dias.',
       iconClass: 'flex h-11 w-11 items-center justify-center rounded-2xl bg-blue-50 text-blue-600 dark:bg-blue-500/10 dark:text-blue-300',
       iconPath: 'M3 12s3.5-6 9-6 9 6 9 6-3.5 6-9 6-9-6-9-6Z M12 9a3 3 0 1 0 0 6 3 3 0 0 0 0-6Z',
+      isLive: true,
     },
     {
       label: 'Usuarios activos',
@@ -168,6 +201,7 @@ const topCards = computed(() => {
       caption: 'Usuarios unicos con actividad en el rango actual.',
       iconClass: 'flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
       iconPath: 'M16 19a4 4 0 0 0-8 0 M12 14.25A3.25 3.25 0 1 0 12 7.75a3.25 3.25 0 0 0 0 6.5 M4 19a3 3 0 0 1 3-3m10 3a3 3 0 0 1 3-3',
+      isLive: false,
     },
     {
       label: 'Nuevos usuarios',
@@ -175,6 +209,7 @@ const topCards = computed(() => {
       caption: 'Primeras visitas detectadas en los ultimos 7 dias.',
       iconClass: 'flex h-11 w-11 items-center justify-center rounded-2xl bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-200',
       iconPath: 'M12 5v14 M5 12h14',
+      isLive: false,
     },
   ]
 })
@@ -211,6 +246,7 @@ const startAnalytics = (catalogId: string) => {
       console.error('CatalogAnalyticsWatch Error:', error)
     },
     RANGE_DAYS,
+    triggerPulse,
   )
 }
 
@@ -227,5 +263,6 @@ watch(catalog, (value) => {
 
 onBeforeUnmount(() => {
   stopAnalyticsWatch?.()
+  if (pulseTimer) clearTimeout(pulseTimer)
 })
 </script>
