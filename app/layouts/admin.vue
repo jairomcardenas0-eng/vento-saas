@@ -54,19 +54,20 @@
             <p class="mb-2 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-slate-300 dark:text-slate-600">
               {{ group.title }}
             </p>
-            <div class="space-y-0.5">
+            <div class="space-y-1.5">
               <NuxtLink
                 v-for="item in group.items"
                 :key="item.to"
                 :to="item.to"
-                class="nav-link group flex w-full min-w-0 items-center gap-3 rounded-2xl px-3 py-2.5 text-[13px] font-medium text-slate-500 transition-all duration-200 hover:bg-slate-50 dark:text-slate-400 dark:hover:bg-slate-800"
-                active-class="!bg-blue-500 !text-white shadow-md shadow-blue-500/20"
+                class="nav-link group flex w-full min-w-0 items-center gap-3.5 rounded-[22px] p-2 pr-4 text-[14.5px] font-semibold text-slate-500 transition-all duration-300 hover:bg-slate-100/70 hover:text-slate-900 active:scale-[0.98] dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
+                active-class="!bg-gradient-to-r !from-blue-600 !to-indigo-600 !text-white shadow-[0_8px_16px_-6px_rgba(59,130,246,0.5)] ring-1 ring-white/10 dark:!from-blue-500 dark:!to-indigo-500"
                 @click.prevent="goTo(item.to)"
               >
-                <span class="nav-icon flex h-8 w-8 flex-shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500 transition-all duration-200 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-sm dark:bg-slate-800 dark:text-slate-400 dark:group-hover:bg-slate-700 dark:group-hover:text-blue-300">
-                  <svg class="h-[17px] w-[17px]" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" v-html="navIcons[item.icon]" />
-                </span>
+                <div class="nav-icon relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] bg-slate-100 text-slate-500 transition-all duration-300 group-hover:scale-105 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-md dark:bg-slate-800/80 dark:text-slate-400 dark:group-hover:bg-slate-700 dark:group-hover:text-blue-400">
+                  <svg class="h-[20px] w-[20px] transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" v-html="navIcons[item.icon]" />
+                </div>
                 <span class="min-w-0 flex-1 truncate text-left">{{ item.label }}</span>
+                <span class="opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:-translate-x-1 text-slate-400 dark:text-slate-500">›</span>
               </NuxtLink>
             </div>
           </div>
