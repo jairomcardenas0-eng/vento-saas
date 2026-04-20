@@ -138,6 +138,7 @@ const goBack = async () => {
   margin: 0;
   font-size: 1.3rem;
   text-align: center;
+  color: #111827;
 }
 
 .catalog-confirm-modal > p {

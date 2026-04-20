@@ -34,7 +34,7 @@ export const createTimerText = (hours: number | null) => {
     return ''
   }
   const end = new Date(Date.now() + hours * 60 * 60 * 1000)
-  return `Termina ${end.toLocaleTimeString('es-MX', { hour: '2-digit', minute: '2-digit' })}`
+  return end.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' })
 }
 
 export const summarizeVariantGroups = (groups: ProductVariantGroup[]) =>

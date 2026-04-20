@@ -35,6 +35,8 @@ export interface ProductItem {
   timerShowMinutes: boolean
   timerShowSeconds: boolean
   timerLinkSale: boolean
+  carouselEnabled: boolean
+  carouselIntervalSeconds: 1 | 2 | 3 | 4 | 5
   tags: string[]
   productRating: number
   productRatingCount: number
@@ -124,6 +126,8 @@ const mapItemProductToCatalog = (product: ProductItem): CatalogProduct => ({
   timerShowMinutes: product.timerShowMinutes ?? true,
   timerShowSeconds: product.timerShowSeconds ?? true,
   timerLinkSale: product.timerLinkSale ?? false,
+  carouselEnabled: product.carouselEnabled ?? false,
+  carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
   tags: product.tags || [],
   variants: (product.variants || []).map((group) => ({
     group: group.groupName,
@@ -175,6 +179,8 @@ export const createEmptyProduct = (categoryId = ''): ProductItem => ({
   timerShowMinutes: true,
   timerShowSeconds: true,
   timerLinkSale: false,
+  carouselEnabled: false,
+  carouselIntervalSeconds: 3,
   tags: [],
   productRating: 0,
   productRatingCount: 0,
@@ -249,6 +255,8 @@ export const useCatalogEngineStore = defineStore('catalog-engine', {
         timerShowMinutes: payload.timerShowMinutes ?? true,
         timerShowSeconds: payload.timerShowSeconds ?? true,
         timerLinkSale: payload.timerLinkSale ?? false,
+        carouselEnabled: payload.carouselEnabled ?? false,
+        carouselIntervalSeconds: (payload.carouselIntervalSeconds ?? 3) as 1 | 2 | 3 | 4 | 5,
         tags: payload.tags ?? [],
         productRating: Number(payload.productRating || 0),
         productRatingCount: Number(payload.productRatingCount || 0),

@@ -132,19 +132,6 @@
       </div>
     </section>
 
-    <section class="panel-card">
-      <UiSectionHeader
-        eyebrow="Accesos rapidos"
-        title="Atajos del panel"
-        description="Mantengo el acceso directo a tus secciones operativas principales."
-      />
-      <div class="quick-links">
-        <NuxtLink to="/admin/orders" class="quick-link">Ver pedidos</NuxtLink>
-        <NuxtLink to="/admin/reviews" class="quick-link">Revisar reseñas</NuxtLink>
-        <NuxtLink to="/admin/catalog" class="quick-link">Gestionar catalogo</NuxtLink>
-        <NuxtLink to="/admin/settings" class="quick-link">Ir a ajustes</NuxtLink>
-      </div>
-    </section>
   </div>
 
   <section v-else-if="catalogStore.loading" class="panel-card">
@@ -157,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import AnalyticsLineChart from '~/components/admin/AnalyticsLineChart.vue'
 import type { CatalogAnalyticsOverview } from '~/types/analytics'
 
 definePageMeta({ layout: 'admin' })

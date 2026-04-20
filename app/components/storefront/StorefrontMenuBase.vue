@@ -34,7 +34,6 @@
       <div class="header">
         <div class="header-brand">
           <img v-if="settings.logoUrl" :src="settings.logoUrl" :alt="settings.businessName" class="header-logo">
-          <div v-else class="header-logo header-logo-placeholder">{{ initials }}</div>
           <h1 id="header-title">{{ settings.businessName }}</h1>
         </div>
         <div class="header-actions">
@@ -94,7 +93,7 @@
             Ver menú
           </button>
           <a v-if="settings.closedShowWhatsapp && whatsappHref" id="closed-whatsapp-btn" :href="whatsappHref" target="_blank" rel="noopener noreferrer">WhatsApp</a>
-          <a v-if="settings.closedShowCall && phoneHref" id="closed-call-btn" :href="phoneHref">Llamar</a>
+          <a v-if="settings.callEnabled && settings.closedShowCall && phoneHref" id="closed-call-btn" :href="phoneHref">Llamar</a>
         </div>
       </div>
     </div>
@@ -389,7 +388,7 @@
           <span>{{ money(cartStore.totalPrice, settings.currency) }}</span>
         </div>
         <div class="cart-footer-btns">
-          <a v-if="phoneHref" class="btn-large btn-call" :href="phoneHref">?? Llamar</a>
+          <a v-if="settings.cartEnabled && settings.callEnabled && phoneHref" class="btn-large btn-call" :href="phoneHref">?? Llamar</a>
           <button class="btn-large btn-whatsapp" :disabled="!cartStore.items.length || sendingCartOrder" @click="sendCartOrder">
             {{ sendingCartOrder ? 'Enviando...' : '?? Enviar Pedido' }}
           </button>

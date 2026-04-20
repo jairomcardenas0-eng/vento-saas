@@ -12,6 +12,13 @@
     description="Estamos sincronizando la caja en tiempo real."
   />
 
+  <AdminStatePanel
+    v-else-if="ordersStore.realtimeError && !ordersStore.items.length"
+    tone="warning"
+    title="Reconectando pedidos"
+    :description="ordersStore.realtimeError"
+  />
+
   <div v-else class="admin-grid">
     <section class="panel-card span-2 min-w-0">
       <UiSectionHeader eyebrow="Operación" title="Pedidos en tiempo real" description="Bandeja de pedidos con detalle expandible y control de estados." />

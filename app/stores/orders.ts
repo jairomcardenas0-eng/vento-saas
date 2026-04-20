@@ -3,6 +3,8 @@ import type { CatalogOrder, OrderStatus } from '~/types/catalog'
 
 let ordersUnsubscribe: null | (() => void) = null
 let ordersVisibilityHandler: null | (() => void) = null
+let reconnectTimer: ReturnType<typeof setTimeout> | null = null
+let reconnectAttempts = 0
 let activeCatalogId: string | null = null
 let hasPrimedRealtime = false
 let latestSeenCreatedAt = 0
@@ -61,6 +63,7 @@ export const useOrdersStore = defineStore('orders-live', {
     items: [] as CatalogOrder[],
     loading: false,
     listening: false,
+    realtimeError: '',
   }),
   getters: {
     monthSales: state => {
@@ -86,18 +89,45 @@ export const useOrdersStore = defineStore('orders-live', {
       latestSeenCreatedAt = 0
       const backend = useSupabaseBackend()
 
+      const clearReconnectTimer = () => {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer)
+          reconnectTimer = null
+        }
+      }
+
+      const scheduleReconnect = () => {
+        if (!activeCatalogId || document.hidden) {
+          return
+        }
+
+        clearReconnectTimer()
+        reconnectAttempts += 1
+        const delay = Math.min(1000 * (2 ** Math.min(reconnectAttempts, 5)), 15000)
+
+        reconnectTimer = setTimeout(() => {
+          reconnectTimer = null
+          subscribe()
+        }, delay)
+      }
+
       const subscribe = () => {
         if (!activeCatalogId || document.hidden) {
           return
         }
 
-        this.loading = true
+        this.loading = !this.items.length
+        this.realtimeError = ''
+        ordersUnsubscribe?.()
         ordersUnsubscribe = backend.watchOrders(
           activeCatalogId,
           async ({ orders, changes }) => {
             this.items = orders
             this.loading = false
             this.listening = true
+            this.realtimeError = ''
+            reconnectAttempts = 0
+            clearReconnectTimer()
 
             const mostRecentTimestamp = orders.reduce((acc, order) => {
               const stamp = Date.parse(order.createdAt || '')
@@ -112,12 +142,12 @@ export const useOrdersStore = defineStore('orders-live', {
 
             const incomingOrders = changes
               .filter(change => change.type === 'added')
-              .map(change => ({ id: change.doc.id, ...change.doc.data() } as CatalogOrder))
+              .map(change => ({ ...change.doc.data() } as CatalogOrder))
               .filter(order => order.status === 'new' && Date.parse(order.createdAt || '') > latestSeenCreatedAt)
 
-            if (incomingOrders.length) {
+            if (incomingOrders.length > 0) {
               playOrderDing()
-              const newest = incomingOrders[0]
+              const newest = incomingOrders[0]!
               await maybeNotify(
                 'Nuevo pedido en caja',
                 `${newest.customerName || 'Cliente'} · ${newest.items.length} items`,
@@ -129,6 +159,11 @@ export const useOrdersStore = defineStore('orders-live', {
           (error) => {
             console.error('OrdersRealtime Error:', error)
             this.loading = false
+            this.listening = false
+            this.realtimeError = 'Conexión inestable. Reintentando sincronización...'
+            ordersUnsubscribe?.()
+            ordersUnsubscribe = null
+            scheduleReconnect()
           },
         )
       }
@@ -139,6 +174,7 @@ export const useOrdersStore = defineStore('orders-live', {
         if (document.hidden) {
           ordersUnsubscribe?.()
           ordersUnsubscribe = null
+          clearReconnectTimer()
           this.listening = false
           return
         }
@@ -153,6 +189,11 @@ export const useOrdersStore = defineStore('orders-live', {
     stopRealtime() {
       ordersUnsubscribe?.()
       ordersUnsubscribe = null
+      if (reconnectTimer) {
+        clearTimeout(reconnectTimer)
+        reconnectTimer = null
+      }
+      reconnectAttempts = 0
       if (ordersVisibilityHandler && import.meta.client) {
         document.removeEventListener('visibilitychange', ordersVisibilityHandler)
       }
@@ -161,6 +202,8 @@ export const useOrdersStore = defineStore('orders-live', {
       hasPrimedRealtime = false
       latestSeenCreatedAt = 0
       this.listening = false
+      this.loading = false
+      this.realtimeError = ''
     },
     async updateStatus(catalogId: string, orderId: string, status: OrderStatus) {
       const backend = useSupabaseBackend()

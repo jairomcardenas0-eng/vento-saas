@@ -85,7 +85,12 @@
                   @click="showCurrencyDropdown = !showCurrencyDropdown"
                 >
                   <span v-if="selectedCurrencyObj" class="flex items-center gap-2.5 flex-1">
-                    <span class="text-xl">{{ selectedCurrencyObj.flag }}</span>
+                    <img
+                      class="h-5 w-7 rounded-sm object-cover border border-zinc-200 dark:border-zinc-700"
+                      :src="`https://flagcdn.com/w40/${selectedCurrencyObj.countryCode}.png`"
+                      :alt="`Bandera ${selectedCurrencyObj.code}`"
+                      loading="lazy"
+                    />
                     <span class="font-bold text-zinc-900 dark:text-zinc-100">{{ selectedCurrencyObj.code }}</span>
                     <span class="text-zinc-500 dark:text-zinc-400 text-sm">{{ selectedCurrencyObj.name }}</span>
                   </span>
@@ -111,7 +116,12 @@
                       :class="draft.currency === cur.code ? 'bg-zinc-900 text-white dark:bg-zinc-100 dark:text-zinc-900' : 'hover:bg-zinc-50 dark:hover:bg-zinc-800 text-zinc-700 dark:text-zinc-300'"
                       @click.stop="selectCurrency(cur.code)"
                     >
-                      <span class="text-xl w-7 text-center flex-shrink-0">{{ cur.flag }}</span>
+                      <img
+                        class="h-5 w-7 rounded-sm object-cover border border-zinc-200 dark:border-zinc-700 flex-shrink-0"
+                        :src="`https://flagcdn.com/w40/${cur.countryCode}.png`"
+                        :alt="`Bandera ${cur.code}`"
+                        loading="lazy"
+                      />
                       <span class="font-bold text-[13px] w-12 flex-shrink-0">{{ cur.code }}</span>
                       <span class="text-[13px] flex-1">{{ cur.name }}</span>
                       <span class="text-[11px] opacity-50">{{ cur.symbol }}</span>
@@ -233,59 +243,59 @@ const businessTypeOptions = [
 // ─── Currency selector ────────────────────────────────────────────────────────
 const allCurrencies = [
   // LATAM & Cuba
-  { code: 'CUP', name: 'Peso cubano',            flag: '🇨🇺', symbol: '$' },
-  { code: 'MLC', name: 'MLC (Cuba)',              flag: '🇨🇺', symbol: 'MLC' },
-  { code: 'USD', name: 'Dólar estadounidense',    flag: '🇺🇸', symbol: '$' },
-  { code: 'MXN', name: 'Peso mexicano',           flag: '🇲🇽', symbol: '$' },
-  { code: 'ARS', name: 'Peso argentino',          flag: '🇦🇷', symbol: '$' },
-  { code: 'COP', name: 'Peso colombiano',         flag: '🇨🇴', symbol: '$' },
-  { code: 'CLP', name: 'Peso chileno',            flag: '🇨🇱', symbol: '$' },
-  { code: 'PEN', name: 'Sol peruano',             flag: '🇵🇪', symbol: 'S/' },
-  { code: 'VES', name: 'Bolívar venezolano',      flag: '🇻🇪', symbol: 'Bs.' },
-  { code: 'BRL', name: 'Real brasileño',          flag: '🇧🇷', symbol: 'R$' },
-  { code: 'BOB', name: 'Boliviano',               flag: '🇧🇴', symbol: 'Bs' },
-  { code: 'PYG', name: 'Guaraní paraguayo',       flag: '🇵🇾', symbol: '₲' },
-  { code: 'UYU', name: 'Peso uruguayo',           flag: '🇺🇾', symbol: '$' },
-  { code: 'GTQ', name: 'Quetzal guatemalteco',    flag: '🇬🇹', symbol: 'Q' },
-  { code: 'HNL', name: 'Lempira hondureño',       flag: '🇭🇳', symbol: 'L' },
-  { code: 'CRC', name: 'Colón costarricense',     flag: '🇨🇷', symbol: '₡' },
-  { code: 'DOP', name: 'Peso dominicano',         flag: '🇩🇴', symbol: 'RD$' },
-  { code: 'HTG', name: 'Gourde haitiano',         flag: '🇭🇹', symbol: 'G' },
-  { code: 'JMD', name: 'Dólar jamaicano',         flag: '🇯🇲', symbol: 'J$' },
-  { code: 'NIO', name: 'Córdoba nicaragüense',    flag: '🇳🇮', symbol: 'C$' },
-  { code: 'PAB', name: 'Balboa panameño',         flag: '🇵🇦', symbol: 'B/.' },
+  { code: 'CUP', name: 'Peso cubano', symbol: '$', countryCode: 'cu' },
+  { code: 'MLC', name: 'MLC (Cuba)', symbol: 'MLC', countryCode: 'cu' },
+  { code: 'USD', name: 'Dólar estadounidense', symbol: '$', countryCode: 'us' },
+  { code: 'MXN', name: 'Peso mexicano', symbol: '$', countryCode: 'mx' },
+  { code: 'ARS', name: 'Peso argentino', symbol: '$', countryCode: 'ar' },
+  { code: 'COP', name: 'Peso colombiano', symbol: '$', countryCode: 'co' },
+  { code: 'CLP', name: 'Peso chileno', symbol: '$', countryCode: 'cl' },
+  { code: 'PEN', name: 'Sol peruano', symbol: 'S/', countryCode: 'pe' },
+  { code: 'VES', name: 'Bolívar venezolano', symbol: 'Bs.', countryCode: 've' },
+  { code: 'BRL', name: 'Real brasileño', symbol: 'R$', countryCode: 'br' },
+  { code: 'BOB', name: 'Boliviano', symbol: 'Bs', countryCode: 'bo' },
+  { code: 'PYG', name: 'Guaraní paraguayo', symbol: '₲', countryCode: 'py' },
+  { code: 'UYU', name: 'Peso uruguayo', symbol: '$', countryCode: 'uy' },
+  { code: 'GTQ', name: 'Quetzal guatemalteco', symbol: 'Q', countryCode: 'gt' },
+  { code: 'HNL', name: 'Lempira hondureño', symbol: 'L', countryCode: 'hn' },
+  { code: 'CRC', name: 'Colón costarricense', symbol: '₡', countryCode: 'cr' },
+  { code: 'DOP', name: 'Peso dominicano', symbol: 'RD$', countryCode: 'do' },
+  { code: 'HTG', name: 'Gourde haitiano', symbol: 'G', countryCode: 'ht' },
+  { code: 'JMD', name: 'Dólar jamaicano', symbol: 'J$', countryCode: 'jm' },
+  { code: 'NIO', name: 'Córdoba nicaragüense', symbol: 'C$', countryCode: 'ni' },
+  { code: 'PAB', name: 'Balboa panameño', symbol: 'B/.', countryCode: 'pa' },
   // Europa
-  { code: 'EUR', name: 'Euro',                   flag: '🇪🇺', symbol: '€' },
-  { code: 'GBP', name: 'Libra esterlina',         flag: '🇬🇧', symbol: '£' },
-  { code: 'CHF', name: 'Franco suizo',            flag: '🇨🇭', symbol: 'Fr' },
-  { code: 'SEK', name: 'Corona sueca',            flag: '🇸🇪', symbol: 'kr' },
-  { code: 'NOK', name: 'Corona noruega',          flag: '🇳🇴', symbol: 'kr' },
-  { code: 'DKK', name: 'Corona danesa',           flag: '🇩🇰', symbol: 'kr' },
-  { code: 'PLN', name: 'Złoty polaco',            flag: '🇵🇱', symbol: 'zł' },
-  { code: 'CZK', name: 'Corona checa',            flag: '🇨🇿', symbol: 'Kč' },
-  { code: 'HUF', name: 'Forinto húngaro',         flag: '🇭🇺', symbol: 'Ft' },
-  { code: 'RUB', name: 'Rublo ruso',              flag: '🇷🇺', symbol: '₽' },
+  { code: 'EUR', name: 'Euro', symbol: '€', countryCode: 'eu' },
+  { code: 'GBP', name: 'Libra esterlina', symbol: '£', countryCode: 'gb' },
+  { code: 'CHF', name: 'Franco suizo', symbol: 'Fr', countryCode: 'ch' },
+  { code: 'SEK', name: 'Corona sueca', symbol: 'kr', countryCode: 'se' },
+  { code: 'NOK', name: 'Corona noruega', symbol: 'kr', countryCode: 'no' },
+  { code: 'DKK', name: 'Corona danesa', symbol: 'kr', countryCode: 'dk' },
+  { code: 'PLN', name: 'Złoty polaco', symbol: 'zł', countryCode: 'pl' },
+  { code: 'CZK', name: 'Corona checa', symbol: 'Kč', countryCode: 'cz' },
+  { code: 'HUF', name: 'Forinto húngaro', symbol: 'Ft', countryCode: 'hu' },
+  { code: 'RUB', name: 'Rublo ruso', symbol: '₽', countryCode: 'ru' },
   // Norteamérica
-  { code: 'CAD', name: 'Dólar canadiense',        flag: '🇨🇦', symbol: 'CA$' },
+  { code: 'CAD', name: 'Dólar canadiense', symbol: 'CA$', countryCode: 'ca' },
   // Asia & Oceanía
-  { code: 'CNY', name: 'Yuan chino',              flag: '🇨🇳', symbol: '¥' },
-  { code: 'JPY', name: 'Yen japonés',             flag: '🇯🇵', symbol: '¥' },
-  { code: 'KRW', name: 'Won surcoreano',          flag: '🇰🇷', symbol: '₩' },
-  { code: 'INR', name: 'Rupia india',             flag: '🇮🇳', symbol: '₹' },
-  { code: 'THB', name: 'Baht tailandés',          flag: '🇹🇭', symbol: '฿' },
-  { code: 'VND', name: 'Dong vietnamita',         flag: '🇻🇳', symbol: '₫' },
-  { code: 'AUD', name: 'Dólar australiano',       flag: '🇦🇺', symbol: 'A$' },
-  { code: 'NZD', name: 'Dólar neozelandés',       flag: '🇳🇿', symbol: 'NZ$' },
+  { code: 'CNY', name: 'Yuan chino', symbol: '¥', countryCode: 'cn' },
+  { code: 'JPY', name: 'Yen japonés', symbol: '¥', countryCode: 'jp' },
+  { code: 'KRW', name: 'Won surcoreano', symbol: '₩', countryCode: 'kr' },
+  { code: 'INR', name: 'Rupia india', symbol: '₹', countryCode: 'in' },
+  { code: 'THB', name: 'Baht tailandés', symbol: '฿', countryCode: 'th' },
+  { code: 'VND', name: 'Dong vietnamita', symbol: '₫', countryCode: 'vn' },
+  { code: 'AUD', name: 'Dólar australiano', symbol: 'A$', countryCode: 'au' },
+  { code: 'NZD', name: 'Dólar neozelandés', symbol: 'NZ$', countryCode: 'nz' },
   // Oriente Medio & África
-  { code: 'AED', name: 'Dírham emiratí',          flag: '🇦🇪', symbol: 'د.إ' },
-  { code: 'SAR', name: 'Riyal saudí',             flag: '🇸🇦', symbol: '﷼' },
-  { code: 'TRY', name: 'Lira turca',              flag: '🇹🇷', symbol: '₺' },
-  { code: 'ZAR', name: 'Rand sudafricano',        flag: '🇿🇦', symbol: 'R' },
-  { code: 'EGP', name: 'Libra egipcia',           flag: '🇪🇬', symbol: 'E£' },
-  { code: 'MAD', name: 'Dírham marroquí',         flag: '🇲🇦', symbol: 'د.م.' },
+  { code: 'AED', name: 'Dírham emiratí', symbol: 'د.إ', countryCode: 'ae' },
+  { code: 'SAR', name: 'Riyal saudí', symbol: '﷼', countryCode: 'sa' },
+  { code: 'TRY', name: 'Lira turca', symbol: '₺', countryCode: 'tr' },
+  { code: 'ZAR', name: 'Rand sudafricano', symbol: 'R', countryCode: 'za' },
+  { code: 'EGP', name: 'Libra egipcia', symbol: 'E£', countryCode: 'eg' },
+  { code: 'MAD', name: 'Dírham marroquí', symbol: 'د.م.', countryCode: 'ma' },
   // Cripto & Digital
-  { code: 'USDT', name: 'Tether (USDT)',          flag: '💵', symbol: '₮' },
-  { code: 'ZELLE', name: 'Zelle (USD)',            flag: '💸', symbol: '$' },
+  { code: 'USDT', name: 'Tether (USDT)', symbol: '₮', countryCode: 'us' },
+  { code: 'ZELLE', name: 'Zelle (USD)', symbol: '$', countryCode: 'us' },
 ]
 
 const showCurrencyDropdown = ref(false)

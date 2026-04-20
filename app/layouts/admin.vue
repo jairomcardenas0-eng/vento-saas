@@ -118,13 +118,25 @@
               class="press inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200/60 bg-slate-50 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
               @click="toggleColorMode"
             >
-              <svg v-if="colorMode.value === 'dark'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v2.25M12 18.75V21M4.97 4.97l1.59 1.59M17.44 17.44l1.59 1.59M3 12h2.25M18.75 12H21M4.97 19.03l1.59-1.59M17.44 6.56l1.59-1.59M15.75 12A3.75 3.75 0 1 1 8.25 12a3.75 3.75 0 0 1 7.5 0Z" />
-              </svg>
-              <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12.79A9 9 0 1 1 11.21 3c-.07.32-.11.66-.11 1a8 8 0 0 0 8 8c.34 0 .68-.04 1-.11Z" />
-              </svg>
-              <span>{{ colorMode.value === 'dark' ? 'Claro' : 'Oscuro' }}</span>
+              <ClientOnly>
+                <svg v-if="colorMode.value === 'dark'" class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M12 3v2.25M12 18.75V21M4.97 4.97l1.59 1.59M17.44 17.44l1.59 1.59M3 12h2.25M18.75 12H21M4.97 19.03l1.59-1.59M17.44 6.56l1.59-1.59M15.75 12A3.75 3.75 0 1 1 8.25 12a3.75 3.75 0 0 1 7.5 0Z" />
+                </svg>
+                <svg v-else class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12.79A9 9 0 1 1 11.21 3c-.07.32-.11.66-.11 1a8 8 0 0 0 8 8c.34 0 .68-.04 1-.11Z" />
+                </svg>
+                <template #fallback>
+                  <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M21 12.79A9 9 0 1 1 11.21 3c-.07.32-.11.66-.11 1a8 8 0 0 0 8 8c.34 0 .68-.04 1-.11Z" />
+                  </svg>
+                </template>
+              </ClientOnly>
+              <ClientOnly>
+                <span>{{ colorMode.value === 'dark' ? 'Claro' : 'Oscuro' }}</span>
+                <template #fallback>
+                  <span>Tema</span>
+                </template>
+              </ClientOnly>
             </button>
 
             <NuxtLink
@@ -153,7 +165,7 @@
       </aside>
 
       <main class="min-w-0 flex-1 overflow-x-hidden lg:pl-[290px]">
-        <header class="sticky top-0 z-30 border-b border-slate-200/60 bg-[#F8FAFC] dark:border-slate-800/60 dark:bg-[#0B1120]">
+        <header class="fixed left-0 right-0 top-0 z-30 border-b border-slate-200/60 bg-[#F8FAFC] dark:border-slate-800/60 dark:bg-[#0B1120] lg:left-[290px]">
           <div class="flex items-center gap-3.5 px-5 py-3.5">
             <button
               class="press flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/60 bg-white shadow-sm transition dark:border-slate-700 dark:bg-slate-800 lg:hidden"
@@ -166,7 +178,7 @@
             </button>
             <div class="min-w-0 flex-1">
               <h2 class="text-[17px] font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">{{ pageTitle }}</h2>
-              <p class="truncate text-[11px] font-medium text-slate-400">{{ authStore.displayName }}<span v-if="activeCatalog"> · {{ activeCatalog.slug }}</span></p>
+              <p class="truncate text-[11px] font-medium text-slate-400"><ClientOnly>{{ authStore.displayName }}<template #fallback>Invitado</template></ClientOnly><span v-if="activeCatalog"> · {{ activeCatalog.slug }}</span></p>
             </div>
             <button
               class="flex items-center gap-1.5 rounded-full bg-blue-500 px-3 py-2 text-white shadow-sm shadow-blue-500/30 transition hover:bg-blue-600"
@@ -186,7 +198,7 @@
           </div>
         </header>
 
-        <div class="px-2 py-3 sm:px-4 sm:py-4 lg:px-6">
+        <div class="px-2 pt-[78px] pb-3 sm:px-4 sm:pt-[82px] sm:pb-4 lg:px-6">
           <slot />
         </div>
       </main>

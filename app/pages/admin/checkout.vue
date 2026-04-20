@@ -57,97 +57,17 @@
             </div>
             <div class="grid-form">
               <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.closed" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Forzar cierre total</span>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.reviewsEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Reseñas activas</span>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.reviewModeration" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Moderación de reseñas</span>
-              </div>
-              <div class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.cartEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
                 <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrito habilitado</span>
               </div>
-              <div class="toggle-row">
+              <div v-if="draft.cartEnabled" class="toggle-row">
                 <label class="toggle-3d"><input v-model="draft.whatsappEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
                 <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">WhatsApp directo habilitado</span>
               </div>
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.productCarouselEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrusel de productos</span>
+              <div v-if="draft.cartEnabled" class="toggle-row">
+                <label class="toggle-3d"><input v-model="draft.callEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
+                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Llamadas habilitadas</span>
               </div>
-              <label class="full mt-4"><span>Mensaje de cierre</span><textarea v-model="draft.closedMessage" rows="3" /><small>Texto principal cuando el negocio no está disponible.</small></label>
-            </div>
-          </section>
-
-          <section class="px-2 py-3">
-            <div class="mb-4">
-              <p class="eyebrow">Pantalla de cierre</p>
-              <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Botones y estilo del cierre</h3>
-            </div>
-            <div class="grid-form">
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.closedShowMenuBtn" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón "Ver menú"</span>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.closedShowWhatsapp" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de WhatsApp</span>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.closedShowCall" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Mostrar botón de llamada</span>
-              </div>
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.closedTextBox" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Usar caja de texto</span>
-              </div>
-              <div class="theme-color-grid full">
-                <label class="theme-swatch">
-                  <span class="theme-swatch-chip" :style="{ backgroundColor: draft.closedTextColor }" />
-                  <span class="theme-swatch-body">
-                    <span class="theme-swatch-label">Color del texto</span>
-                    <span class="theme-swatch-hex">{{ String(draft.closedTextColor).toUpperCase() }}</span>
-                  </span>
-                  <input v-model="draft.closedTextColor" type="color" class="theme-swatch-input" />
-                </label>
-                <label class="theme-swatch">
-                  <span class="theme-swatch-chip" :style="{ backgroundColor: draft.closedMenuBtnBg }" />
-                  <span class="theme-swatch-body">
-                    <span class="theme-swatch-label">Fondo botón menú</span>
-                    <span class="theme-swatch-hex">{{ String(draft.closedMenuBtnBg).toUpperCase() }}</span>
-                  </span>
-                  <input v-model="draft.closedMenuBtnBg" type="color" class="theme-swatch-input" />
-                </label>
-                <label class="theme-swatch">
-                  <span class="theme-swatch-chip" :style="{ backgroundColor: draft.closedMenuBtnText }" />
-                  <span class="theme-swatch-body">
-                    <span class="theme-swatch-label">Texto botón menú</span>
-                    <span class="theme-swatch-hex">{{ String(draft.closedMenuBtnText).toUpperCase() }}</span>
-                  </span>
-                  <input v-model="draft.closedMenuBtnText" type="color" class="theme-swatch-input" />
-                </label>
-                <label class="theme-swatch">
-                  <span class="theme-swatch-chip" :style="{ backgroundColor: draft.closedTextBoxColor }" />
-                  <span class="theme-swatch-body">
-                    <span class="theme-swatch-label">Fondo cajón texto</span>
-                    <span class="theme-swatch-hex">{{ String(draft.closedTextBoxColor).toUpperCase() }}</span>
-                  </span>
-                  <input v-model="draft.closedTextBoxColor" type="color" class="theme-swatch-input" />
-                </label>
-              </div>
-              <label class="flex flex-col justify-center">
-                <div class="mb-3 flex items-center justify-between">
-                  <span>Opacidad de la caja</span>
-                  <span class="rounded-[10px] bg-blue-50 px-2 py-1 text-xs font-bold text-blue-600 dark:bg-blue-950/40 dark:text-blue-400">{{ draft.closedTextBoxOpacity }}%</span>
-                </div>
-                <input v-model.number="draft.closedTextBoxOpacity" type="range" min="0" max="100" step="1" class="w-full cursor-pointer accent-blue-600 dark:accent-blue-500" />
-              </label>
-              <label><span>Tamaño del texto principal</span><input v-model.number="draft.closedTextSizeLarge" type="number" min="12" step="1" /></label>
             </div>
           </section>
         </div>
@@ -169,6 +89,13 @@ const catalog = computed(() => catalogStore.activeCatalog)
 const draft = ref<CatalogOperationalSettings>(defaultSettings())
 const saving = ref(false)
 const saveError = ref('')
+
+watch(() => draft.value.cartEnabled, (enabled) => {
+  if (!enabled) {
+    draft.value.whatsappEnabled = false
+    draft.value.callEnabled = false
+  }
+})
 
 watch(catalog, (value) => {
   if (!value) {

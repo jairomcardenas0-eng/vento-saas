@@ -16,6 +16,38 @@
     <section class="panel-card span-2 min-w-0">
       <UiSectionHeader eyebrow="Moderación" title="Bandeja de reseñas" description="Aprueba, responde y limpia las reseñas del catálogo." />
 
+      <div class="review-settings">
+        <article class="setting-card">
+          <div class="setting-head">
+            <div>
+              <p class="setting-title">Reseñas activas</p>
+              <p class="setting-desc">
+                Si desactivas las reseñas, ningún usuario podrá comentar en tus platos.
+              </p>
+            </div>
+            <label class="toggle-3d">
+              <input v-model="reviewsEnabled" type="checkbox" class="toggle-checkbox" @change="saveReviewSettings" />
+              <span class="slider-3d"></span>
+            </label>
+          </div>
+        </article>
+
+        <article class="setting-card">
+          <div class="setting-head">
+            <div>
+              <p class="setting-title">Moderación de reseñas</p>
+              <p class="setting-desc">
+                Si desactivas la moderación, cualquier usuario podrá comentar y su reseña se publicará sin aprobación del administrador.
+              </p>
+            </div>
+            <label class="toggle-3d">
+              <input v-model="reviewModeration" type="checkbox" class="toggle-checkbox" @change="saveReviewSettings" />
+              <span class="slider-3d"></span>
+            </label>
+          </div>
+        </article>
+      </div>
+
       <div class="review-metrics">
         <article class="metric-card">
           <p class="metric-label">Pendientes</p>
@@ -105,6 +137,29 @@ onBeforeUnmount(() => {
   reviewsStore.stopRealtime()
 })
 
+const reviewsEnabled = ref(true)
+const reviewModeration = ref(true)
+
+watch(catalog, (value) => {
+  if (!value) {
+    return
+  }
+
+  reviewsEnabled.value = value.settings.reviewsEnabled
+  reviewModeration.value = value.settings.reviewModeration
+}, { immediate: true })
+
+const saveReviewSettings = async () => {
+  if (!catalog.value) {
+    return
+  }
+
+  await catalogStore.updateSettings({
+    reviewsEnabled: reviewsEnabled.value,
+    reviewModeration: reviewModeration.value,
+  })
+}
+
 const approve = async (reviewId: string) => {
   if (!catalog.value) {
     return
@@ -144,6 +199,117 @@ const remove = async (reviewId: string) => {
 </script>
 
 <style scoped>
+.review-settings {
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 0.8rem;
+  margin-bottom: 1rem;
+}
+
+.setting-card {
+  border-radius: 16px;
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.86));
+  padding: 0.85rem 1rem;
+}
+
+.setting-head {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 0.9rem;
+}
+
+.setting-title {
+  margin: 0;
+  font-size: 0.92rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.setting-desc {
+  margin: 0.35rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.35;
+  color: #64748b;
+}
+
+.toggle-3d {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  width: 48px;
+  height: 28px;
+  flex: 0 0 auto;
+}
+
+.toggle-checkbox {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  cursor: pointer;
+  margin: 0;
+}
+
+.slider-3d {
+  position: relative;
+  width: 48px;
+  height: 28px;
+  border-radius: 999px;
+  background: linear-gradient(180deg, #e4e4e7 0%, #d4d4d8 100%);
+  box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.12);
+  transition: background-color 0.2s ease, background 0.2s ease;
+}
+
+.slider-3d::after {
+  content: '';
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 22px;
+  height: 22px;
+  border-radius: 999px;
+  background: #ffffff;
+  box-shadow: 0 4px 10px rgba(15, 23, 42, 0.2);
+  transition: transform 0.2s ease;
+}
+
+.toggle-checkbox:checked + .slider-3d {
+  background: linear-gradient(180deg, #22c55e 0%, #16a34a 100%);
+}
+
+.toggle-checkbox:checked + .slider-3d::after {
+  transform: translateX(20px);
+}
+
+.toggle-checkbox:focus-visible + .slider-3d {
+  outline: 2px solid #22c55e;
+  outline-offset: 2px;
+}
+
+.dark .setting-card {
+  border-color: rgba(100, 116, 139, 0.35);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.38));
+}
+
+.dark .setting-title {
+  color: #f8fafc;
+}
+
+.dark .setting-desc {
+  color: #94a3b8;
+}
+
+.dark .slider-3d {
+  background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
+}
+
+.dark .toggle-checkbox:checked + .slider-3d {
+  background: linear-gradient(180deg, #22d3ee 0%, #0891b2 100%);
+}
+
 .review-metrics {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

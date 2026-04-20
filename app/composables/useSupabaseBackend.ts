@@ -54,6 +54,8 @@ const mapRowToProduct = (row: any): CatalogProduct => ({
   timerShowMinutes: row.timer?.showMinutes ?? true,
   timerShowSeconds: row.timer?.showSeconds ?? false,
   timerLinkSale: row.timer?.linkSale ?? false,
+  carouselEnabled: row.timer?.carouselEnabled ?? false,
+  carouselIntervalSeconds: row.timer?.carouselIntervalSeconds ?? 3,
   tags: Array.isArray(row.tags) ? row.tags : [],
   variants: Array.isArray(row.variants) ? row.variants : [],
   reviewsApprovedCount: Number(row.reviews_approved_count || 0),
@@ -84,6 +86,8 @@ const mapProductToRow = (catalogId: string, product: CatalogProduct) => ({
     showMinutes: product.timerShowMinutes,
     showSeconds: product.timerShowSeconds,
     linkSale: product.timerLinkSale,
+    carouselEnabled: product.carouselEnabled ?? false,
+    carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
   },
   tags: product.tags || [],
   variants: product.variants || [],
@@ -582,8 +586,42 @@ export const useSupabaseBackend = () => {
       range_days: rangeDays,
     })
 
+    if (!error) {
+      return mapAnalyticsOverview(data, rangeDays)
+    }
+
+    const fallback = {
+      rangeDays,
+      totals: {
+        pageViews: 0,
+        activeUsers: 0,
+        newUsers: 0,
+        productClicks: 0,
+      },
+      daily: Array.from({ length: rangeDays }, (_, index) => {
+        const date = new Date()
+        date.setDate(date.getDate() - (rangeDays - 1 - index))
+        return {
+          day: date.toISOString().slice(0, 10),
+          pageViews: 0,
+          activeUsers: 0,
+          newUsers: 0,
+          productClicks: 0,
+        }
+      }),
+    }
+
+    const isRecoverable =
+      String(error?.message || '').toLowerCase().includes('column "day" does not exist')
+      || String(error?.message || '').toLowerCase().includes('get_catalog_analytics_snapshot')
+
+    if (isRecoverable) {
+      console.warn('[analytics] fallback activado:', error.message || error)
+      return fallback
+    }
+
     ensureSuccess(error, 'No se pudieron cargar las metricas del catalogo')
-    return mapAnalyticsOverview(data, rangeDays)
+    return fallback
   }
 
   const getMarketplaceLanding = async (userTags: string[] = [], options?: {

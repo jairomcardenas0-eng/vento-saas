@@ -223,6 +223,42 @@
               </div>
             </div>
 
+            <!-- Carrusel de imágenes -->
+            <div class="rounded-[22px] border border-zinc-200 bg-white/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/80 space-y-3">
+              <p class="text-sm font-semibold text-zinc-900 dark:text-zinc-100">Carrusel de imágenes</p>
+              <p class="text-xs text-zinc-400">
+                Activa el carrusel desde aquí mismo al crear/editar el producto.
+              </p>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <label class="flex items-center gap-3 rounded-[16px] border border-zinc-200 bg-white px-3 py-2.5 dark:border-zinc-800 dark:bg-zinc-950">
+                  <input
+                    v-model="productDraft.carouselEnabled"
+                    type="checkbox"
+                    class="h-4 w-4 rounded border-zinc-300"
+                    :disabled="availableImageCount < 2"
+                  />
+                  <span class="text-sm text-zinc-900 dark:text-zinc-100">Activar carrusel</span>
+                </label>
+                <label class="block">
+                  <span class="mb-2 block text-xs text-zinc-500">Intervalo (segundos)</span>
+                  <select
+                    v-model.number="productDraft.carouselIntervalSeconds"
+                    class="w-full rounded-[16px] border border-zinc-200 bg-white px-3 py-2.5 text-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-zinc-900 dark:border-zinc-800 dark:bg-zinc-950 dark:text-zinc-100"
+                    :disabled="!productDraft.carouselEnabled || availableImageCount < 2"
+                  >
+                    <option :value="1">1</option>
+                    <option :value="2">2</option>
+                    <option :value="3">3</option>
+                    <option :value="4">4</option>
+                    <option :value="5">5</option>
+                  </select>
+                </label>
+              </div>
+              <p v-if="availableImageCount < 2" class="text-xs text-amber-600 dark:text-amber-400">
+                Si hay una sola imagen, el carrusel no se puede activar. Agrega 2 o más imágenes para habilitarlo.
+              </p>
+            </div>
+
             <!-- Estado y promo -->
             <div class="grid gap-4 sm:grid-cols-2">
               <label class="flex items-center gap-3 rounded-[20px] border border-zinc-200 bg-white px-4 py-3 dark:border-zinc-800 dark:bg-zinc-950">
@@ -470,6 +506,10 @@ const closeDrawer = () => {
   uploadProgress.value = 0
 }
 
+const availableImageCount = computed(() =>
+  (productDraft.value.imageUrls || []).filter(Boolean).length,
+)
+
 const addVariantGroup = () => {
   productDraft.value.variants.push(createEmptyVariantGroup())
 }
@@ -544,6 +584,9 @@ const clearMultiImage = async (imgIdx: number) => {
   urls[imgIdx] = null
   productDraft.value.imageUrls = urls
   if (imgIdx === 0) productDraft.value.imageUrl = null
+  if (availableImageCount.value < 2) {
+    productDraft.value.carouselEnabled = false
+  }
 }
 
 

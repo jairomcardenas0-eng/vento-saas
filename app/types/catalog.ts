@@ -113,6 +113,7 @@ export interface CatalogOperationalSettings {
   weeklySchedule: BusinessDaySchedule[]
   cartEnabled: boolean
   whatsappEnabled: boolean
+  callEnabled: boolean
   productCarouselEnabled: boolean
   productCarouselSeconds: number
   checkoutNameReq: 'obligatorio' | 'opcional'
@@ -216,6 +217,8 @@ export interface CatalogProduct {
   timerShowMinutes: boolean
   timerShowSeconds: boolean
   timerLinkSale: boolean
+  carouselEnabled?: boolean
+  carouselIntervalSeconds?: 1 | 2 | 3 | 4 | 5
   tags: string[]
   variants: ProductVariantGroup[]
   reviewsApprovedCount: number
