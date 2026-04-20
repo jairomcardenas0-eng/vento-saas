@@ -6,14 +6,7 @@
   />
 
   <AdminStatePanel
-    v-else-if="loading"
-    tone="loading"
-    title="Cargando referidos"
-    description="Estamos consultando tu código y la actividad de tu red."
-  />
-
-  <AdminStatePanel
-    v-else-if="loadError"
+    v-else-if="loadError && !referralCode"
     tone="error"
     title="No se pudo cargar el programa de referidos"
     :description="loadError"
@@ -30,6 +23,17 @@
         title="Programa de referidos"
         description="Comparte tu enlace único y haz crecer tu red. Cada persona que se registre con tu código queda vinculada a tu cuenta."
       />
+
+      <div
+        v-if="(loading && !referralCode) || loadError"
+        class="mt-4 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm"
+        :class="loadError
+          ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
+          : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
+      >
+        <span>{{ loadError || 'Actualizando tu código y la actividad de tu red...' }}</span>
+        <button v-if="loadError" class="solid-btn" @click="loadReferrals()">Reintentar</button>
+      </div>
 
       <div class="mt-6 min-w-0 rounded-[24px] border border-zinc-200 bg-gradient-to-br from-zinc-50 to-white p-4 sm:p-6 dark:border-zinc-800 dark:from-zinc-900 dark:to-zinc-950">
         <div class="flex min-w-0 flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">

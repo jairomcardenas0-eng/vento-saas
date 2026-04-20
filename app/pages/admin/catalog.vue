@@ -38,12 +38,20 @@
       </div>
     </div>
 
-    <!-- Inline Catalog View -->
-    <div v-if="catalogEngine.loadingEngine" class="rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50 px-4 py-12 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-400">
-      Cargando el catálogo desde la base de datos...
+    <!-- Inline status (no bloquea la pantalla) -->
+    <div
+      v-if="(catalogEngine.loadingEngine && !catalogEngine.categories.length) || loadError"
+      class="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm"
+      :class="loadError
+        ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
+        : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
+    >
+      <span>{{ loadError || 'Actualizando catálogo desde la base de datos...' }}</span>
+      <button v-if="loadError" class="solid-btn" @click="refreshCatalog">Reintentar</button>
     </div>
-    
-    <div v-else class="space-y-12 pb-10">
+
+    <!-- Inline Catalog View -->
+    <div class="space-y-12 pb-10">
       <div v-for="category in filteredCatalog" :key="category.id" class="space-y-5">
         
         <!-- Category Header -->
@@ -416,6 +424,7 @@ const uploadProgress = ref(0)
 const productDraft = ref<ProductItem>(createEmptyProduct())
 const categoryDraft = ref<CategoryItem>(createEmptyCategory())
 const previousImageUrl = ref<string | null>(null)
+const loadError = ref('')
 
 const filteredCatalog = computed(() => {
   const needle = search.value.trim().toLowerCase()
@@ -443,10 +452,18 @@ const refreshCatalog = async () => {
     return
   }
 
-  await catalogEngine.hydrateCatalog(activeStoreId.value)
+  loadError.value = ''
 
-  if (!selectedCategoryId.value && catalogEngine.categories[0]) {
-    selectedCategoryId.value = catalogEngine.categories[0].id
+  try {
+    await catalogEngine.hydrateCatalog(activeStoreId.value)
+
+    if (!selectedCategoryId.value && catalogEngine.categories[0]) {
+      selectedCategoryId.value = catalogEngine.categories[0].id
+    }
+  } catch (error) {
+    loadError.value = error instanceof Error
+      ? error.message
+      : 'No pudimos sincronizar el catálogo. Intenta nuevamente.'
   }
 }
 
