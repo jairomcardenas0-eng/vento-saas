@@ -23,6 +23,13 @@ export default defineNuxtConfig({
       title: 'Plataforma SaaS Central',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },
+        // Tell the browser to keep the connection alive (reduces Supabase cold starts)
+        { 'http-equiv': 'Connection', content: 'keep-alive' },
+      ],
+      // Preconnect to Supabase so DNS + TLS are resolved before any JS runs
+      link: [
+        { rel: 'preconnect', href: 'https://eydolnzvwkqwoubbgvjc.supabase.co' },
+        { rel: 'dns-prefetch', href: 'https://eydolnzvwkqwoubbgvjc.supabase.co' },
       ],
     },
   },
@@ -31,5 +38,24 @@ export default defineNuxtConfig({
     classSuffix: '',
     fallback: 'light',
     preference: 'system',
+  },
+
+  // Vite build optimizations
+  vite: {
+    build: {
+      // Split vendor chunks so the browser can cache them separately
+      chunkSizeWarningLimit: 1000,
+      rollupOptions: {
+        output: {
+          manualChunks: {
+            'supabase': ['@supabase/supabase-js'],
+          },
+        },
+      },
+    },
+    // Optimize dependency pre-bundling in dev
+    optimizeDeps: {
+      include: ['@supabase/supabase-js'],
+    },
   },
 })

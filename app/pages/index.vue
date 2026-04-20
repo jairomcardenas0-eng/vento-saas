@@ -49,9 +49,10 @@
           <button
             type="button"
             class="rounded-full border border-stone-300 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] active:scale-95 dark:border-white/15"
-            @click="refreshLanding(true)"
+            :class="{ 'animate-spin-slow opacity-60 pointer-events-none': isFetching }"
+            @click="forceRefresh"
           >
-            Reset
+            {{ isFetching ? '⟳' : 'Reset' }}
           </button>
         </div>
         <p class="mt-2 max-w-[24rem] text-sm leading-6 text-stone-600 dark:text-slate-300">
@@ -66,9 +67,19 @@
             {{ tag }}
           </span>
         </div>
+
+        <!-- Subtle refresh indicator — doesn't block the UI -->
+        <div
+          v-if="isFetching && hasContent"
+          class="mt-3 flex items-center gap-2 text-[11px] text-stone-400 dark:text-slate-500"
+        >
+          <span class="inline-block h-2 w-2 animate-ping rounded-full bg-amber-400 dark:bg-cyan-400" />
+          Actualizando feed…
+        </div>
       </section>
 
-      <section v-if="pending && !hasContent" class="space-y-6">
+      <!-- SKELETON: only shown when there is absolutely nothing cached -->
+      <section v-if="showSkeleton" class="space-y-6">
         <div class="grid grid-cols-4 gap-3">
           <div v-for="item in 4" :key="`orbit-skeleton-${item}`" class="animate-pulse">
             <div class="aspect-square rounded-full bg-stone-200 dark:bg-slate-800" />
@@ -112,7 +123,7 @@
               @click="trackStoreTap(store)"
             >
               <div class="relative aspect-square overflow-hidden rounded-full border border-white/70 shadow-[0_18px_44px_-24px_rgba(15,23,42,0.65)] dark:border-white/10">
-                <img :src="store.logoUrl || store.coverImage" :alt="store.businessName" class="h-full w-full object-cover transition duration-300 group-active:scale-95" loading="lazy">
+                <img :src="store.logoUrl || store.coverImage" :alt="store.businessName" class="h-full w-full object-cover transition duration-300 group-active:scale-95" loading="lazy" decoding="async">
                 <span class="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-[11px] text-white shadow-lg">✓</span>
               </div>
               <p class="mt-2 truncate text-center text-[12px] font-semibold">{{ store.businessName }}</p>
@@ -138,7 +149,7 @@
               @click="trackProductTap(product)"
             >
               <div class="relative aspect-square">
-                <img :src="product.imageUrl" :alt="product.productName" class="h-full w-full object-cover" loading="lazy">
+                <img :src="product.imageUrl" :alt="product.productName" class="h-full w-full object-cover" loading="lazy" decoding="async">
                 <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent px-3 pb-3 pt-8">
                   <p class="line-clamp-2 text-sm font-semibold">{{ product.productName }}</p>
                   <p class="mt-1 text-[11px] text-white/70">{{ product.businessName }}</p>
@@ -167,7 +178,8 @@
                   :src="hub.sampleImageUrl"
                   :alt="hub.regionLabel"
                   class="h-full w-full scale-110 object-cover"
-                  loading="lazy"
+                  :loading="index === 0 ? 'eager' : 'lazy'"
+                  decoding="async"
                 >
               </div>
               <div class="relative overflow-hidden rounded-[30px] border border-white/70 bg-gradient-to-r from-stone-950/85 via-stone-950/50 to-stone-950/20 px-4 py-5 text-white dark:border-white/10 dark:from-slate-950/90 dark:via-slate-900/55">
@@ -201,11 +213,11 @@
               @click="trackFeedTap(item)"
             >
               <div class="relative aspect-[1.1] overflow-hidden">
-                <img :src="item.coverImage || item.productImageUrl" :alt="item.businessName" class="h-full w-full object-cover" loading="lazy">
+                <img :src="item.coverImage || item.productImageUrl" :alt="item.businessName" class="h-full w-full object-cover" loading="lazy" decoding="async">
                 <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
                 <div class="absolute inset-x-0 bottom-0 p-4 text-white">
                   <div class="mb-2 flex items-center gap-2">
-                    <img :src="item.logoUrl" :alt="item.businessName" class="h-10 w-10 rounded-full border border-white/40 object-cover">
+                    <img :src="item.logoUrl" :alt="item.businessName" class="h-10 w-10 rounded-full border border-white/40 object-cover" loading="lazy" decoding="async">
                     <div>
                       <p class="text-sm font-semibold">{{ item.businessName }}</p>
                       <p class="text-[11px] text-white/70">{{ item.city }}{{ item.stateCode ? `, ${item.stateCode}` : '' }}</p>
@@ -287,6 +299,7 @@
       </template>
     </div>
 
+    <!-- Search overlay -->
     <Transition
       enter-active-class="duration-300 ease-out"
       enter-from-class="opacity-0"
@@ -341,6 +354,7 @@
       </div>
     </Transition>
 
+    <!-- Geo menu -->
     <Transition
       enter-active-class="duration-300 ease-out"
       enter-from-class="opacity-0"
@@ -450,48 +464,48 @@ type GeoCountryNode = {
 const backend = useSupabaseBackend()
 const trackerEngine = useAlgorithmicTracker()
 const colorMode = useColorMode()
+const marketplaceCache = useMarketplaceCache()
 
-const landingCache = useState<{
-  topStores: MarketplaceStoreCard[]
-  viralProducts: MarketplaceProductCard[]
-  hubs: MarketplaceHub[]
-  forYou: MarketplaceFeedEntry[]
-  fetchedAt: string | null
-  signature: string
-}>('marketplace-landing-cache', () => ({
-  topStores: [],
-  viralProducts: [],
-  hubs: [],
-  forYou: [],
-  fetchedAt: null,
-  signature: '',
-}))
-
-const pending = ref(false)
-const errorMessage = ref('')
+// --- STATE ---
+/**
+ * isFetching = a network request is in-flight RIGHT NOW.
+ * Different from "pending": the UI stays visible with old data while fetching.
+ */
+const isFetching = ref(false)
+const fetchError = ref('')
 const isSearchOpen = ref(false)
 const isGeoMenuOpen = ref(false)
 const searchQuery = ref('')
 const searchDraft = ref('')
 const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
 
-const topStores = computed(() => landingCache.value.topStores)
-const viralProducts = computed(() => landingCache.value.viralProducts)
-const hubs = computed(() => landingCache.value.hubs)
-const forYou = computed(() => landingCache.value.forYou)
+// Hydrate localStorage cache into reactive state BEFORE any render so the
+// first paint already has data (instant perceived load).
+// This runs synchronously during setup — zero delay.
+if (import.meta.client) {
+  marketplaceCache.hydrateFromStorage()
+}
+
+// Convenient aliases for the template
+const topStores = computed(() => marketplaceCache.cache.value.topStores)
+const viralProducts = computed(() => marketplaceCache.cache.value.viralProducts)
+const hubs = computed(() => marketplaceCache.cache.value.hubs)
+const forYou = computed(() => marketplaceCache.cache.value.forYou)
+const hasContent = marketplaceCache.hasContent
+
+// Only show the full skeleton when there is literally nothing to display
+const showSkeleton = computed(() => isFetching.value && !hasContent.value)
+
 const preferredTags = trackerEngine.preferredTags
 const recentSearches = trackerEngine.recentSearches
 const currentYear = new Date().getFullYear()
-
-const hasContent = computed(() =>
-  topStores.value.length > 0 || viralProducts.value.length > 0 || hubs.value.length > 0 || forYou.value.length > 0,
-)
 
 const chips = computed(() => {
   const base = preferredTags.value.length ? preferredTags.value : ['delivery', 'viral', 'nuevo', 'cerca']
   return base.slice(0, 6)
 })
 
+// --- SEARCH FILTERS ---
 const searchNeedle = computed(() => searchQuery.value.trim().toLowerCase())
 
 const matchText = (fields: Array<string | number | null | undefined>) => {
@@ -539,6 +553,7 @@ const filteredFeed = computed(() => forYou.value.filter(item => matchText([
   ...item.matchedTags,
 ])))
 
+// --- GEO MENU TREE ---
 const geoMenuTree = computed<GeoCountryNode[]>(() => {
   const countryMap = new Map<string, {
     countryCode: string
@@ -603,8 +618,9 @@ const geoMenuTree = computed<GeoCountryNode[]>(() => {
     .sort((left, right) => right.storeCount - left.storeCount || left.countryLabel.localeCompare(right.countryLabel))
 })
 
+// --- HEADLINE ---
 const heroHeadline = computed(() => {
-  if (errorMessage.value) {
+  if (fetchError.value) {
     return 'Carga parcial disponible'
   }
 
@@ -625,34 +641,53 @@ const money = (value: number) => new Intl.NumberFormat('es-MX', {
   maximumFractionDigits: 0,
 }).format(value || 0)
 
+// --- DATA FETCHING (stale-while-revalidate) ---
 const trackerSignature = computed(() => preferredTags.value.join('|'))
 
+/**
+ * Core fetch function.
+ *
+ * Strategy: stale-while-revalidate
+ *  1. If cache exists → paint it immediately (0 wait).
+ *  2. If cache is stale OR signature changed → fetch in background, update when done.
+ *  3. If cache expired OR forced → show spinner overlay (not full skeleton).
+ *  4. Never blocks the UI unnecessarily.
+ */
 const refreshLanding = async (force = false) => {
-  const lastFetchMs = landingCache.value.fetchedAt ? Date.parse(landingCache.value.fetchedAt) : 0
-  const isFresh = lastFetchMs && Date.now() - lastFetchMs < 1000 * 60 * 8
   const nextSignature = trackerSignature.value
+  const signatureChanged = marketplaceCache.cache.value.signature !== nextSignature
 
-  if (!force && isFresh && landingCache.value.signature === nextSignature && hasContent.value) {
+  // Nothing to do: cache is fresh and signature matches
+  if (!force && !signatureChanged && !marketplaceCache.isStale.value && hasContent.value) {
     return
   }
 
-  pending.value = true
-  errorMessage.value = ''
+  // If we have NO content at all, flag as fetching so skeleton shows
+  if (!hasContent.value || marketplaceCache.isExpired.value) {
+    isFetching.value = true
+  }
+
+  fetchError.value = ''
 
   try {
     const payload = await backend.getMarketplaceLanding(preferredTags.value)
-    landingCache.value = {
-      ...payload,
-      fetchedAt: new Date().toISOString(),
-      signature: nextSignature,
-    }
+    marketplaceCache.write(payload, nextSignature)
   } catch (error: any) {
-    errorMessage.value = error?.message || 'No se pudo refrescar el feed'
+    fetchError.value = error?.message || 'No se pudo refrescar el feed'
+
+    // If we still have stale data, keep showing it — just stop the spinner
+    if (!hasContent.value) {
+      // No data at all — nothing useful to show
+      console.error('[marketplace] fetch failed, no cache available:', fetchError.value)
+    }
   } finally {
-    pending.value = false
+    isFetching.value = false
   }
 }
 
+const forceRefresh = () => refreshLanding(true)
+
+// --- SEARCH ---
 const openSearch = async () => {
   isSearchOpen.value = true
   searchDraft.value = searchQuery.value
@@ -683,6 +718,7 @@ const selectGeoCity = async (city: string) => {
   await commitSearch(city)
 }
 
+// --- MISC ---
 const toggleColorMode = () => {
   colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
 }
@@ -693,6 +729,7 @@ const showComingSoon = (label: string) => {
   }
 }
 
+// --- TRACKING ---
 const trackStoreTap = (store: MarketplaceStoreCard) => {
   trackerEngine.trackStoreView({
     store: store.businessName,
@@ -728,12 +765,17 @@ const trackFeedTap = (item: MarketplaceFeedEntry) => {
   })
 }
 
-watch(preferredTags, async () => {
+// Re-fetch when user behavior shifts the personalization signature
+watch(trackerSignature, async () => {
   await refreshLanding()
-}, { deep: true })
+})
 
 onMounted(async () => {
+  // 1. Hydrate tracker (reads localStorage with user's history)
   trackerEngine.hydrate()
+
+  // 2. Trigger fetch — if cache is warm from localStorage this is a silent
+  //    background refresh; if cold it starts the skeleton spinner.
   await refreshLanding()
 })
 </script>
