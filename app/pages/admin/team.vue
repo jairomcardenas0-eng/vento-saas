@@ -57,7 +57,7 @@
           v-model="search"
           type="search"
           placeholder="Buscar por nombre o correo..."
-          class="w-full rounded-[14px] border border-zinc-200 bg-white py-3 pl-9 pr-4 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950"
+          class="w-full rounded-[14px] border border-zinc-200 bg-white py-3 pl-9 pr-4 text-sm text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
         />
       </div>
 
@@ -175,11 +175,11 @@
                 <div class="grid gap-4 sm:grid-cols-2">
                   <label class="flex flex-col gap-1.5">
                     <span class="text-xs font-bold uppercase tracking-wide text-zinc-500">Nombre completo</span>
-                    <input v-model="form.name" required placeholder="Ej. María García" class="rounded-[12px] border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900" />
+                    <input v-model="form.name" required placeholder="Ej. María García" class="rounded-[12px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white" />
                   </label>
                   <label class="flex flex-col gap-1.5">
                     <span class="text-xs font-bold uppercase tracking-wide text-zinc-500">Correo</span>
-                    <input v-model="form.email" type="email" required :disabled="Boolean(editingMember)" placeholder="correo@ejemplo.com" class="rounded-[12px] border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900" />
+                    <input v-model="form.email" type="email" required :disabled="Boolean(editingMember)" placeholder="correo@ejemplo.com" class="rounded-[12px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 disabled:opacity-50 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white" />
                   </label>
                 </div>
 
@@ -203,7 +203,7 @@
 
                 <div v-if="editingMember">
                   <span class="mb-2 block text-xs font-bold uppercase tracking-wide text-zinc-500">Estado</span>
-                  <select v-model="form.status" class="w-full rounded-[12px] border border-zinc-200 bg-white px-3 py-2.5 text-sm outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900">
+                  <select v-model="form.status" class="w-full rounded-[12px] border border-zinc-200 bg-white px-3 py-2.5 text-sm text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-900 dark:text-white">
                     <option value="active">Activo</option>
                     <option value="pending">Pendiente</option>
                     <option value="suspended">Suspendido</option>
