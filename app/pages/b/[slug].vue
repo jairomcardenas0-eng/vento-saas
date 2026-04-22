@@ -1,5 +1,5 @@
 <template>
-  <section v-if="pending" class="auth-shell">
+  <section v-if="status === 'idle' || status === 'pending'" class="auth-shell">
     <div class="auth-card">
       <h1>Cargando storefront</h1>
       <p class="section-copy">Sincronizando categorias, productos y configuracion desde Supabase.</p>
@@ -84,7 +84,7 @@ const mapProduct = (product: any): ProductItem => ({
   updatedAt: null,
 })
 
-const { data, pending } = await useAsyncData<StorefrontPayload | null>(
+const { data, status } = await useAsyncData<StorefrontPayload | null>(
   `storefront-${slugKey.value}`,
   async () => {
     if (!slugKey.value) {
@@ -132,10 +132,13 @@ const { data, pending } = await useAsyncData<StorefrontPayload | null>(
 const storefront = computed(() => data.value)
 const layout = computed(() => storefront.value?.settings.storefrontLayout ?? 'classic')
 
-// Disparo de analítica: solo en el cliente, post-hidratación, idempotente por TAB.
-// onMounted garantiza que nunca corre en SSR ni durante la hidratación.
-onMounted(() => {
-  if (!storefront.value) return
-  analytics.trackPageView(storefront.value.id, `/b/${storefront.value.slug}`)
-})
+// Analítica: watch en lugar de onMounted para capturar cuando el fetch
+// termina después del montaje (lazy: true + server: false).
+const analyticsTracked = ref(false)
+watch(storefront, (value) => {
+  if (value && !analyticsTracked.value) {
+    analyticsTracked.value = true
+    analytics.trackPageView(value.id, `/b/${value.slug}`)
+  }
+}, { immediate: true })
 </script>
