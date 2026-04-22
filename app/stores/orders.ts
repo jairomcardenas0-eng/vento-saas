@@ -116,12 +116,27 @@ export const useOrdersStore = defineStore('orders-live', {
           return
         }
 
+        let loadingGuard: ReturnType<typeof setTimeout> | null = null
         this.loading = !this.items.length
+        if (this.loading) {
+          // Seguridad: si en 12s el fetch inicial no respondió, apagar el spinner
+          // silenciosamente y reintentar la suscripción (Supabase siempre responde)
+          loadingGuard = setTimeout(() => {
+            if (this.loading) {
+              this.loading = false
+              scheduleReconnect()
+            }
+          }, 12000)
+        }
         this.realtimeError = ''
         ordersUnsubscribe?.()
         ordersUnsubscribe = backend.watchOrders(
           activeCatalogId,
           async ({ orders, changes }) => {
+            if (loadingGuard) {
+              clearTimeout(loadingGuard)
+              loadingGuard = null
+            }
             this.items = orders
             this.loading = false
             this.listening = true

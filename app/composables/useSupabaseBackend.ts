@@ -1137,23 +1137,27 @@ export const useSupabaseBackend = () => {
       onError?: (error: Error) => void,
     ) {
       const fetchOrders = async (changes: RealtimeDocChange<CatalogOrder>[] = []) => {
-        const { data, error } = await $supabase
-          .from('orders')
-          .select('*')
-          .eq('catalog_id', catalogId)
-          .order('created_at', { ascending: false })
+        try {
+          const { data, error } = await $supabase
+            .from('orders')
+            .select('*')
+            .eq('catalog_id', catalogId)
+            .order('created_at', { ascending: false })
 
-        if (error) {
-          throw error
+          if (error) {
+            throw error
+          }
+
+          callback({
+            orders: (data || []).map(mapRowToOrder),
+            changes,
+          })
+        } catch (error) {
+          onError?.(error as Error)
         }
-
-        callback({
-          orders: (data || []).map(mapRowToOrder),
-          changes,
-        })
       }
 
-      fetchOrders().catch((error) => onError?.(error as Error))
+      fetchOrders()
 
       const channel = $supabase
         .channel(`orders:${catalogId}`)

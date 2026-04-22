@@ -444,8 +444,16 @@ const refreshCatalog = async () => {
 
   loadError.value = ''
 
+  // Timeout de seguridad: si Supabase no responde en 15s, mostrar error
+  const timeout = new Promise<never>((_, reject) =>
+    setTimeout(() => reject(new Error('La conexión tardó demasiado. Revisa tu internet e intenta de nuevo.')), 15000),
+  )
+
   try {
-    await catalogEngine.hydrateCatalog(activeStoreId.value)
+    await Promise.race([
+      catalogEngine.hydrateCatalog(activeStoreId.value),
+      timeout,
+    ])
 
     if (!selectedCategoryId.value && catalogEngine.categories[0]) {
       selectedCategoryId.value = catalogEngine.categories[0].id

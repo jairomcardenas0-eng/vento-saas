@@ -219,10 +219,14 @@ export const useCatalogEngineStore = defineStore('catalog-engine', {
 
       try {
         const catalog = await backend.getCatalogById(storeId)
-        this.categories = (catalog?.categories || []).map(mapCatalogCategoryToItem)
-        this.products = (catalog?.products || []).map(mapCatalogProductToItem)
+        if (!catalog) {
+          throw new Error('El catálogo no respondió. Verifica tu conexión e intenta de nuevo.')
+        }
+        this.categories = (catalog.categories || []).map(mapCatalogCategoryToItem)
+        this.products = (catalog.products || []).map(mapCatalogProductToItem)
       } catch (error) {
         console.error('DataHydration Error:', error)
+        throw error // propagar para que la página muestre el error
       } finally {
         this.loadingEngine = false
       }
