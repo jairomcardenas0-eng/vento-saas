@@ -512,26 +512,6 @@ const checkoutForm = reactive({
 
 let nowTimer: ReturnType<typeof setInterval> | null = null
 
-const hexToRgba = (hex: string, alpha: number) => {
-  const normalized = hex.replace('#', '')
-  const safe = normalized.length === 3 ? normalized.split('').map((char) => char + char).join('') : normalized
-  const parsed = Number.parseInt(safe, 16)
-  const red = (parsed >> 16) & 255
-  const green = (parsed >> 8) & 255
-  const blue = parsed & 255
-  return `rgba(${red}, ${green}, ${blue}, ${alpha})`
-}
-
-const activePrice = (product: ProductItem) => product.hasPromo && product.promoPrice !== null ? product.promoPrice : product.basePrice
-
-const formatReviewDate = (dateStr: string | null) => {
-  if (!dateStr) return ''
-  return new Date(dateStr).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
-}
-
-const reviewStars = (rating: number) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
-
-
 const settings = computed(() => ({
   ...defaultSettings(props.storefront.settings.businessName || 'Nueva Tienda', props.storefront.slug || props.slugKey),
   ...props.storefront.settings,
@@ -612,11 +592,32 @@ const closedTextStyle = computed(() => ({
   fontSize: `${settings.value.closedTextSizeLarge}px`,
 }))
 
+// ─── Helper functions declared before the computed that use them ──────────────
+const hexToRgba = (hex: string, alpha: number) => {
+  const normalized = hex.replace('#', '')
+  const safe = normalized.length === 3 ? normalized.split('').map((char) => char + char).join('') : normalized
+  const parsed = Number.parseInt(safe, 16)
+  const red = (parsed >> 16) & 255
+  const green = (parsed >> 8) & 255
+  const blue = parsed & 255
+  return `rgba(${red}, ${green}, ${blue}, ${alpha})`
+}
+
+const activePrice = (product: ProductItem) => product.hasPromo && product.promoPrice !== null ? product.promoPrice : product.basePrice
+
 const closedTextBoxStyle = computed(() => settings.value.closedTextBox
   ? {
       backgroundColor: hexToRgba(settings.value.closedTextBoxColor, settings.value.closedTextBoxOpacity / 100),
     }
   : {})
+
+const formatReviewDate = (dateStr: string | null) => {
+  if (!dateStr) return ''
+  return new Date(dateStr).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
+}
+
+const reviewStars = (rating: number) => '★'.repeat(rating) + '☆'.repeat(5 - rating)
+
 
 const productsByCategory = (categoryId: string) => {
   const needle = search.value.trim().toLowerCase()
@@ -1084,6 +1085,8 @@ const submitReview = async () => {
   }
 }
 
+const reviewStars = (rating: number) => `${Math.max(1, Math.min(5, Number(rating) || 5))}/5`
+const formatReviewDate = (value: string) => new Date(value).toLocaleDateString('es-MX', { day: 'numeric', month: 'short' })
 
 </script>
 
