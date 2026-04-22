@@ -98,17 +98,17 @@
                 </svg>
               </div>
 
-              <NuxtLink
-                to="/onboarding/create-catalog"
+              <button
+                type="button"
                 class="inline-flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-2xl border border-dashed border-blue-300/70 bg-blue-50/70 text-blue-700 transition hover:bg-blue-100/80 dark:border-blue-700/60 dark:bg-blue-900/20 dark:text-blue-300 dark:hover:bg-blue-900/30"
                 title="Agregar nuevo catálogo"
                 aria-label="Agregar nuevo catálogo"
-                @click="sidebarOpen = false"
+                @click="goToCreateCatalog"
               >
                 <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 5v14m-7-7h14" />
                 </svg>
-              </NuxtLink>
+              </button>
             </div>
           </div>
 
@@ -139,17 +139,17 @@
               </ClientOnly>
             </button>
 
-            <NuxtLink
+            <button
+              type="button"
               v-if="activeCatalog"
-              :to="`/b/${activeCatalog.slug}`"
               class="press inline-flex min-h-[44px] items-center justify-center gap-2 rounded-2xl border border-slate-200/60 bg-slate-50 px-3 text-sm font-medium text-slate-600 transition hover:bg-slate-100 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700"
-              @click="sidebarOpen = false"
+              @click="openStorefront"
             >
               <svg class="h-4 w-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.8" d="M7 17 17 7M9 7h8v8" />
               </svg>
               <span>Ver menú</span>
-            </NuxtLink>
+            </button>
           </div>
 
           <button
@@ -330,6 +330,9 @@ const titleMap: Record<string, string> = {
 
 const pageTitle = computed(() => titleMap[route.path] || 'Panel')
 const activeCatalog = computed(() => catalogStore.activeCatalog)
+const loadingCatalogs = ref(false)
+const catalogsLoadedForUser = ref<string | null>(null)
+let visibilityCleanup: (() => void) | null = null
 
 watch(
   () => route.path,
@@ -339,14 +342,50 @@ watch(
   { immediate: true },
 )
 
-onMounted(async () => {
-  if (authStore.user) {
-    await catalogStore.loadOwnerCatalogs(authStore.user.uid, authStore.user.defaultCatalogId)
+const ensureOwnerCatalogs = async () => {
+  const user = authStore.user
+
+  if (!user) {
+    catalogsLoadedForUser.value = null
+    catalogStore.ownerCatalogs = []
+    catalogStore.activeCatalogId = null
+    return
   }
-})
+
+  const shouldReload = catalogsLoadedForUser.value !== user.uid
+    || !catalogStore.ownerCatalogs.length
+    || (user.defaultCatalogId && catalogStore.activeCatalogId !== user.defaultCatalogId)
+
+  if (!shouldReload || loadingCatalogs.value) {
+    return
+  }
+
+  loadingCatalogs.value = true
+  try {
+    await catalogStore.loadOwnerCatalogs(user.uid, user.defaultCatalogId)
+    catalogsLoadedForUser.value = user.uid
+  } finally {
+    loadingCatalogs.value = false
+  }
+}
+
+watch(
+  () => [authStore.user?.uid || '', authStore.user?.defaultCatalogId || ''],
+  async () => {
+    await ensureOwnerCatalogs()
+  },
+  { immediate: true },
+)
 
 const changeCatalog = async (catalogId: string) => {
+  if (!catalogId) {
+    return
+  }
+
   await catalogStore.setActiveCatalog(catalogId)
+  if (authStore.user?.defaultCatalogId !== catalogId) {
+    await authStore.setDefaultCatalog(catalogId)
+  }
 }
 
 const goTo = async (path: string) => {
@@ -354,14 +393,62 @@ const goTo = async (path: string) => {
   await navigateTo(path)
 }
 
+const goToCreateCatalog = async () => {
+  await goTo('/onboarding/create-catalog')
+}
+
+const openStorefront = () => {
+  if (!activeCatalog.value || import.meta.server) {
+    return
+  }
+
+  sidebarOpen.value = false
+  const storefrontUrl = `/b/${activeCatalog.value.slug}`
+  window.open(storefrontUrl, '_blank', 'noopener,noreferrer')
+}
+
 const toggleColorMode = () => {
   colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
 }
 
 const logout = async () => {
-  await authStore.logout()
-  await navigateTo('/login')
+  sidebarOpen.value = false
+
+  try {
+    await authStore.logout()
+  } finally {
+    await navigateTo('/login')
+  }
 }
+
+onMounted(() => {
+  const revalidateAdminBootstrap = async () => {
+    if (document.hidden || !authStore.user) {
+      return
+    }
+
+    if (!catalogStore.activeCatalog || !catalogStore.ownerCatalogs.length) {
+      await ensureOwnerCatalogs()
+    }
+  }
+
+  const handleVisibility = () => {
+    void revalidateAdminBootstrap()
+  }
+
+  document.addEventListener('visibilitychange', handleVisibility)
+  window.addEventListener('focus', handleVisibility)
+
+  visibilityCleanup = () => {
+    document.removeEventListener('visibilitychange', handleVisibility)
+    window.removeEventListener('focus', handleVisibility)
+    visibilityCleanup = null
+  }
+})
+
+onBeforeUnmount(() => {
+  visibilityCleanup?.()
+})
 </script>
 
 <style scoped>

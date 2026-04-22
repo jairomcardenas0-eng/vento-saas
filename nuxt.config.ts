@@ -20,10 +20,25 @@ export default defineNuxtConfig({
 
   app: {
     head: {
-      title: 'Plataforma SaaS Central',
+      charset: 'utf-8',
+      title: 'Vento — Tu catálogo digital inteligente',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },
-        // Tell the browser to keep the connection alive (reduces Supabase cold starts)
+        { name: 'description', content: 'Vento es la plataforma líder para crear tu escaparate móvil en segundos y gestionar pedidos en tiempo real.' },
+        
+        // Open Graph / WhatsApp
+        { property: 'og:type', content: 'website' },
+        { property: 'og:title', content: 'Vento — Tu catálogo digital inteligente' },
+        { property: 'og:description', content: 'Crea tu tienda móvil hoy mismo. Gestión de pedidos, analíticas en tiempo real y sistema de referidos integrado.' },
+        { property: 'og:image', content: 'https://vento.smartiadigital.com/og-image.png' },
+        { property: 'og:url', content: 'https://vento.smartiadigital.com' },
+        
+        // Twitter
+        { name: 'twitter:card', content: 'summary_large_image' },
+        { name: 'twitter:title', content: 'Vento — Tu catálogo digital' },
+        { name: 'twitter:description', content: 'La plataforma más potente para digitalizar tu negocio.' },
+        { name: 'twitter:image', content: 'https://vento.smartiadigital.com/og-image.png' },
+
         { 'http-equiv': 'Connection', content: 'keep-alive' },
       ],
       // Preconnect to Supabase so DNS + TLS are resolved before any JS runs

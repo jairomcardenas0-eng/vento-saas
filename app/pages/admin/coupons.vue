@@ -6,14 +6,7 @@
   />
 
   <AdminStatePanel
-    v-else-if="loading"
-    tone="loading"
-    title="Cargando cupones"
-    description="Estamos sincronizando tus descuentos desde Supabase."
-  />
-
-  <AdminStatePanel
-    v-else-if="loadError"
+    v-else-if="loadError && !coupons.length"
     tone="error"
     title="No se pudieron cargar los cupones"
     :description="loadError"
@@ -32,6 +25,15 @@
           </button>
         </template>
       </UiSectionHeader>
+
+      <div
+        v-if="loading || loadError"
+        class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm"
+        :class="loadError ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300' : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
+      >
+        <span>{{ loadError || 'Actualizando descuentos y cupones del catálogo...' }}</span>
+        <button v-if="loadError && catalog" class="solid-btn" @click="loadCoupons(catalog.id)">Reintentar</button>
+      </div>
 
       <div v-if="!coupons.length" class="rounded-[22px] border border-dashed border-zinc-300 bg-zinc-50 px-5 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:bg-zinc-950 dark:text-zinc-400">
         Todavía no hay cupones creados para este catálogo.

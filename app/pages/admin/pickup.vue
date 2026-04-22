@@ -21,10 +21,15 @@
             <label class="toggle-3d"><input v-model="draft.pickupEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
             <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Servicio de recogida activo</span>
           </div>
-          <label><span>Punto de recogida</span><input v-model="draft.pickupPoint" /><small>Ej. mostrador principal, ventanilla o barra.</small></label>
-          <label><span>Tiempo estimado</span><input v-model.number="draft.pickupEtaMinutes" type="number" min="0" step="1" /><small>Minutos aproximados para tener el pedido listo.</small></label>
-          <label class="full"><span>Instrucciones para el cliente</span><textarea v-model="draft.pickupInstructions" rows="3" /><small>Ej. presenta tu nombre en caja y espera confirmación.</small></label>
         </div>
+
+        <Transition name="fade-slide">
+          <div v-if="draft.pickupEnabled" class="grid-form mt-6">
+            <label><span>Punto de recogida</span><input v-model="draft.pickupPoint" /><small>Ej. mostrador principal, ventanilla o barra.</small></label>
+            <label><span>Tiempo estimado</span><input v-model.number="draft.pickupEtaMinutes" type="number" min="0" step="1" /><small>Minutos aproximados para tener el pedido listo.</small></label>
+            <label class="full"><span>Instrucciones para el cliente</span><textarea v-model="draft.pickupInstructions" rows="3" /><small>Ej. presenta tu nombre en caja y espera confirmación.</small></label>
+          </div>
+        </Transition>
       </fieldset>
 
       <p v-if="saveError" class="mt-4 text-sm text-rose-500">{{ saveError }}</p>
@@ -139,6 +144,17 @@ const save = async () => {
 .toggle-checkbox:focus-visible + .slider-3d {
   outline: 2px solid #22c55e;
   outline-offset: 2px;
+}
+
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.22s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
 }
 
 .dark .slider-3d {

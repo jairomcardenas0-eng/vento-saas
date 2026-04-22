@@ -116,6 +116,7 @@
             </div>
 
             <div class="grid-form">
+              <label class="toggle"><input v-model="draft.bannerEnabled" type="checkbox" /><span>Banner activo</span></label>
               <label><span>Texto de banner</span><input v-model="draft.bannerText" /></label>
               <label><span>Estilo de tarjeta</span>
                 <select v-model="draft.cardStyle">
@@ -210,7 +211,10 @@ watch(catalog, (value) => {
     return
   }
 
-  draft.value = JSON.parse(JSON.stringify(value.theme))
+  draft.value = {
+    ...defaultTheme(),
+    ...JSON.parse(JSON.stringify(value.theme || {})),
+  }
   layoutDraft.value = value.settings.storefrontLayout || 'classic'
 }, { immediate: true })
 

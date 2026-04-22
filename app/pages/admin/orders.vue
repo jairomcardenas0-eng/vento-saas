@@ -5,23 +5,24 @@
     description="Selecciona un catálogo para revisar los pedidos."
   />
 
-  <AdminStatePanel
-    v-else-if="ordersStore.loading && !ordersStore.items.length"
-    tone="loading"
-    title="Cargando pedidos"
-    description="Estamos sincronizando la caja en tiempo real."
-  />
-
-  <AdminStatePanel
-    v-else-if="ordersStore.realtimeError && !ordersStore.items.length"
-    tone="warning"
-    title="Reconectando pedidos"
-    :description="ordersStore.realtimeError"
-  />
-
   <div v-else class="admin-grid">
     <section class="panel-card span-2 min-w-0">
       <UiSectionHeader eyebrow="Operación" title="Pedidos en tiempo real" description="Bandeja de pedidos con detalle expandible y control de estados." />
+
+      <div class="mb-4 space-y-3">
+        <div
+          v-if="ordersStore.loading"
+          class="rounded-[18px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
+        >
+          Actualizando caja y pedidos en tiempo real...
+        </div>
+        <div
+          v-if="ordersStore.realtimeError"
+          class="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300"
+        >
+          {{ ordersStore.realtimeError }}
+        </div>
+      </div>
 
       <div class="order-filters" role="tablist" aria-label="Filtros de pedidos">
         <button

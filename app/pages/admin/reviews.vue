@@ -5,16 +5,16 @@
     description="Selecciona un catálogo para revisar las reseñas."
   />
 
-  <AdminStatePanel
-    v-else-if="reviewsStore.loading && !reviewsStore.items.length"
-    tone="loading"
-    title="Cargando reseñas"
-    description="Estamos sincronizando la moderación en tiempo real."
-  />
-
   <div v-else class="admin-grid">
     <section class="panel-card span-2 min-w-0">
       <UiSectionHeader eyebrow="Moderación" title="Bandeja de reseñas" description="Aprueba, responde y limpia las reseñas del catálogo." />
+
+      <div
+        v-if="reviewsStore.loading"
+        class="mb-4 rounded-[18px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
+      >
+        Actualizando moderación y reseñas del catálogo...
+      </div>
 
       <div class="review-settings">
         <article class="setting-card">

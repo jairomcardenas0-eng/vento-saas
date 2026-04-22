@@ -42,7 +42,10 @@ export const useCatalogStore = defineStore('catalogs', {
       try {
         const backend = useSupabaseBackend()
         this.ownerCatalogs = await backend.getCatalogsByOwner(ownerUid)
-        this.activeCatalogId = preferredCatalogId || this.ownerCatalogs[0]?.id || null
+        const preferredMatch = preferredCatalogId
+          ? this.ownerCatalogs.find(item => item.id === preferredCatalogId)
+          : null
+        this.activeCatalogId = preferredMatch?.id || this.ownerCatalogs[0]?.id || null
       } finally {
         this.loading = false
       }
@@ -92,9 +95,16 @@ export const useCatalogStore = defineStore('catalogs', {
         return
       }
 
+      const previousSettings = JSON.parse(JSON.stringify(this.activeCatalog.settings)) as CatalogRecord['settings']
       this.activeCatalog.settings = { ...this.activeCatalog.settings, ...payload }
       const backend = useSupabaseBackend()
-      await backend.updateSettings(this.activeCatalog.id, this.activeCatalog.settings)
+
+      try {
+        await backend.updateSettings(this.activeCatalog.id, this.activeCatalog.settings)
+      } catch (error) {
+        this.activeCatalog.settings = previousSettings
+        throw error
+      }
     },
     async updateTheme(payload: Partial<CatalogRecord['theme']>) {
       if (!this.activeCatalog) {

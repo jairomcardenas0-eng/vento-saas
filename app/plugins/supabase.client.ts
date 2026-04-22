@@ -16,7 +16,7 @@ function startKeepAlive(client: ReturnType<typeof createClient>) {
   keepAliveTimer = setInterval(async () => {
     try {
       // Cheapest possible query — just checks the connection, no data transfer
-      await (client as any).rpc('pg_sleep', { seconds: 0 }).maybeSingle()
+      await (client as any).from('catalogs').select('id').limit(1).maybeSingle()
     } catch {
       // Ignore — it's just a keep-alive ping
     }

@@ -19,7 +19,7 @@
 </template>
 
 <script setup lang="ts">
-import { defaultSettings } from '~/data/defaults'
+import { defaultSettings, defaultTheme } from '~/data/defaults'
 import type { StorefrontPayload } from '~/composables/useStorefrontExperience'
 import type { CategoryItem, ProductItem } from '~/stores/catalog'
 
@@ -75,6 +75,8 @@ const mapProduct = (product: any): ProductItem => ({
   timerShowMinutes: product.timerShowMinutes ?? true,
   timerShowSeconds: product.timerShowSeconds ?? false,
   timerLinkSale: product.timerLinkSale ?? false,
+  carouselEnabled: product.carouselEnabled ?? false,
+  carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
   tags: product.tags || [],
   productRating: Number(product.productRating || 0),
   productRatingCount: Number(product.productRatingCount || 0),
@@ -83,7 +85,7 @@ const mapProduct = (product: any): ProductItem => ({
 })
 
 const { data, pending } = await useAsyncData<StorefrontPayload | null>(
-  () => `storefront-${slugKey.value}`,
+  `storefront-${slugKey.value}`,
   async () => {
     if (!slugKey.value) {
       return null
@@ -103,7 +105,10 @@ const { data, pending } = await useAsyncData<StorefrontPayload | null>(
         ...defaultSettings(catalog.settings?.businessName || 'Nueva Tienda', catalog.slug),
         ...catalog.settings,
       },
-      theme: catalog.theme,
+      theme: {
+        ...defaultTheme(),
+        ...(catalog.theme || {}),
+      },
       categories: catalog.categories
         .filter((category) => category.active)
         .sort((left, right) => left.order - right.order)
@@ -119,6 +124,8 @@ const { data, pending } = await useAsyncData<StorefrontPayload | null>(
   {
     default: () => null,
     watch: [slugKey],
+    server: false,
+    lazy: true,
   },
 )
 

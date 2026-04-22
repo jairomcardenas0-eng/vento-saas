@@ -6,14 +6,7 @@
   />
 
   <AdminStatePanel
-    v-else-if="loading"
-    tone="loading"
-    title="Cargando equipo"
-    description="Estamos sincronizando los miembros y permisos del catálogo."
-  />
-
-  <AdminStatePanel
-    v-else-if="loadError"
+    v-else-if="loadError && !members.length"
     tone="error"
     title="No se pudo cargar el equipo"
     :description="loadError"
@@ -59,6 +52,15 @@
           placeholder="Buscar por nombre o correo..."
           class="w-full rounded-[14px] border border-zinc-200 bg-white py-3 pl-9 pr-4 text-sm text-zinc-900 outline-none transition focus:border-blue-400 focus:ring-2 focus:ring-blue-500/20 dark:border-zinc-800 dark:bg-zinc-950 dark:text-white"
         />
+      </div>
+
+      <div
+        v-if="loading || loadError"
+        class="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm"
+        :class="loadError ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300' : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
+      >
+        <span>{{ loadError || 'Actualizando miembros y permisos del catálogo...' }}</span>
+        <button v-if="loadError" class="solid-btn" @click="loadMembers()">Reintentar</button>
       </div>
 
       <div v-if="!filteredMembers.length && !search" class="flex flex-col items-center justify-center rounded-[28px] border-2 border-dashed border-zinc-200 py-16 text-center dark:border-zinc-800">

@@ -3,7 +3,7 @@
     <section class="panel-card span-2 relative overflow-hidden">
       <UiSectionHeader eyebrow="General" title="Ajustes del negocio" description="Identidad, contacto, redes sociales y moneda del catálogo.">
         <template #actions>
-          <button class="solid-btn" :disabled="saving" @click="save">
+          <button class="solid-btn" :disabled="saving || uploadingLogo" @click="save">
             {{ saving ? 'Guardando...' : 'Guardar ajustes' }}
           </button>
         </template>
@@ -142,6 +142,12 @@
         </div>
       </fieldset>
 
+      <p v-if="draftRecoveredNotice" class="mt-4 rounded-[16px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+        {{ draftRecoveredNotice }}
+      </p>
+      <p v-if="saveSuccess" class="mt-4 rounded-[16px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">
+        {{ saveSuccess }}
+      </p>
       <p v-if="saveError" class="mt-4 text-sm text-rose-500">{{ saveError }}</p>
     </section>
   </div>
@@ -170,10 +176,56 @@ const isPaywalled = computed(() => false)
 const draft = ref<CatalogOperationalSettings>(defaultSettings())
 const saving = ref(false)
 const saveError = ref('')
+const saveSuccess = ref('')
+const draftRecoveredNotice = ref('')
+
+const SETTINGS_SAVE_TIMEOUT_MS = 15000
+const SETTINGS_DRAFT_STORAGE_PREFIX = 'mi-tienda:settings-draft:'
+
+const settingsDraftStorageKey = computed(() =>
+  catalog.value ? `${SETTINGS_DRAFT_STORAGE_PREFIX}${catalog.value.id}` : '',
+)
+
+const persistDraftLocally = (value: CatalogOperationalSettings) => {
+  if (import.meta.server || !settingsDraftStorageKey.value) {
+    return
+  }
+
+  localStorage.setItem(settingsDraftStorageKey.value, JSON.stringify(value))
+}
+
+const clearPersistedDraft = () => {
+  if (import.meta.server || !settingsDraftStorageKey.value) {
+    return
+  }
+
+  localStorage.removeItem(settingsDraftStorageKey.value)
+}
+
+const getPersistedDraft = (): CatalogOperationalSettings | null => {
+  if (import.meta.server || !settingsDraftStorageKey.value) {
+    return null
+  }
+
+  const raw = localStorage.getItem(settingsDraftStorageKey.value)
+  if (!raw) {
+    return null
+  }
+
+  try {
+    return JSON.parse(raw) as CatalogOperationalSettings
+  } catch {
+    localStorage.removeItem(settingsDraftStorageKey.value)
+    return null
+  }
+}
 
 // Sync draft settings to preview store in real-time
 watch(draft, (value) => {
   previewStore.setSettings(JSON.parse(JSON.stringify(value)))
+  saveSuccess.value = ''
+  saveError.value = ''
+  persistDraftLocally(value)
 }, { deep: true })
 
 onUnmounted(() => {
@@ -194,9 +246,23 @@ watch(catalog, (value) => {
     return
   }
 
-  draft.value = {
+  const baseDraft: CatalogOperationalSettings = {
     ...defaultSettings(value.settings.businessName, value.slug),
     ...JSON.parse(JSON.stringify(value.settings)),
+  }
+
+  const persistedDraft = getPersistedDraft()
+  draftRecoveredNotice.value = ''
+
+  draft.value = persistedDraft
+    ? {
+        ...baseDraft,
+        ...persistedDraft,
+      }
+    : baseDraft
+
+  if (persistedDraft) {
+    draftRecoveredNotice.value = 'Restauramos un borrador local pendiente de guardar. Revísalo y vuelve a guardar cuando estés listo.'
   }
 
   // Backwards compatibility
@@ -396,8 +462,9 @@ const save = async () => {
 
   saving.value = true
   saveError.value = ''
+  saveSuccess.value = ''
   try {
-    await catalogStore.updateSettings({
+    const payload = {
       ...draft.value,
       weeklySchedule: sanitizeSchedule(),
       deliveryZones: draft.value.deliveryZones.map(zone => ({
@@ -407,7 +474,18 @@ const save = async () => {
         minOrder: Number(zone.minOrder || 0),
         estimatedMinutes: Number(zone.estimatedMinutes || 0),
       })),
-    })
+    }
+
+    await Promise.race([
+      catalogStore.updateSettings(payload),
+      new Promise((_, reject) => {
+        setTimeout(() => reject(new Error('La actualización tardó demasiado. Conservamos tu borrador para que no pierdas cambios.')), SETTINGS_SAVE_TIMEOUT_MS)
+      }),
+    ])
+
+    clearPersistedDraft()
+    draftRecoveredNotice.value = ''
+    saveSuccess.value = 'Ajustes guardados correctamente.'
   } catch (error) {
     saveError.value = error instanceof Error ? error.message : 'No se pudieron guardar los ajustes.'
   } finally {

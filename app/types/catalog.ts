@@ -77,6 +77,7 @@ export interface CatalogThemeSettings {
   btnCartText: string
   btnWaBg: string
   btnWaText: string
+  bannerEnabled: boolean
   bannerText: string
   bannerMode: 'static' | 'loop'
   bannerSticky: boolean
@@ -116,8 +117,11 @@ export interface CatalogOperationalSettings {
   callEnabled: boolean
   productCarouselEnabled: boolean
   productCarouselSeconds: number
+  checkoutNameEnabled: boolean
   checkoutNameReq: 'obligatorio' | 'opcional'
+  checkoutAddressEnabled: boolean
   checkoutAddressReq: 'obligatorio' | 'opcional'
+  checkoutPaymentEnabled: boolean
   checkoutPaymentReq: 'obligatorio' | 'opcional'
   deliveryEnabled: boolean
   deliveryPaused: boolean

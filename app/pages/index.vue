@@ -5,8 +5,8 @@
         <div class="rounded-[28px] border border-white/65 bg-white/95 p-3 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-stone-950/95">
           <div class="mb-4 flex items-center justify-between gap-3">
             <div class="min-w-0">
-              <p class="truncate text-[10px] font-semibold uppercase tracking-[0.34em] text-amber-600 dark:text-cyan-300">Marketplace Engine</p>
-              <h1 class="truncate font-serif text-[1.75rem] leading-none">Descubre algo brutal</h1>
+              <p class="truncate text-[10px] font-bold uppercase tracking-[0.4em] text-amber-600 dark:text-cyan-300">Vento SaaS</p>
+              <h1 class="truncate font-serif text-[1.75rem] leading-none">Negocios encendidos</h1>
             </div>
             <button
               class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
@@ -258,8 +258,8 @@
 
         <footer class="mt-8 overflow-hidden rounded-[36px] border border-stone-900/10 bg-[linear-gradient(180deg,_#1c1917_0%,_#0f172a_100%)] text-white shadow-[0_32px_90px_-40px_rgba(2,6,23,0.95)]">
           <div class="border-b border-white/10 px-5 py-6">
-            <p class="text-[11px] uppercase tracking-[0.34em] text-cyan-300">Lanza tu SaaS</p>
-            <h2 class="mt-3 text-3xl font-semibold leading-tight">¿Aún no tienes tu tienda? Crea una ahora mismo y comienza a vender en minutos.</h2>
+            <p class="text-[11px] uppercase tracking-[0.34em] text-cyan-300">Lanza tu propio Vento</p>
+            <h2 class="mt-3 text-3xl font-semibold leading-tight">Digitaliza tu negocio y comienza a vender en minutos.</h2>
             <p class="mt-3 max-w-[28rem] text-sm leading-6 text-white/70">
               Activa tu escaparate móvil, publica productos con imagen y convierte visitas del marketplace en pedidos reales.
             </p>
@@ -292,8 +292,8 @@
           </div>
 
           <div class="flex items-center justify-between border-t border-white/10 px-5 py-4 text-[11px] text-white/40">
-            <p>© {{ currentYear }} Marketplace Engine</p>
-            <p>Built for mobile commerce</p>
+            <p>© {{ currentYear }} Vento Platform</p>
+            <p>Smart commerce ecosystem</p>
           </div>
         </footer>
       </template>

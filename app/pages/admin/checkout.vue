@@ -7,7 +7,7 @@
 
   <div v-else class="admin-grid">
     <section class="panel-card span-2 min-w-0">
-      <UiSectionHeader eyebrow="Operación" title="Pedido y visibilidad" description="Controla qué datos se requieren al crear un pedido y qué funciones están visibles.">
+      <UiSectionHeader eyebrow="Operación" title="Pedido y visibilidad" description="Controla qué funciones del negocio están activas y qué datos se piden al cliente.">
         <template #actions>
           <button class="solid-btn" :disabled="saving" @click="save">
             {{ saving ? 'Guardando...' : 'Guardar ajustes' }}
@@ -17,59 +17,145 @@
 
       <fieldset class="contents">
         <div class="space-y-8">
-          <section class="px-2 py-3">
-            <div class="mb-4">
-              <p class="eyebrow">Campos del pedido</p>
-              <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Datos que se capturan</h3>
+          <section class="px-2 py-3 space-y-4">
+            <div>
+              <p class="eyebrow">Funciones del negocio</p>
+              <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Funciones activas del negocio</h3>
+              <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Estas opciones controlan qué puede hacer el cliente dentro de tu tienda pública.</p>
             </div>
-            <div class="grid-form">
-              <label>
-                <span>Nombre del cliente</span>
-                <select v-model="draft.checkoutNameReq">
-                  <option value="obligatorio">Obligatorio</option>
-                  <option value="opcional">Opcional</option>
-                </select>
-                <small>Define si se exige antes de enviar el pedido.</small>
-              </label>
-              <label>
-                <span>Dirección de entrega</span>
-                <select v-model="draft.checkoutAddressReq">
-                  <option value="obligatorio">Obligatorio</option>
-                  <option value="opcional">Opcional</option>
-                </select>
-                <small>Solo aplica a pedidos con entrega a domicilio.</small>
-              </label>
-              <label>
-                <span>Método de pago</span>
-                <select v-model="draft.checkoutPaymentReq">
-                  <option value="obligatorio">Obligatorio</option>
-                  <option value="opcional">Opcional</option>
-                </select>
-                <small>Se captura antes de enviar a WhatsApp.</small>
-              </label>
+
+            <div class="space-y-3">
+              <div class="toggle-card">
+                <div>
+                  <p class="toggle-card-title">Carrito habilitado</p>
+                  <p class="toggle-card-copy">Permite agregar productos, abrir el carrito y completar pedidos desde la tienda.</p>
+                </div>
+                <label class="toggle-3d">
+                  <input v-model="draft.cartEnabled" type="checkbox" class="toggle-checkbox" />
+                  <span class="slider-3d"></span>
+                </label>
+              </div>
+
+              <Transition name="fade-slide">
+                <div v-if="!draft.cartEnabled" class="rounded-[18px] border border-amber-200 bg-amber-50 px-4 py-4 text-sm text-amber-800 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+                  Si desactivas el carrito, los clientes no podrán realizar pedidos desde tu tienda. Solo podrán ver el catálogo. Útil si quieres usar la app como menú digital de solo lectura.
+                </div>
+              </Transition>
+
+              <Transition name="fade-slide">
+                <div v-if="draft.cartEnabled" class="grid-form">
+                  <div class="toggle-card">
+                    <div>
+                      <p class="toggle-card-title">WhatsApp directo</p>
+                      <p class="toggle-card-copy">Muestra el botón para pedir de inmediato desde la ficha del producto.</p>
+                    </div>
+                    <label class="toggle-3d">
+                      <input v-model="draft.whatsappEnabled" type="checkbox" class="toggle-checkbox" />
+                      <span class="slider-3d"></span>
+                    </label>
+                  </div>
+
+                  <div class="toggle-card">
+                    <div>
+                      <p class="toggle-card-title">Llamadas habilitadas</p>
+                      <p class="toggle-card-copy">Muestra accesos para llamar al negocio desde la tienda pública.</p>
+                    </div>
+                    <label class="toggle-3d">
+                      <input v-model="draft.callEnabled" type="checkbox" class="toggle-checkbox" />
+                      <span class="slider-3d"></span>
+                    </label>
+                  </div>
+                </div>
+              </Transition>
             </div>
           </section>
 
-          <section class="px-2 py-3">
-            <div class="mb-4">
-              <p class="eyebrow">Visibilidad</p>
-              <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Funciones activas del negocio</h3>
-            </div>
-            <div class="grid-form">
-              <div class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.cartEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Carrito habilitado</span>
+          <Transition name="fade-slide">
+            <section v-if="draft.cartEnabled" class="px-2 py-3 space-y-4">
+              <div>
+                <p class="eyebrow">Checkout</p>
+                <h3 class="text-xl font-semibold text-zinc-900 dark:text-zinc-100">Datos que se capturan</h3>
+                <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">Activa cada campo por separado y define si será obligatorio u opcional.</p>
               </div>
-              <div v-if="draft.cartEnabled" class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.whatsappEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">WhatsApp directo habilitado</span>
+
+              <div class="space-y-4">
+                <article class="capture-card">
+                  <div class="capture-head">
+                    <div>
+                      <p class="toggle-card-title">Nombre del cliente</p>
+                      <p class="toggle-card-copy">Sirve para identificar el pedido y personalizar la atención.</p>
+                    </div>
+                    <label class="toggle-3d">
+                      <input v-model="draft.checkoutNameEnabled" type="checkbox" class="toggle-checkbox" />
+                      <span class="slider-3d"></span>
+                    </label>
+                  </div>
+
+                  <Transition name="fade-slide">
+                    <div v-if="draft.checkoutNameEnabled" class="capture-body">
+                      <label class="block">
+                        <span>Requisito</span>
+                        <select v-model="draft.checkoutNameReq">
+                          <option value="obligatorio">Obligatorio</option>
+                          <option value="opcional">Opcional</option>
+                        </select>
+                      </label>
+                    </div>
+                  </Transition>
+                </article>
+
+                <article class="capture-card">
+                  <div class="capture-head">
+                    <div>
+                      <p class="toggle-card-title">Dirección de entrega</p>
+                      <p class="toggle-card-copy">Solo aparece cuando el cliente elige entrega a domicilio.</p>
+                    </div>
+                    <label class="toggle-3d">
+                      <input v-model="draft.checkoutAddressEnabled" type="checkbox" class="toggle-checkbox" />
+                      <span class="slider-3d"></span>
+                    </label>
+                  </div>
+
+                  <Transition name="fade-slide">
+                    <div v-if="draft.checkoutAddressEnabled" class="capture-body">
+                      <label class="block">
+                        <span>Requisito</span>
+                        <select v-model="draft.checkoutAddressReq">
+                          <option value="obligatorio">Obligatorio</option>
+                          <option value="opcional">Opcional</option>
+                        </select>
+                      </label>
+                    </div>
+                  </Transition>
+                </article>
+
+                <article class="capture-card">
+                  <div class="capture-head">
+                    <div>
+                      <p class="toggle-card-title">Método de pago</p>
+                      <p class="toggle-card-copy">Permite que el cliente anticipe cómo piensa pagar su pedido.</p>
+                    </div>
+                    <label class="toggle-3d">
+                      <input v-model="draft.checkoutPaymentEnabled" type="checkbox" class="toggle-checkbox" />
+                      <span class="slider-3d"></span>
+                    </label>
+                  </div>
+
+                  <Transition name="fade-slide">
+                    <div v-if="draft.checkoutPaymentEnabled" class="capture-body">
+                      <label class="block">
+                        <span>Requisito</span>
+                        <select v-model="draft.checkoutPaymentReq">
+                          <option value="obligatorio">Obligatorio</option>
+                          <option value="opcional">Opcional</option>
+                        </select>
+                      </label>
+                    </div>
+                  </Transition>
+                </article>
               </div>
-              <div v-if="draft.cartEnabled" class="toggle-row">
-                <label class="toggle-3d"><input v-model="draft.callEnabled" type="checkbox" class="toggle-checkbox" /><span class="slider-3d"></span></label>
-                <span class="toggle-row-label text-[14px] font-semibold text-zinc-800 dark:text-zinc-200">Llamadas habilitadas</span>
-              </div>
-            </div>
-          </section>
+            </section>
+          </Transition>
         </div>
       </fieldset>
 
@@ -111,6 +197,7 @@ watch(catalog, (value) => {
 const save = async () => {
   saving.value = true
   saveError.value = ''
+
   try {
     await catalogStore.updateSettings({ ...draft.value })
   } catch (error) {
@@ -122,22 +209,46 @@ const save = async () => {
 </script>
 
 <style scoped>
-.toggle-row {
+.toggle-card,
+.capture-card {
+  border: 1px solid rgba(148, 163, 184, 0.22);
+  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.86));
+  border-radius: 20px;
+  padding: 1rem 1.1rem;
+}
+
+.toggle-card {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  min-height: 32px;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
-.toggle-row-label {
+.capture-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+}
+
+.capture-body {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+}
+
+.toggle-card-title {
   margin: 0;
-  line-height: 1.2;
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #0f172a;
 }
 
-.grid-form .toggle-3d {
-  display: inline-flex !important;
-  margin-top: 0 !important;
-  flex: 0 0 auto;
+.toggle-card-copy {
+  margin: 0.35rem 0 0;
+  font-size: 0.8rem;
+  line-height: 1.45;
+  color: #64748b;
 }
 
 .toggle-3d {
@@ -146,6 +257,7 @@ const save = async () => {
   align-items: center;
   width: 48px;
   height: 28px;
+  flex: 0 0 auto;
 }
 
 .toggle-checkbox {
@@ -194,111 +306,40 @@ const save = async () => {
   outline-offset: 2px;
 }
 
+.fade-slide-enter-active,
+.fade-slide-leave-active {
+  transition: all 0.2s ease;
+}
+
+.fade-slide-enter-from,
+.fade-slide-leave-to {
+  opacity: 0;
+  transform: translateY(-8px);
+}
+
+.dark .toggle-card,
+.dark .capture-card {
+  border-color: rgba(100, 116, 139, 0.35);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.62), rgba(15, 23, 42, 0.38));
+}
+
+.dark .toggle-card-title {
+  color: #f8fafc;
+}
+
+.dark .toggle-card-copy {
+  color: #94a3b8;
+}
+
+.dark .capture-body {
+  border-top-color: rgba(100, 116, 139, 0.22);
+}
+
 .dark .slider-3d {
   background: linear-gradient(180deg, #3f3f46 0%, #27272a 100%);
 }
 
 .dark .toggle-checkbox:checked + .slider-3d {
   background: linear-gradient(180deg, #22d3ee 0%, #0891b2 100%);
-}
-
-.theme-color-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
-  gap: 0.75rem;
-  margin-top: 1rem;
-  margin-bottom: 0.5rem;
-}
-
-.theme-swatch {
-  position: relative;
-  display: flex !important;
-  align-items: center;
-  gap: 0.75rem;
-  padding: 0.7rem 0.85rem !important;
-  border-radius: 16px;
-  border: 1px solid rgba(148, 163, 184, 0.25) !important;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.95), rgba(248, 250, 252, 0.85)) !important;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
-  margin-top: 0 !important;
-}
-
-.theme-swatch:hover {
-  border-color: rgba(59, 130, 246, 0.5) !important;
-  transform: translateY(-1px);
-  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.08);
-}
-
-.theme-swatch-chip {
-  flex-shrink: 0;
-  width: 40px;
-  height: 40px;
-  border-radius: 12px;
-  border: 2px solid rgba(255, 255, 255, 0.9);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.12), inset 0 0 0 1px rgba(15, 23, 42, 0.08);
-}
-
-.theme-swatch-body {
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  min-width: 0;
-  flex: 1;
-}
-
-.theme-swatch-label {
-  font-size: 0.78rem;
-  font-weight: 700;
-  color: #0f172a;
-  line-height: 1.2;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.theme-swatch-hex {
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-  font-size: 0.7rem;
-  font-weight: 600;
-  color: #64748b;
-  letter-spacing: 0.02em;
-}
-
-.theme-swatch-input {
-  position: absolute;
-  inset: 0;
-  width: 100% !important;
-  height: 100% !important;
-  opacity: 0;
-  cursor: pointer;
-  border: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-}
-
-.dark .theme-swatch {
-  border-color: rgba(100, 116, 139, 0.35) !important;
-  background: linear-gradient(160deg, rgba(15, 23, 42, 0.8), rgba(30, 41, 59, 0.7)) !important;
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-}
-
-.dark .theme-swatch:hover {
-  border-color: rgba(59, 130, 246, 0.6) !important;
-  background: linear-gradient(160deg, rgba(30, 41, 59, 0.95), rgba(51, 65, 85, 0.85)) !important;
-}
-
-.dark .theme-swatch-chip {
-  border-color: rgba(15, 23, 42, 0.8);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(148, 163, 184, 0.2);
-}
-
-.dark .theme-swatch-label {
-  color: #f1f5f9;
-}
-
-.dark .theme-swatch-hex {
-  color: #94a3b8;
 }
 </style>

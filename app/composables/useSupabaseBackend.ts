@@ -374,7 +374,8 @@ export interface MasterDashboardSnapshot {
 }
 
 export const useSupabaseBackend = () => {
-  const { $supabase } = useNuxtApp()
+  const { $supabase: supabaseRaw } = useNuxtApp()
+  const $supabase = supabaseRaw as any
 
   const ensureSuccess = (error: any, fallbackMessage: string) => {
     if (error) {
@@ -414,8 +415,32 @@ export const useSupabaseBackend = () => {
     }
   }
 
+  const fetchPublicCatalogRelations = async (catalogId: string) => {
+    const [categoriesRes, productsRes, reviewsRes] = await Promise.all([
+      $supabase.from('categories').select('*').eq('catalog_id', catalogId).order('sort_order'),
+      $supabase.from('products').select('*').eq('catalog_id', catalogId).eq('is_active', true).order('sort_order'),
+      $supabase.from('reviews').select('*').eq('catalog_id', catalogId).eq('approved', true).order('created_at', { ascending: false }),
+    ])
+
+    ensureSuccess(categoriesRes.error, 'No se pudieron cargar las categorías')
+    ensureSuccess(productsRes.error, 'No se pudieron cargar los productos')
+    ensureSuccess(reviewsRes.error, 'No se pudieron cargar las reseñas')
+
+    return {
+      categories: (categoriesRes.data || []).map(mapRowToCategory),
+      products: (productsRes.data || []).map(mapRowToProduct),
+      reviews: (reviewsRes.data || []).map(mapRowToReview),
+      orders: [], // Las órdenes NO son necesarias en la vista pública
+    }
+  }
+
   const assembleCatalog = async (row: any): Promise<CatalogRecord> => {
     const relations = await fetchCatalogRelations(row.id)
+    return mapRowToCatalogRecord(row, relations.categories, relations.products, relations.reviews, relations.orders)
+  }
+
+  const assemblePublicCatalog = async (row: any): Promise<CatalogRecord> => {
+    const relations = await fetchPublicCatalogRelations(row.id)
     return mapRowToCatalogRecord(row, relations.categories, relations.products, relations.reviews, relations.orders)
   }
 
@@ -644,16 +669,18 @@ export const useSupabaseBackend = () => {
       }),
     ])
 
-    ensureSuccess(topStoresRes.error, 'No se pudo cargar el ranking de tiendas')
-    ensureSuccess(viralProductsRes.error, 'No se pudo cargar la seccion viral')
-    ensureSuccess(hubsRes.error, 'No se pudieron cargar las zonas')
-    ensureSuccess(feedRes.error, 'No se pudo cargar el feed personalizado')
+    // Fault-tolerant: if any single RPC fails (e.g. function not yet created in Supabase),
+    // return an empty array for that section instead of crashing the whole page.
+    if (topStoresRes.error) console.warn('[marketplace] get_top_stores failed:', topStoresRes.error.message)
+    if (viralProductsRes.error) console.warn('[marketplace] get_viral_products failed:', viralProductsRes.error.message)
+    if (hubsRes.error) console.warn('[marketplace] get_hubs_by_region failed:', hubsRes.error.message)
+    if (feedRes.error) console.warn('[marketplace] get_personalized_feed failed:', feedRes.error.message)
 
     return {
-      topStores: (topStoresRes.data || []).map(mapRowToMarketplaceStore),
-      viralProducts: (viralProductsRes.data || []).map(mapRowToMarketplaceProduct),
-      hubs: (hubsRes.data || []).map(mapRowToMarketplaceHub),
-      forYou: (feedRes.data || []).map(mapRowToMarketplaceFeedEntry),
+      topStores: topStoresRes.error ? [] : (topStoresRes.data || []).map(mapRowToMarketplaceStore),
+      viralProducts: viralProductsRes.error ? [] : (viralProductsRes.data || []).map(mapRowToMarketplaceProduct),
+      hubs: hubsRes.error ? [] : (hubsRes.data || []).map(mapRowToMarketplaceHub),
+      forYou: feedRes.error ? [] : (feedRes.data || []).map(mapRowToMarketplaceFeedEntry),
     }
   }
 
@@ -690,6 +717,36 @@ export const useSupabaseBackend = () => {
 
   return {
     async initPersistence() {},
+    async getSessionProfile(options?: { refresh?: boolean }) {
+      const shouldRefresh = options?.refresh === true
+      const {
+        data: { session: cachedSession },
+        error: cachedSessionError,
+      } = await $supabase.auth.getSession()
+
+      ensureSuccess(cachedSessionError, 'No se pudo restaurar la sesion')
+
+      if (!cachedSession?.user) {
+        return null
+      }
+
+      if (!shouldRefresh) {
+        return ensureUserProfile(cachedSession.user)
+      }
+
+      try {
+        const {
+          data: { session: refreshedSession },
+          error: refreshError,
+        } = await $supabase.auth.refreshSession()
+
+        ensureSuccess(refreshError, 'No se pudo refrescar la sesion')
+        return ensureUserProfile(refreshedSession?.user || cachedSession.user)
+      } catch {
+        // Keep the cached session when refresh fails transiently after resuming the app.
+        return ensureUserProfile(cachedSession.user)
+      }
+    },
     watchSession(callback: (profile: UserProfile | null) => Promise<void> | void) {
       $supabase.auth.getSession()
         .then(async ({ data: { session } }) => {
@@ -704,10 +761,21 @@ export const useSupabaseBackend = () => {
           await callback(null)
         })
 
-      const { data: { subscription } } = $supabase.auth.onAuthStateChange(async (_event, session) => {
+      const { data: { subscription } } = $supabase.auth.onAuthStateChange(async (event, session) => {
         try {
-          if (!session?.user) {
+          if (event === 'SIGNED_OUT') {
             await callback(null)
+            return
+          }
+
+          if (!session?.user) {
+            const { data } = await $supabase.auth.getSession()
+            if (!data.session?.user) {
+              await callback(null)
+              return
+            }
+
+            await callback(await ensureUserProfile(data.session.user))
             return
           }
 
@@ -778,7 +846,8 @@ export const useSupabaseBackend = () => {
         .order('created_at', { ascending: false })
 
       ensureSuccess(error, 'No se pudieron cargar los catálogos del propietario')
-      return Promise.all((data || []).map(assembleCatalog))
+      // Map empty relations for list view to avoid N+1 queries. Details are fetched by setActiveCatalog.
+      return (data || []).map(row => mapRowToCatalogRecord(row, [], [], [], []))
     },
     async getCatalogBySlug(slug: string) {
       if (!slug) return null
@@ -797,7 +866,7 @@ export const useSupabaseBackend = () => {
         return null
       }
 
-      return assembleCatalog(data)
+      return assemblePublicCatalog(data)
     },
     async getCatalogById(catalogId: string) {
       const data = await getCatalogHeaderById(catalogId)
@@ -816,7 +885,7 @@ export const useSupabaseBackend = () => {
         .order('created_at', { ascending: false })
 
       ensureSuccess(error, 'No se pudo cargar el marketplace')
-      return Promise.all((data || []).map(assembleCatalog))
+      return (data || []).map(row => mapRowToCatalogRecord(row, [], [], [], []))
     },
     getMarketplaceLanding,
     async createCatalog(ownerUid: string, name: string, slug: string) {
@@ -876,13 +945,21 @@ export const useSupabaseBackend = () => {
       return assembleCatalog(catalogRow)
     },
     async updateSettings(catalogId: string, settings: Partial<CatalogOperationalSettings>) {
-      await updateCatalogJson(catalogId, 'settings', settings)
+      const { data, error } = await $supabase.from('catalogs').select('settings').eq('id', catalogId).single()
+      ensureSuccess(error, 'No se pudo cargar la configuración actual')
+      
+      const merged = { ...data?.settings, ...settings }
+      await updateCatalogJson(catalogId, 'settings', merged)
     },
     async updateStorefrontLayout(catalogId: string, storefrontLayout: CatalogOperationalSettings['storefrontLayout']) {
-      await updateCatalogJson(catalogId, 'settings', { storefrontLayout })
+      await this.updateSettings(catalogId, { storefrontLayout })
     },
     async updateTheme(catalogId: string, theme: Partial<CatalogThemeSettings>) {
-      await updateCatalogJson(catalogId, 'theme', theme)
+      const { data, error } = await $supabase.from('catalogs').select('theme').eq('id', catalogId).single()
+      ensureSuccess(error, 'No se pudo cargar el tema actual')
+      
+      const merged = { ...data?.theme, ...theme }
+      await updateCatalogJson(catalogId, 'theme', merged)
     },
     async updateCatalogBanStatus(catalogId: string, isBanned: boolean) {
       const { error } = await $supabase.from('catalogs').update({ is_banned: isBanned }).eq('id', catalogId)
@@ -1162,7 +1239,9 @@ export const useSupabaseBackend = () => {
 
       const { data, error } = await $supabase.from('catalogs').select('*').in('id', catalogIds)
       ensureSuccess(error, 'No se pudieron hidratar los catálogos')
-      return Promise.all((data || []).map(assembleCatalog))
+      
+      // Optimizacion: retornar solo headers con relaciones vacias para evitar N+1
+      return (data || []).map(row => mapRowToCatalogRecord(row, [], [], [], []))
     },
 
     // ─── Referidos ────────────────────────────────────────────────────────────
