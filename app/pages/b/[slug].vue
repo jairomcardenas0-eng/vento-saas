@@ -1,21 +1,34 @@
 <template>
-  <section v-if="status === 'idle' || status === 'pending'" class="auth-shell">
-    <div class="auth-card">
-      <h1>Cargando storefront</h1>
-      <p class="section-copy">Sincronizando categorias, productos y configuracion desde Supabase.</p>
-    </div>
-  </section>
+  <template v-if="storefront">
+    <StorefrontClassic v-if="layout === 'classic'" :storefront="storefront" :slug-key="slugKey" />
+    <StorefrontList v-else-if="layout === 'list'" :storefront="storefront" :slug-key="slugKey" />
+    <StorefrontSaas v-else :storefront="storefront" :slug-key="slugKey" />
+  </template>
 
-  <section v-else-if="!storefront" class="auth-shell">
-    <div class="auth-card">
-      <h1>Catalogo no encontrado</h1>
-      <NuxtLink to="/catalogos" class="solid-btn">Ir al marketplace</NuxtLink>
-    </div>
-  </section>
+  <template v-else>
+    <section v-if="status === 'success' || status === 'error'" class="flex min-h-screen flex-col items-center justify-center bg-white px-6 text-stone-900 dark:bg-slate-950 dark:text-white">
+      <div class="flex max-w-sm flex-col items-center text-center">
+        <div class="mb-6 flex h-20 w-20 items-center justify-center rounded-full bg-rose-50 text-rose-500 dark:bg-rose-500/10 dark:text-rose-400">
+          <svg class="h-10 w-10" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" /></svg>
+        </div>
+        <h1 class="text-2xl font-bold tracking-tight">Catálogo no encontrado</h1>
+        <p class="mt-3 text-sm leading-relaxed text-stone-500 dark:text-slate-400">El escaparate que buscas no está disponible o la dirección es incorrecta.</p>
+        <NuxtLink to="/catalogos" class="mt-8 flex w-full items-center justify-center rounded-full bg-stone-900 px-6 py-3.5 text-sm font-semibold text-white transition active:scale-95 dark:bg-white dark:text-stone-950">
+          Explorar el Marketplace
+        </NuxtLink>
+      </div>
+    </section>
 
-  <StorefrontClassic v-else-if="layout === 'classic'" :storefront="storefront" :slug-key="slugKey" />
-  <StorefrontList v-else-if="layout === 'list'" :storefront="storefront" :slug-key="slugKey" />
-  <StorefrontSaas v-else :storefront="storefront" :slug-key="slugKey" />
+    <section v-else class="flex min-h-screen flex-col items-center justify-center bg-white text-stone-900 dark:bg-slate-950 dark:text-white">
+      <div class="flex flex-col items-center text-center">
+        <div class="mb-6 flex h-16 w-16 items-center justify-center rounded-full bg-stone-100 shadow-inner dark:bg-white/5">
+          <div class="h-8 w-8 animate-spin rounded-full border-[3px] border-stone-200 border-t-stone-800 dark:border-white/10 dark:border-t-cyan-400"></div>
+        </div>
+        <h1 class="text-xl font-semibold tracking-tight">Preparando experiencia</h1>
+        <p class="mt-3 max-w-[280px] text-sm text-stone-500 dark:text-slate-400">Optimizando catálogo, imágenes y disponibilidad en tiempo real.</p>
+      </div>
+    </section>
+  </template>
 </template>
 
 <script setup lang="ts">

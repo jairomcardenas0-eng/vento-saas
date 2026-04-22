@@ -294,7 +294,7 @@
           <div class="flex items-center justify-between border-t border-white/10 px-5 py-4 text-[11px] text-white/40">
             <div class="flex items-center gap-2">
               <p>© {{ currentYear }} Vento Platform</p>
-              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60">v1.0</span>
+              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60">v1.1</span>
             </div>
             <p>Smart commerce ecosystem</p>
           </div>
