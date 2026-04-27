@@ -10,9 +10,67 @@
     <div v-if="product" class="fixed inset-0 z-50 bg-black/40 backdrop-blur-sm" @click.self="$emit('close')">
       <div class="absolute inset-x-0 bottom-0 max-h-[90vh] overflow-y-auto rounded-t-[32px] border border-white/10 p-4 pb-[calc(1rem+env(safe-area-inset-bottom))]" :style="{ background: 'var(--catalog-detail-bg, var(--catalog-card))' }">
         <div class="mx-auto mb-4 h-1.5 w-14 rounded-full bg-white/20" />
-        <div class="overflow-hidden rounded-[24px] bg-black/10">
-          <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" loading="lazy" class="aspect-video w-full object-cover" />
+
+        <!-- Galería de imágenes -->
+        <div class="relative overflow-hidden rounded-[24px] bg-black/10">
+          <div v-if="galleryImages.length" class="relative">
+            <img
+              :src="galleryImages[galleryActiveIndex]"
+              :alt="product.name"
+              loading="lazy"
+              class="aspect-video w-full object-cover cursor-pointer"
+              @click="openLightbox"
+            />
+            <!-- Badge de oferta en galería -->
+            <span
+              v-if="product.hasPromo && product.offerLabel"
+              class="absolute left-3 top-3 inline-flex items-center rounded-full bg-[color:var(--catalog-primary)] px-3 py-1 text-xs font-bold text-white shadow-lg"
+            >
+              {{ product.offerLabel }}
+            </span>
+            <!-- Contador de imágenes -->
+            <div
+              v-if="galleryImages.length > 1"
+              class="absolute bottom-3 right-3 flex items-center gap-1.5 rounded-full bg-black/60 px-3 py-1.5 text-xs font-medium text-white backdrop-blur-md"
+            >
+              <span>{{ galleryActiveIndex + 1 }} / {{ galleryImages.length }}</span>
+              <button
+                class="ml-0.5 grid h-6 w-6 place-items-center rounded-full bg-white/20 hover:bg-white/30 transition"
+                @click.stop="openLightbox"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/><line x1="11" y1="8" x2="11" y2="14"/><line x1="8" y1="11" x2="14" y2="11"/></svg>
+              </button>
+            </div>
+            <!-- Flechas de navegación en galería -->
+            <button
+              v-if="galleryImages.length > 1"
+              class="absolute left-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md hover:bg-black/60 transition"
+              @click.stop="galleryPrev"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="15 18 9 12 15 6"/></svg>
+            </button>
+            <button
+              v-if="galleryImages.length > 1"
+              class="absolute right-2 top-1/2 grid h-9 w-9 -translate-y-1/2 place-items-center rounded-full bg-black/40 text-white backdrop-blur-md hover:bg-black/60 transition"
+              @click.stop="galleryNext"
+            >
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><polyline points="9 18 15 12 9 6"/></svg>
+            </button>
+          </div>
           <div v-else class="flex aspect-video items-center justify-center text-sm text-white/60">Sin imagen</div>
+        </div>
+
+        <!-- Miniaturas debajo de la galería -->
+        <div v-if="galleryImages.length > 1" class="mt-3 flex gap-2 overflow-x-auto pb-1">
+          <button
+            v-for="(image, index) in galleryImages"
+            :key="index"
+            class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-xl border-2 transition"
+            :class="index === galleryActiveIndex ? 'border-[color:var(--catalog-primary)]' : 'border-white/10 opacity-70 hover:opacity-100'"
+            @click="galleryActiveIndex = index"
+          >
+            <img :src="image" :alt="`${product.name} ${index + 1}`" class="h-full w-full object-cover" loading="lazy" />
+          </button>
         </div>
 
         <div class="mt-5 space-y-5">
@@ -24,8 +82,32 @@
               </div>
               <h3 class="text-2xl font-semibold text-[color:var(--catalog-text)]">{{ product.name }}</h3>
               <p class="mt-2 text-sm leading-6 text-[color:var(--catalog-muted)]">{{ product.description }}</p>
+              <!-- Tags del producto -->
+              <div v-if="product.tags.length" class="mt-3 flex flex-wrap gap-1.5">
+                <span
+                  v-for="tag in product.tags"
+                  :key="tag"
+                  class="inline-flex rounded-full bg-[color:var(--catalog-tag-bg)] px-2.5 py-0.5 text-[10px] font-bold text-[color:var(--catalog-tag-text)]"
+                >{{ tag }}</span>
+              </div>
+              <!-- Timer de oferta -->
+              <div
+                v-if="product.timerHours && timerDisplay"
+                class="mt-3 inline-flex items-center gap-1.5 rounded-full bg-[color:var(--catalog-offer-bg)] px-3 py-1.5 text-xs font-bold text-[color:var(--catalog-offer-text)]"
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                <span>{{ timerDisplay }}</span>
+              </div>
             </div>
             <button class="ghost-btn small !min-h-[44px]" @click="$emit('close')">Cerrar</button>
+          </div>
+
+          <!-- Share button -->
+          <div class="flex gap-2">
+            <button class="share-btn" type="button" @click="shareProduct">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/></svg>
+              <span>Compartir</span>
+            </button>
           </div>
 
           <section v-for="group in product.variants" :key="group.id" class="rounded-[24px] border border-white/10 bg-black/10 p-4">
@@ -70,6 +152,14 @@
       </div>
     </div>
   </Transition>
+
+  <!-- Lightbox para galería -->
+  <StorefrontLightbox
+    :is-open="lightboxOpen"
+    :images="galleryImages"
+    :initial-index="galleryActiveIndex"
+    @close="lightboxOpen = false"
+  />
 </template>
 
 <script setup lang="ts">
@@ -95,7 +185,110 @@ defineEmits<{
   'update:instructions': [value: string]
 }>()
 
+const lightboxOpen = ref(false)
+const galleryActiveIndex = ref(0)
+
+const galleryImages = computed(() => {
+  if (!props.product) return []
+  const images: string[] = []
+  if (props.product.imageUrl) images.push(props.product.imageUrl)
+  if (props.product.imageUrls?.length) {
+    props.product.imageUrls.forEach((url) => {
+      if (url && !images.includes(url)) images.push(url)
+    })
+  }
+  return images
+})
+
+watch(() => props.product, () => {
+  galleryActiveIndex.value = 0
+  lightboxOpen.value = false
+})
+
+const openLightbox = () => {
+  lightboxOpen.value = true
+}
+
+const galleryPrev = () => {
+  if (galleryImages.value.length > 1) {
+    galleryActiveIndex.value = (galleryActiveIndex.value - 1 + galleryImages.value.length) % galleryImages.value.length
+  }
+}
+
+const galleryNext = () => {
+  if (galleryImages.value.length > 1) {
+    galleryActiveIndex.value = (galleryActiveIndex.value + 1) % galleryImages.value.length
+  }
+}
+
 const isSelected = (group: VariantGroup, optionId: string) => group.type === 'single'
   ? props.singleSelections[group.id] === optionId
   : props.multiSelections[group.id]?.includes(optionId) || false
+
+// Timer countdown
+const timerDisplay = ref('')
+let timerInterval: ReturnType<typeof setInterval> | null = null
+
+const updateTimer = () => {
+  if (!props.product?.timerHours) {
+    timerDisplay.value = ''
+    return
+  }
+
+  const totalSeconds = props.product.timerHours * 3600
+  const startTime = localStorage.getItem(`vento_timer_${props.product.id}`)
+  let remaining: number
+
+  if (startTime) {
+    const elapsed = (Date.now() - Number(startTime)) / 1000
+    remaining = Math.max(0, totalSeconds - elapsed)
+  } else {
+    localStorage.setItem(`vento_timer_${props.product.id}`, String(Date.now()))
+    remaining = totalSeconds
+  }
+
+  if (remaining <= 0) {
+    timerDisplay.value = 'Oferta finalizada'
+    if (timerInterval) clearInterval(timerInterval)
+    return
+  }
+
+  const hours = Math.floor(remaining / 3600)
+  const minutes = Math.floor((remaining % 3600) / 60)
+  const seconds = Math.floor(remaining % 60)
+
+  const parts: string[] = []
+  if (hours > 0) parts.push(`${hours}h`)
+  if (props.product.timerShowMinutes) parts.push(`${minutes}m`)
+  if (props.product.timerShowSeconds) parts.push(`${seconds}s`)
+
+  timerDisplay.value = parts.join(' ')
+}
+
+watch(() => props.product?.id, () => {
+  if (timerInterval) clearInterval(timerInterval)
+  updateTimer()
+  if (props.product?.timerHours) {
+    timerInterval = setInterval(updateTimer, 1000)
+  }
+}, { immediate: true })
+
+const shareProduct = async () => {
+  if (!props.product) return
+  const url = window.location.href
+  const text = `${props.product.name} - ${money(props.product.hasPromo && props.product.promoPrice ? props.product.promoPrice : props.product.basePrice, props.currency)}`
+
+  if (navigator.share) {
+    try {
+      await navigator.share({ title: props.product.name, text, url })
+    } catch {}
+  } else {
+    const wa = `https://wa.me/?text=${encodeURIComponent(`${text} ${url}`)}`
+    window.open(wa, '_blank')
+  }
+}
+
+onUnmounted(() => {
+  if (timerInterval) clearInterval(timerInterval)
+})
 </script>

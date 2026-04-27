@@ -416,19 +416,23 @@ const categoryDraft = ref<CategoryItem>(createEmptyCategory())
 const previousImageUrl = ref<string | null>(null)
 const loadError = ref('')
 
+type MappedCatalogCategory = CategoryItem & {
+  items: ProductItem[]
+}
+
 const filteredCatalog = computed(() => {
   const needle = search.value.trim().toLowerCase()
 
   return catalogEngine.mappedCatalog
-    .filter((category: any) => !selectedCategoryId.value || category.id === selectedCategoryId.value)
-    .map((category: any) => {
+    .filter((category: MappedCatalogCategory) => !selectedCategoryId.value || category.id === selectedCategoryId.value)
+    .map((category: MappedCatalogCategory) => {
       const items = category.items.filter((product: ProductItem) => {
         const matchesSearch = !needle || [product.name, product.description].join(' ').toLowerCase().includes(needle)
         return matchesSearch
       })
       return { ...category, items }
     })
-    .filter((category: any) => category.items.length > 0 || !needle)
+    .filter((category: MappedCatalogCategory) => category.items.length > 0 || !needle)
 })
 
 const categoryName = (categoryId: string) =>

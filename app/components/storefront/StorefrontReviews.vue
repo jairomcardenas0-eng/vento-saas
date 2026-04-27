@@ -1,6 +1,6 @@
 <template>
   <section v-if="enabled" class="panel-card mt-8">
-    <UiSectionHeader eyebrow="Prueba social" title="Resenas visibles" description="Resenas publicadas moderadas desde el admin." />
+    <UiSectionHeader eyebrow="Prueba social" title="Reseñas visibles" description="Reseñas publicadas moderadas desde el admin." />
     <div class="mt-4 grid gap-3">
       <article v-for="review in reviews.slice(0, 8)" :key="review.id" class="rounded-[20px] border border-black/10 bg-white/80 p-4">
         <div class="flex items-center justify-between gap-3">
@@ -13,15 +13,15 @@
 
     <form class="mt-6 space-y-4 rounded-[24px] border border-black/10 bg-white/70 p-4" @submit.prevent="$emit('submit')">
       <div>
-        <strong class="block text-[#24140f]">Deja tu opinion</strong>
-        <p class="section-copy mt-2 text-sm">La reseña entra al cluster de auditoria antes de publicarse.</p>
+        <strong class="block text-[#24140f]">Deja tu opinión</strong>
+        <p class="section-copy mt-2 text-sm">La reseña entra al cluster de auditoría antes de publicarse.</p>
       </div>
       <label class="block">
         <span class="mb-2 block text-sm text-[#7f5a49]">Nombre</span>
         <input v-model="reviewForm.name" class="w-full rounded-[18px] border border-black/10 bg-white px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#24140f]" />
       </label>
       <label class="block">
-        <span class="mb-2 block text-sm text-[#7f5a49]">Calificacion</span>
+        <span class="mb-2 block text-sm text-[#7f5a49]">Calificación</span>
         <select v-model.number="reviewForm.rating" class="w-full rounded-[18px] border border-black/10 bg-white px-4 py-3 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[#24140f]">
           <option :value="5">5 estrellas</option>
           <option :value="4">4 estrellas</option>

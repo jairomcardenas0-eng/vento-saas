@@ -1,10 +1,12 @@
 export type CatalogStatus = 'draft' | 'published'
-export type OrderStatus = 'new' | 'preparing' | 'completed' | 'cancelled' | 'viewed' | 'closed'
+export type OrderStatus = 'new' | 'viewed' | 'preparing' | 'ready' | 'delivered' | 'completed' | 'cancelled' | 'closed'
 export type DeliveryMode = 'delivery' | 'pickup'
 export type SystemRole = 'owner' | 'merchant'
-export type PlanTier = 'free' | 'pro' | 'gold'
+export type PlanTier = 'free' | 'basic' | 'pro' | 'enterprise' | 'gold'
 export type DeliveryFeeType = 'flat' | 'zones'
 export type DiscountType = 'percentage' | 'fixed'
+export type OrderEventType = 'viewed' | 'preparing' | 'ready' | 'delivered' | 'cancelled' | 'payment_received' | 'note_added' | 'assigned'
+export type CatalogPlanStatus = 'trial' | 'active' | 'paused' | 'blocked' | 'expired'
 
 export interface UserProfile {
   uid: string
@@ -24,12 +26,21 @@ export interface TeamMemberPermissions {
   manageOrders: boolean
   viewProducts: boolean
   manageProducts: boolean
+  viewInventory: boolean
+  manageInventory: boolean
   viewReviews: boolean
   manageReviews: boolean
   viewCoupons: boolean
   manageCoupons: boolean
   viewStats: boolean
   viewSettings: boolean
+}
+
+export interface CatalogAccessProfile {
+  catalogId: string
+  isOwner: boolean
+  role: TeamMemberRole | null
+  permissions: TeamMemberPermissions
 }
 
 export interface CatalogTeamMember {
@@ -85,13 +96,34 @@ export interface CatalogThemeSettings {
   bannerTextColor: string
 }
 
+export type StorefrontLayout = 'classic' | 'list' | 'saas' | 'store'
+
 export interface CatalogOperationalSettings {
   businessName: string
   businessType: string[]
   tagline: string
   logoUrl: string
   coverImage: string
-  storefrontLayout: 'classic' | 'list' | 'saas'
+  storefrontLayout: StorefrontLayout
+  storeTopBarHtml: string
+  storeHeaderName: string
+  storeShowPremiumBadge: boolean
+  storeHeroTag: string
+  storeHeroTitle: string
+  storeHeroDescription: string
+  storeHeroButtonText: string
+  storeHeroBackgroundImage: string
+  storeFooterText: string
+  storeIcon: string
+  appIconUrl: string
+  storeBgColor: string
+  storeCardBgColor: string
+  storeCartBgColor: string
+  storeTextPrimaryColor: string
+  storeTextSecondaryColor: string
+  storeCartTextColor: string
+  storeToastFrom: string
+  storeToastTo: string
   timezone: string
   address: {
     countryCode: string
@@ -203,6 +235,38 @@ export interface ProductVariantGroup {
   options: ProductVariantOption[]
 }
 
+export interface CatalogVariantOption {
+  id: string
+  groupId: string
+  name: string
+  priceDelta: number
+  isRequired: boolean
+  sortOrder: number
+}
+
+export interface CatalogVariantGroup {
+  id: string
+  catalogId?: string
+  productId?: string
+  groupName: string
+  selectionType: 'single' | 'multiple'
+  required: boolean
+  sortOrder: number
+  options: CatalogVariantOption[]
+}
+
+export interface InventoryItem {
+  id: string
+  catalogId?: string
+  productId: string
+  variantOptionId: string | null
+  sku: string
+  quantity: number
+  reserved: number
+  lowStockThreshold: number
+  trackStock: boolean
+}
+
 export interface CatalogProduct {
   id: string
   categoryId: string
@@ -224,7 +288,11 @@ export interface CatalogProduct {
   carouselEnabled?: boolean
   carouselIntervalSeconds?: 1 | 2 | 3 | 4 | 5
   tags: string[]
+  /** @deprecated Legacy JSONB variants snapshot kept for backwards compatibility. */
   variants: ProductVariantGroup[]
+  variantGroups?: CatalogVariantGroup[]
+  inventoryItems?: InventoryItem[]
+  freeShip: boolean
   reviewsApprovedCount: number
   productRating: number
   productRatingCount: number
@@ -252,6 +320,48 @@ export interface CatalogOrderItem {
   unitPrice: number
   totalPrice: number
   variantSummary: string[]
+  variantOptionIds?: string[]
+}
+
+export interface CatalogOrderStatusHistory {
+  id: string
+  orderId: string
+  status: OrderStatus
+  previousStatus: OrderStatus | null
+  changedBy: string | null
+  changedByName: string
+  note: string
+  createdAt: string
+}
+
+export interface CatalogOrderEvent {
+  id: string
+  orderId: string
+  eventType: OrderEventType
+  payload: Record<string, unknown> | null
+  createdBy: string | null
+  createdAt: string
+}
+
+export interface CatalogPlan {
+  id: string
+  catalogId: string
+  planType: Exclude<PlanTier, 'gold'>
+  status: CatalogPlanStatus
+  activatedAt: string
+  expiresAt: string | null
+  paymentReference: string
+  notes: string
+}
+
+export interface CatalogPlanHistoryEntry {
+  id: string
+  catalogId: string
+  previousPlan: Exclude<PlanTier, 'gold'> | null
+  newPlan: Exclude<PlanTier, 'gold'>
+  changedBy: string | null
+  reason: string
+  createdAt: string
 }
 
 export interface CatalogOrder {
@@ -266,6 +376,9 @@ export interface CatalogOrder {
   deliveryZoneId?: string
   deliveryZoneName?: string
   notes: string
+  internalNotes?: string
+  assignedToUid?: string | null
+  assignedToName?: string | null
   items: CatalogOrderItem[]
   subtotal: number
   discountTotal: number
@@ -278,6 +391,8 @@ export interface CatalogOrder {
   } | null
   total: number
   createdAt: string
+  statusHistory?: CatalogOrderStatusHistory[]
+  events?: CatalogOrderEvent[]
 }
 
 export interface CatalogCoupon {

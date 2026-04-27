@@ -1,0 +1,43 @@
+name: Deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+      - run: npm ci
+      - run: npx nuxt typecheck
+      - run: npm run build
+      - run: npm test
+
+  deploy-staging:
+    if: github.event_name == 'pull_request'
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Deploy to staging environment"
+      - run: echo "Configure your staging deployment provider here"
+
+  deploy-production:
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    needs: lint-and-test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: echo "Deploy to production environment"
+      - run: echo "Configure your production deployment provider here"
+      - run: |
+          DOMAIN="${SMOKE_TEST_BASE_URL:-https://tu-dominio.com}"
+          curl -f "$DOMAIN/api/health" || exit 1
+          curl -f "$DOMAIN/" || exit 1

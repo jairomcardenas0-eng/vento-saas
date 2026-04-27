@@ -19,6 +19,9 @@
         <span>Slug público</span>
         <input v-model="slug" type="text" required />
       </label>
+      <p v-if="slugCheckStatus === 'checking'" class="form-hint">Verificando disponibilidad...</p>
+      <p v-else-if="slugCheckStatus === 'available'" class="form-success">Disponible</p>
+      <p v-else-if="slugCheckStatus === 'taken'" class="form-error">Ese slug ya está en uso.</p>
 
       <p class="form-hint">Vista previa: <code>/b/{{ normalizedSlug }}</code></p>
       <p class="catalog-name-warning">⚠️ La URL del catálogo (slug) no se puede cambiar después de crearlo. Asegúrate de elegir la URL correcta.</p>
@@ -59,13 +62,50 @@ const name = ref('')
 const slug = ref('')
 const error = ref('')
 const showConfirm = ref(false)
+const slugCheckStatus = ref<'checking' | 'available' | 'taken' | null>(null)
+let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
 
 const normalizedSlug = computed(() => slugify(slug.value))
+
+watch(normalizedSlug, (value) => {
+  error.value = ''
+
+  if (slugCheckTimer) {
+    clearTimeout(slugCheckTimer)
+    slugCheckTimer = null
+  }
+
+  if (!value) {
+    slugCheckStatus.value = null
+    return
+  }
+
+  slugCheckStatus.value = 'checking'
+  slugCheckTimer = setTimeout(async () => {
+    try {
+      const data = await $fetch<{ available?: boolean }>('/api/check-slug', {
+        method: 'POST',
+        body: { slug: value },
+      })
+      slugCheckStatus.value = data?.available ? 'available' : 'taken'
+    } catch {
+      slugCheckStatus.value = null
+    }
+  }, 300)
+}, { immediate: true })
 
 const submit = () => {
   error.value = ''
   if (!authStore.user) {
     return navigateTo('/login')
+  }
+  if (!normalizedSlug.value) {
+    error.value = 'Ingresa un slug válido.'
+    return
+  }
+  if (slugCheckStatus.value === 'taken') {
+    error.value = 'Ese slug ya está en uso.'
+    return
   }
   showConfirm.value = true
 }
@@ -183,5 +223,11 @@ const goBack = async () => {
   grid-template-columns: 1fr 1fr;
   gap: 0.75rem;
   margin-top: 0.25rem;
+}
+
+.form-success {
+  margin: 0;
+  color: #047857;
+  font-size: 0.88rem;
 }
 </style>

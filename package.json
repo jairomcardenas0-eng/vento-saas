@@ -8,25 +8,36 @@
     "generate": "nuxt generate",
     "preview": "nuxt preview",
     "postinstall": "nuxt prepare",
-    "start": "node .output/server/index.mjs"
+    "start": "node .output/server/index.mjs",
+    "test": "vitest run"
   },
   "dependencies": {
     "@nuxtjs/color-mode": "^4.0.0",
     "@pinia/nuxt": "^0.11.3",
+    "@sentry/node": "^10.50.0",
+    "@sentry/vue": "^10.50.0",
     "@supabase/supabase-js": "^2.103.3",
+    "@upstash/redis": "^1.37.0",
     "@vue-leaflet/vue-leaflet": "^0.10.1",
     "chart.js": "^4.5.1",
     "country-state-city": "^3.2.1",
     "leaflet": "^1.9.4",
+    "lucide-vue-next": "^1.0.0",
+    "lz-string": "^1.5.0",
     "nuxt": "^4.4.2",
     "pinia": "^3.0.4",
     "qr-code-styling": "^1.9.2",
     "vue": "^3.5.32",
     "vue-chartjs": "^5.3.3",
-    "vue-router": "^5.0.4"
+    "vue-router": "^5.0.4",
+    "zod": "^4.3.6"
   },
   "devDependencies": {
     "@nuxtjs/tailwindcss": "^6.14.0",
-    "@types/leaflet": "^1.9.21"
+    "@types/leaflet": "^1.9.21",
+    "@vue/language-core": "^3.2.7",
+    "typescript": "^6.0.3",
+    "vitest": "^3.2.4",
+    "vue-tsc": "^3.2.7"
   }
 }

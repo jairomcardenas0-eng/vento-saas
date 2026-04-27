@@ -1,8 +1,14 @@
+import { useSeoMeta } from 'nuxt/app'
+import { computed, reactive, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { CatalogCoupon, CatalogOperationalSettings, CatalogReview, CatalogThemeSettings } from '~/types/catalog'
 import type { CartModifier } from '~/stores/cart'
 import type { CategoryItem, ProductItem } from '~/stores/catalog'
+import { useAnalytics } from '~/composables/useAnalytics'
+import { useCheckoutEngine } from '~/composables/useCheckoutEngine'
+import { useSupabaseBackend } from '~/composables/useSupabaseBackend'
 import { useCartStore } from '~/stores/cart'
+import { generatePublicEntityId } from '~/utils/entityIds'
 import { getCurrentScheduleState, money, resolveDeliveryFee, validateCoupon } from '~/utils/catalog'
 
 export interface StorefrontPayload {
@@ -17,6 +23,14 @@ export interface StorefrontPayload {
 }
 
 export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null>, slugKey: Ref<string>) => {
+  const runtime = globalThis as typeof globalThis & {
+    localStorage?: Storage
+    window?: {
+      open?: (url?: string | URL, target?: string, features?: string) => Window | null
+      alert?: (message?: unknown) => void
+    }
+  }
+
   const cartStore = useCartStore()
   const { encodeOrderToWhatsApp } = useCheckoutEngine()
   const backend = useSupabaseBackend()
@@ -48,15 +62,22 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   const couponCode = ref('')
   const appliedCoupon = ref<CatalogCoupon | null>(null)
   const couponMessage = ref('')
+  const checkoutSubmitting = ref(false)
+  const reviewSubmitting = ref(false)
 
-  watch(slugKey, (slug) => {
+  const notify = (message: string) => {
+    runtime.window?.alert?.(message)
+  }
+
+  watch(slugKey, (slug: string) => {
     if (!slug) {
       return
     }
+
     cartStore.hydrateCart(slug)
   }, { immediate: true })
 
-  watch(storefront, (value) => {
+  watch(storefront, (value: StorefrontPayload | null) => {
     if (!value) {
       return
     }
@@ -71,7 +92,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     })
   }, { immediate: true })
 
-  const isClosed = computed(() => Boolean(storefront.value?.settings.closed || (storefront.value?.settings as any)?.closedIsActive))
+  const isClosed = computed(() => Boolean(storefront.value?.settings.closed))
   const scheduleState = computed(() => storefront.value ? getCurrentScheduleState(storefront.value.settings) : { isOpen: false, label: '' })
   const isStoreAcceptingOrders = computed(() => !isClosed.value && scheduleState.value.isOpen)
   const availableDelivery = computed(() => Boolean(storefront.value?.settings.deliveryEnabled && !storefront.value?.settings.deliveryPaused))
@@ -90,7 +111,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   const deliveryFee = computed(() => checkoutForm.method === 'Delivery' ? Number(deliveryResolution.value.fee || 0) : 0)
   const finalTotal = computed(() => Math.max(0, subtotalBeforeDiscount.value - discountTotal.value + deliveryFee.value))
 
-  watch(() => checkoutForm.method, (value) => {
+  watch(() => checkoutForm.method, (value: string) => {
     if (value !== 'Delivery') {
       checkoutForm.zoneId = ''
       checkoutForm.address = ''
@@ -107,16 +128,19 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
 
   const themeVars = computed(() => {
     const theme = storefront.value?.theme
+    const settings = storefront.value?.settings
     if (!theme) {
       return {}
     }
 
+    const isStoreMode = settings?.storefrontLayout === 'store'
+
     return {
-      '--catalog-bg': theme.bg,
-      '--catalog-card': theme.cardBg,
+      '--catalog-bg': isStoreMode && settings?.storeBgColor ? settings.storeBgColor : theme.bg,
+      '--catalog-card': isStoreMode && settings?.storeCardBgColor ? settings.storeCardBgColor : theme.cardBg,
       '--catalog-primary': theme.primary,
-      '--catalog-text': theme.productTitleColor,
-      '--catalog-muted': theme.descColor,
+      '--catalog-text': isStoreMode && settings?.storeTextPrimaryColor ? settings.storeTextPrimaryColor : theme.productTitleColor,
+      '--catalog-muted': isStoreMode && settings?.storeTextSecondaryColor ? settings.storeTextSecondaryColor : theme.descColor,
       '--catalog-header': theme.headerBg,
       '--catalog-header-text': theme.headerText,
       '--catalog-tag-bg': theme.tagBg,
@@ -128,16 +152,9 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       '--catalog-detail-bg': theme.detailBg,
       '--catalog-btn-cart': theme.btnCartBg,
       '--catalog-btn-wa': theme.btnWaBg,
+      '--catalog-store-cart-bg': isStoreMode && settings?.storeCartBgColor ? settings.storeCartBgColor : '#0f172a',
+      '--catalog-store-cart-text': isStoreMode && settings?.storeCartTextColor ? settings.storeCartTextColor : '#ffffff',
     }
-  })
-
-  const filteredCategories = computed(() => {
-    const source = storefront.value?.categories || []
-    if (!selectedCategoryId.value) {
-      return source.filter(category => productsByCategory(category.id).length > 0)
-    }
-
-    return source.filter(category => category.id === selectedCategoryId.value && productsByCategory(category.id).length > 0)
   })
 
   const productsByCategory = (categoryId: string) => {
@@ -148,6 +165,15 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       return matchesCategory && matchesSearch
     })
   }
+
+  const filteredCategories = computed<CategoryItem[]>(() => {
+    const source = storefront.value?.categories || []
+    if (!selectedCategoryId.value) {
+      return source.filter(category => productsByCategory(category.id).length > 0)
+    }
+
+    return source.filter(category => category.id === selectedCategoryId.value && productsByCategory(category.id).length > 0)
+  })
 
   const activeBasePrice = (product: ProductItem) =>
     product.hasPromo && product.promoPrice !== null ? product.promoPrice : product.basePrice
@@ -174,12 +200,12 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     })
   })
 
-  const liveSubtotal = computed(() => {
+  const liveSubtotal = computed<number>(() => {
     if (!selectedProduct.value) {
       return 0
     }
 
-    const modifiersTotal = selectedModifiers.value.reduce((acc, modifier) => acc + modifier.priceDelta, 0)
+    const modifiersTotal = selectedModifiers.value.reduce((acc: number, modifier: CartModifier) => acc + modifier.priceDelta, 0)
     return (activeBasePrice(selectedProduct.value) + modifiersTotal) * quantity.value
   })
 
@@ -216,9 +242,15 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       return
     }
 
+    const trackedInventory = (selectedProduct.value.inventoryItems || []).filter(item => item.trackStock)
+    if (trackedInventory.length && trackedInventory.some(item => Number(item.available ?? (item.quantity - item.reserved)) <= 0)) {
+      notify(`${selectedProduct.value.name} ya no tiene stock disponible.`)
+      return
+    }
+
     const missingRequired = selectedProduct.value.variants.find(group => group.options.length > 0 && group.type === 'single' && !singleSelections.value[group.id] && group.options.some(option => option.isRequired))
     if (missingRequired) {
-      window.alert(`Selecciona una opcion para ${missingRequired.groupName}`)
+      notify(`Selecciona una opcion para ${missingRequired.groupName}`)
       return
     }
 
@@ -236,6 +268,12 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   const quickAddProduct = (product: ProductItem) => {
     if (storefront.value) {
       analytics.trackProductClick(storefront.value.id, product.id)
+    }
+
+    const trackedInventory = (product.inventoryItems || []).filter(item => item.trackStock)
+    if (trackedInventory.length && trackedInventory.some(item => Number(item.available ?? (item.quantity - item.reserved)) <= 0)) {
+      notify(`${product.name} ya no tiene stock disponible.`)
+      return
     }
 
     if (product.variants.length > 0) {
@@ -273,7 +311,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     }
 
     appliedCoupon.value = match
-    couponMessage.value = `Cupón aplicado. Ahorras ${money(validation.discount || 0, storefront.value.settings.currency)}.`
+    couponMessage.value = `Cupon aplicado. Ahorras ${money(validation.discount || 0, storefront.value.settings.currency)}.`
   }
 
   const removeCoupon = () => {
@@ -283,50 +321,52 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   }
 
   const submitCheckout = async () => {
-    if (!storefront.value || !isStoreAcceptingOrders.value || !cartStore.items.length) {
+    if (!storefront.value || !isStoreAcceptingOrders.value || !cartStore.items.length || checkoutSubmitting.value) {
       return
     }
 
     if (checkoutForm.name.trim().length < 2 && storefront.value.settings.checkoutNameReq === 'obligatorio') {
-      alert('Ingresa tu nombre antes de continuar.')
+      notify('Ingresa tu nombre antes de continuar.')
       return
     }
 
     if (checkoutForm.method === 'Delivery' && !availableDelivery.value) {
-      alert('El delivery no esta disponible en este momento.')
+      notify('El delivery no esta disponible en este momento.')
       return
     }
 
     if (checkoutForm.method === 'Pickup' && !availablePickup.value) {
-      alert('La recogida no esta disponible en este momento.')
+      notify('La recogida no esta disponible en este momento.')
       return
     }
 
     if (checkoutForm.method === 'Delivery' && storefront.value.settings.deliveryFeeType === 'zones' && !checkoutForm.zoneId) {
-      alert('Selecciona una zona de entrega antes de continuar.')
+      notify('Selecciona una zona de entrega antes de continuar.')
       return
     }
 
     if (checkoutForm.method === 'Delivery' && checkoutForm.address.trim().length <= 10) {
-      alert('Ingresa una direccion valida para el delivery.')
+      notify('Ingresa una direccion valida para el delivery.')
       return
     }
 
     if (checkoutForm.method === 'Delivery' && subtotalBeforeDiscount.value < deliveryResolution.value.minimumOrder) {
-      alert(`El pedido minimo para delivery es ${money(deliveryResolution.value.minimumOrder, storefront.value.settings.currency)}.`)
+      notify(`El pedido minimo para delivery es ${money(deliveryResolution.value.minimumOrder, storefront.value.settings.currency)}.`)
       return
     }
 
     if (appliedCoupon.value) {
       const validation = validateCoupon(appliedCoupon.value, subtotalBeforeDiscount.value)
       if (!validation.valid) {
-        alert(validation.reason)
+        notify(validation.reason)
         return
       }
     }
 
+    checkoutSubmitting.value = true
+
     const order = {
-      id: `order-${Date.now()}`,
+      id: generatePublicEntityId('order'),
       catalogId: storefront.value.id,
       channel: 'whatsapp' as const,
       status: 'new' as const,
@@ -344,6 +384,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
         unitPrice: item.finalUnitPrice,
         totalPrice: item.finalUnitPrice * item.quantity,
         variantSummary: item.modifiers.map(modifier => `${modifier.groupName}: ${modifier.optionName}`),
+        variantOptionIds: item.modifiers.map(modifier => modifier.optionId),
       })),
       subtotal: subtotalBeforeDiscount.value,
       discountTotal: discountTotal.value,
@@ -364,6 +405,8 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       await backend.appendOrder(storefront.value.id, order)
     } catch (error) {
       console.warn('Order ledger persistence failed before WhatsApp redirect', error)
+    } finally {
+      checkoutSubmitting.value = false
     }
 
     const checkoutUrl = encodeOrderToWhatsApp(
@@ -382,7 +425,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       finalTotal.value,
     )
 
-    window.open(checkoutUrl, '_blank')
+    runtime.window?.open?.(checkoutUrl, '_blank')
     cartStore.clearCart(slugKey.value)
     cartStore.isOpen = false
     checkoutForm.zoneId = ''
@@ -399,7 +442,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     }
 
     const now = Date.now()
-    const raw = localStorage.getItem(reviewThrottleKey.value)
+    const raw = runtime.localStorage?.getItem(reviewThrottleKey.value)
     const timestamps = raw ? (JSON.parse(raw) as number[]) : []
     return timestamps.filter(timestamp => now - timestamp < 6 * 60 * 60 * 1000)
   }
@@ -411,29 +454,31 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
 
     const recent = readRecentReviewAttempts()
     recent.push(Date.now())
-    localStorage.setItem(reviewThrottleKey.value, JSON.stringify(recent))
+    runtime.localStorage?.setItem(reviewThrottleKey.value, JSON.stringify(recent))
   }
 
   const submitReview = async () => {
-    if (!storefront.value) {
+    if (!storefront.value || reviewSubmitting.value) {
       return
     }
 
     if (reviewForm.name.trim().length < 2 || reviewForm.comment.trim().length < 3) {
-      window.alert('Completa nombre y comentario validos.')
+      notify('Completa nombre y comentario validos.')
       return
     }
 
     if (readRecentReviewAttempts().length >= 3) {
-      window.alert('Ya enviaste varias reseñas recientemente. Intenta más tarde.')
+      notify('Ya enviaste varias reseñas recientemente. Intenta mas tarde.')
       return
     }
+
+    reviewSubmitting.value = true
 
     const targetProductId = reviewTargetProductId.value || storefront.value.products[0]?.id || 'catalog'
     const targetProductName = storefront.value.products.find(item => item.id === targetProductId)?.name || storefront.value.settings.businessName
 
     const review: CatalogReview = {
-      id: `review-${Date.now()}`,
+      id: generatePublicEntityId('review'),
       productId: targetProductId,
       productName: targetProductName,
       name: reviewForm.name.trim(),
@@ -449,10 +494,12 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       reviewForm.name = ''
       reviewForm.comment = ''
       reviewForm.rating = 5
-      window.alert('Reseña enviada. Entró a moderación.')
+      notify('Reseña enviada. Entro a moderacion.')
     } catch (error) {
       console.error('ReviewSubmission Error:', error)
-      window.alert('No se pudo enviar la reseña.')
+      notify('No se pudo enviar la reseña.')
+    } finally {
+      reviewSubmitting.value = false
     }
   }
 
@@ -470,6 +517,8 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     couponCode,
     appliedCoupon,
     couponMessage,
+    checkoutSubmitting,
+    reviewSubmitting,
     isClosed,
     scheduleState,
     isStoreAcceptingOrders,

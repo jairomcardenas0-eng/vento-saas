@@ -1,25 +1,78 @@
+import { useNuxtApp } from 'nuxt/app'
 import { createCatalogRecord, defaultSettings, defaultTheme } from '~/data/defaults'
-import type { CatalogAnalyticsOverview } from '~/types/analytics'
 import type {
+  CatalogAccessProfile,
   CatalogCategory,
   CatalogCoupon,
+  CatalogPlan,
+  CatalogPlanHistoryEntry,
+  CatalogVariantGroup,
+  CatalogVariantOption,
+  InventoryItem,
   MarketplaceFeedEntry,
   MarketplaceHub,
-  MarketplaceLandingPayload,
   MarketplaceProductCard,
   MarketplaceStoreCard,
-  CatalogOperationalSettings,
   CatalogOrder,
   CatalogProduct,
   CatalogRecord,
   CatalogReview,
-  CatalogThemeSettings,
   UserProfile,
 } from '~/types/catalog'
+import type { CategoryItem, ProductItem } from '~/stores/catalog'
+import { createOwnerAccessProfile, normalizeTeamPermissions } from '~/utils/adminAccess'
+import { createSupabaseAnalyticsBackend } from '~/composables/backend/analytics'
+import { createSupabaseAuthBackend } from '~/composables/backend/auth'
+import { createSupabaseCatalogBackend } from '~/composables/backend/catalog'
+import { createSupabaseCommerceBackend } from '~/composables/backend/commerce'
+import { createSupabaseOperationsBackend } from '~/composables/backend/operations'
+import type {
+  CatalogAccessRow,
+  CatalogHeaderRow,
+  CatalogPlanHistoryRow,
+  CatalogPlanRow,
+  CatalogHeaderSnapshot,
+  CategoryRow,
+  CouponRow,
+  EnsureSuccess,
+  MarketplaceFeedEntryRow,
+  MarketplaceHubRow,
+  MarketplaceProductRow,
+  MarketplaceStoreRow,
+  OrderRow,
+  ProductRow,
+  ReviewRow,
+  UserProfileRow,
+  BackendSupabaseClient,
+} from '~/composables/backend/types'
+export type {
+  AdminBootstrapPayload,
+  MasterCatalogSnapshot,
+  MasterDashboardSnapshot,
+  OrdersStatsSnapshot,
+  ReviewsStatsSnapshot,
+  TeamMemberPayload,
+} from '~/composables/backend/types'
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
 
-const mapRowToCategory = (row: any): CatalogCategory => ({
+const CATALOG_SELECT = 'id, slug, owner_uid, status, plan_tier, is_banned, created_at, rating_average, rating_approved_count, theme, settings'
+const CATEGORY_SELECT = 'catalog_id, id, name, description, sort_order, is_active'
+const PRODUCT_SELECT = 'catalog_id, id, category_id, name, description, base_price, promo_price, has_promo, image_url, image_urls, sort_order, is_active, promo_tag, timer, tags, variants, product_rating, product_rating_count, reviews_approved_count, free_ship, product_variant_groups(id, catalog_id, product_id, group_name, selection_type, required, sort_order, product_variant_options(id, group_id, name, price_delta, is_required, sort_order)), inventory_items(id, catalog_id, product_id, variant_option_id, sku, quantity, reserved, low_stock_threshold, track_stock)'
+const REVIEW_SELECT = 'catalog_id, id, product_id, product_name, customer_name, comment, rating, approved, admin_reply, created_at'
+const ORDER_SELECT = 'catalog_id, id, channel, status, customer_name, customer_address, payment_method, delivery_mode, delivery_zone_id, delivery_zone_name, notes, internal_notes, assigned_to_uid, assigned_to_name, items, subtotal, discount_total, delivery_fee, applied_coupon, total, created_at, status_history:order_status_history(id, order_id, status, previous_status, changed_by, changed_by_name, note, created_at), events:order_events(id, order_id, event_type, payload, created_by, created_at)'
+const COUPON_SELECT = 'catalog_id, id, name, code, discount_type, discount_value, minimum_order, usage_limit, used_count, starts_at, expires_at, visible_publicly, is_active, created_at, updated_at'
+const USER_PROFILE_SELECT = 'uid, email, display_name, default_catalog_id, system_role, referral_code, referred_by, created_at'
+const DEFAULT_LIVE_PAGE_SIZE = 50
+const normalizeCarouselIntervalSeconds = (value: number | null | undefined): 1 | 2 | 3 | 4 | 5 => {
+  const normalized = Math.round(Number(value || 3))
+  if (normalized === 1 || normalized === 2 || normalized === 3 || normalized === 4 || normalized === 5) {
+    return normalized
+  }
+  return 3
+}
+
+const mapRowToCategory = (row: CategoryRow): CatalogCategory => ({
   id: row.id,
   name: row.name,
   note: row.description || '',
@@ -36,7 +89,71 @@ const mapCategoryToRow = (catalogId: string, category: CatalogCategory) => ({
   is_active: category.active,
 })
 
-const mapRowToProduct = (row: any): CatalogProduct => ({
+type ProductVariantOptionRow = {
+  id: string
+  group_id?: string | null
+  name?: string | null
+  price_delta?: number | string | null
+  is_required?: boolean | null
+  sort_order?: number | null
+}
+
+type ProductVariantGroupRow = {
+  id: string
+  catalog_id?: string | null
+  product_id?: string | null
+  group_name?: string | null
+  selection_type?: 'single' | 'multiple' | null
+  required?: boolean | null
+  sort_order?: number | null
+  product_variant_options?: ProductVariantOptionRow[] | null
+}
+
+type InventoryItemRow = {
+  id: string
+  catalog_id?: string | null
+  product_id?: string | null
+  variant_option_id?: string | null
+  sku?: string | null
+  quantity?: number | string | null
+  reserved?: number | string | null
+  low_stock_threshold?: number | string | null
+  track_stock?: boolean | null
+}
+
+const mapVariantOptionRow = (row: ProductVariantOptionRow): CatalogVariantOption => ({
+  id: row.id,
+  groupId: row.group_id || '',
+  name: row.name || '',
+  priceDelta: Number(row.price_delta || 0),
+  isRequired: row.is_required === true,
+  sortOrder: Number(row.sort_order || 0),
+})
+
+const mapVariantGroupRow = (row: ProductVariantGroupRow): CatalogVariantGroup => ({
+  id: row.id,
+  catalogId: row.catalog_id || undefined,
+  productId: row.product_id || undefined,
+  groupName: row.group_name || '',
+  selectionType: row.selection_type === 'multiple' ? 'multiple' : 'single',
+  required: row.required === true,
+  sortOrder: Number(row.sort_order || 0),
+  options: Array.isArray(row.product_variant_options) ? row.product_variant_options.map(mapVariantOptionRow) : [],
+})
+
+const mapInventoryItemRow = (row: InventoryItemRow): InventoryItem => ({
+  id: row.id,
+  catalogId: row.catalog_id || undefined,
+  productId: row.product_id || '',
+  variantOptionId: row.variant_option_id || null,
+  sku: row.sku || '',
+  quantity: Number(row.quantity || 0),
+  reserved: Number(row.reserved || 0),
+  lowStockThreshold: Number(row.low_stock_threshold || 0),
+  trackStock: row.track_stock === true,
+})
+
+const mapRowToProduct = (row: ProductRow): CatalogProduct => ({
   id: row.id,
   categoryId: row.category_id || '',
   name: row.name,
@@ -55,12 +172,19 @@ const mapRowToProduct = (row: any): CatalogProduct => ({
   timerShowSeconds: row.timer?.showSeconds ?? false,
   timerLinkSale: row.timer?.linkSale ?? false,
   carouselEnabled: row.timer?.carouselEnabled ?? false,
-  carouselIntervalSeconds: row.timer?.carouselIntervalSeconds ?? 3,
+  carouselIntervalSeconds: normalizeCarouselIntervalSeconds(row.timer?.carouselIntervalSeconds),
   tags: Array.isArray(row.tags) ? row.tags : [],
   variants: Array.isArray(row.variants) ? row.variants : [],
+  variantGroups: Array.isArray((row as ProductRow & { product_variant_groups?: ProductVariantGroupRow[] }).product_variant_groups)
+    ? (((row as ProductRow & { product_variant_groups?: ProductVariantGroupRow[] }).product_variant_groups) || []).map(mapVariantGroupRow)
+    : Array.isArray(row.variant_groups) ? row.variant_groups : [],
+  inventoryItems: Array.isArray(row.inventory_items)
+    ? (row.inventory_items as unknown as InventoryItemRow[]).map(mapInventoryItemRow)
+    : [],
   reviewsApprovedCount: Number(row.reviews_approved_count || 0),
   productRating: Number(row.product_rating || 0),
   productRatingCount: Number(row.product_rating_count || 0),
+  freeShip: row.free_ship ?? false,
 })
 
 const mapProductToRow = (catalogId: string, product: CatalogProduct) => ({
@@ -90,13 +214,27 @@ const mapProductToRow = (catalogId: string, product: CatalogProduct) => ({
     carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
   },
   tags: product.tags || [],
-  variants: product.variants || [],
+  variants: product.variantGroups?.length
+    ? product.variantGroups.map(group => ({
+      id: group.id,
+      groupName: group.groupName,
+      type: group.selectionType,
+      required: group.required,
+      options: group.options.map(option => ({
+        id: option.id,
+        name: option.name,
+        priceDelta: option.priceDelta,
+        isRequired: option.isRequired,
+      })),
+    }))
+    : product.variants || [],
   reviews_approved_count: product.reviewsApprovedCount || 0,
   product_rating: product.productRating || 0,
   product_rating_count: product.productRatingCount || 0,
+  free_ship: product.freeShip ?? false,
 })
 
-const mapRowToReview = (row: any): CatalogReview => ({
+const mapRowToReview = (row: ReviewRow): CatalogReview => ({
   id: row.id,
   productId: row.product_id || '',
   productName: row.product_name || '',
@@ -121,7 +259,7 @@ const mapReviewToRow = (catalogId: string, review: CatalogReview) => ({
   created_at: review.createdAt || new Date().toISOString(),
 })
 
-const mapRowToOrder = (row: any): CatalogOrder => ({
+const mapRowToOrder = (row: OrderRow): CatalogOrder => ({
   id: row.id,
   catalogId: row.catalog_id,
   channel: row.channel || 'whatsapp',
@@ -133,12 +271,49 @@ const mapRowToOrder = (row: any): CatalogOrder => ({
   deliveryZoneId: row.delivery_zone_id || undefined,
   deliveryZoneName: row.delivery_zone_name || undefined,
   notes: row.notes || '',
+  internalNotes: row.internal_notes || '',
+  assignedToUid: row.assigned_to_uid || null,
+  assignedToName: row.assigned_to_name || null,
   items: Array.isArray(row.items) ? row.items : [],
   subtotal: Number(row.subtotal || 0),
   discountTotal: Number(row.discount_total || 0),
   deliveryFee: Number(row.delivery_fee || 0),
   appliedCoupon: row.applied_coupon || null,
   total: Number(row.total || 0),
+  createdAt: row.created_at,
+  statusHistory: Array.isArray(row.status_history) ? row.status_history : [],
+  events: Array.isArray(row.events) ? row.events : [],
+})
+
+const mapRowToCatalogPlan = (row: CatalogPlanRow): CatalogPlan => ({
+  id: row.id,
+  catalogId: row.catalog_id,
+  planType: row.plan_type,
+  status: row.status,
+  activatedAt: row.activated_at,
+  expiresAt: row.expires_at ?? null,
+  paymentReference: row.payment_reference || '',
+  notes: row.notes || '',
+})
+
+const mapCatalogPlanToRow = (catalogId: string, plan: CatalogPlan) => ({
+  id: plan.id,
+  catalog_id: catalogId,
+  plan_type: plan.planType,
+  status: plan.status,
+  activated_at: plan.activatedAt,
+  expires_at: plan.expiresAt,
+  payment_reference: plan.paymentReference || null,
+  notes: plan.notes || null,
+})
+
+const mapRowToPlanHistoryEntry = (row: CatalogPlanHistoryRow): CatalogPlanHistoryEntry => ({
+  id: row.id,
+  catalogId: row.catalog_id,
+  previousPlan: row.previous_plan ?? null,
+  newPlan: row.new_plan,
+  changedBy: row.changed_by || null,
+  reason: row.reason || '',
   createdAt: row.created_at,
 })
 
@@ -154,6 +329,9 @@ const mapOrderToRow = (catalogId: string, order: CatalogOrder) => ({
   delivery_zone_id: order.deliveryZoneId || null,
   delivery_zone_name: order.deliveryZoneName || null,
   notes: order.notes || '',
+  internal_notes: order.internalNotes || '',
+  assigned_to_uid: order.assignedToUid || null,
+  assigned_to_name: order.assignedToName || null,
   items: order.items || [],
   subtotal: order.subtotal,
   discount_total: order.discountTotal,
@@ -163,17 +341,17 @@ const mapOrderToRow = (catalogId: string, order: CatalogOrder) => ({
   created_at: order.createdAt || new Date().toISOString(),
 })
 
-const mapRowToCoupon = (row: any): CatalogCoupon => ({
+const mapRowToCoupon = (row: CouponRow): CatalogCoupon => ({
   id: row.id,
   name: row.name,
   code: row.code,
   discountType: row.discount_type,
   discountValue: Number(row.discount_value || 0),
   minimumOrder: Number(row.minimum_order || 0),
-  usageLimit: row.usage_limit,
+  usageLimit: row.usage_limit ?? null,
   usedCount: Number(row.used_count || 0),
-  startsAt: row.starts_at,
-  expiresAt: row.expires_at,
+  startsAt: row.starts_at ?? null,
+  expiresAt: row.expires_at ?? null,
   visiblePublicly: row.visible_publicly === true,
   active: row.is_active === true,
   createdAt: row.created_at,
@@ -198,7 +376,7 @@ const mapCouponToRow = (catalogId: string, coupon: CatalogCoupon) => ({
   updated_at: coupon.updatedAt || new Date().toISOString(),
 })
 
-const mapRowToUserProfile = (row: any): UserProfile => ({
+const mapRowToUserProfile = (row: UserProfileRow): UserProfile => ({
   uid: row.uid,
   email: row.email || '',
   displayName: row.display_name || 'Owner',
@@ -207,26 +385,7 @@ const mapRowToUserProfile = (row: any): UserProfile => ({
   createdAt: row.created_at || new Date().toISOString(),
 })
 
-const mapAnalyticsOverview = (payload: any, rangeDays: number): CatalogAnalyticsOverview => ({
-  rangeDays: Number(payload?.rangeDays || rangeDays),
-  totals: {
-    pageViews: Number(payload?.totals?.pageViews || 0),
-    activeUsers: Number(payload?.totals?.activeUsers || 0),
-    newUsers: Number(payload?.totals?.newUsers || 0),
-    productClicks: Number(payload?.totals?.productClicks || 0),
-  },
-  daily: Array.isArray(payload?.daily)
-    ? payload.daily.map((row: any) => ({
-      day: String(row.day || ''),
-      pageViews: Number(row.pageViews || 0),
-      activeUsers: Number(row.activeUsers || 0),
-      newUsers: Number(row.newUsers || 0),
-      productClicks: Number(row.productClicks || 0),
-    }))
-    : [],
-})
-
-const mapCatalogHeader = (row: any) => ({
+const mapCatalogHeader = (row: CatalogHeaderRow): CatalogHeaderSnapshot => ({
   id: row.id,
   slug: row.slug,
   ownerUid: row.owner_uid,
@@ -256,7 +415,7 @@ const asStringArray = (value: unknown): string[] => {
     .filter(Boolean)
 }
 
-const mapRowToMarketplaceStore = (row: any): MarketplaceStoreCard => ({
+const mapRowToMarketplaceStore = (row: MarketplaceStoreRow): MarketplaceStoreCard => ({
   id: row.id,
   slug: row.slug,
   businessName: row.business_name || 'Tienda',
@@ -273,7 +432,7 @@ const mapRowToMarketplaceStore = (row: any): MarketplaceStoreCard => ({
   score: Number(row.score || 0),
 })
 
-const mapRowToMarketplaceProduct = (row: any): MarketplaceProductCard => ({
+const mapRowToMarketplaceProduct = (row: MarketplaceProductRow): MarketplaceProductCard => ({
   catalogId: row.catalog_id,
   catalogSlug: row.catalog_slug || '',
   productId: row.product_id || '',
@@ -292,7 +451,7 @@ const mapRowToMarketplaceProduct = (row: any): MarketplaceProductCard => ({
   score: Number(row.score || 0),
 })
 
-const mapRowToMarketplaceHub = (row: any): MarketplaceHub => ({
+const mapRowToMarketplaceHub = (row: MarketplaceHubRow): MarketplaceHub => ({
   regionKey: row.region_key || '',
   regionLabel: row.region_label || '',
   city: row.city || '',
@@ -305,7 +464,7 @@ const mapRowToMarketplaceHub = (row: any): MarketplaceHub => ({
   sampleStoreSlug: row.sample_store_slug || '',
 })
 
-const mapRowToMarketplaceFeedEntry = (row: any): MarketplaceFeedEntry => ({
+const mapRowToMarketplaceFeedEntry = (row: MarketplaceFeedEntryRow): MarketplaceFeedEntry => ({
   catalogId: row.catalog_id,
   slug: row.slug || '',
   productId: row.product_id || '',
@@ -330,7 +489,7 @@ const mapRowToMarketplaceFeedEntry = (row: any): MarketplaceFeedEntry => ({
 })
 
 const mapRowToCatalogRecord = (
-  row: any,
+  row: CatalogHeaderRow,
   categories: CatalogCategory[],
   products: CatalogProduct[],
   reviews: CatalogReview[],
@@ -343,989 +502,179 @@ const mapRowToCatalogRecord = (
   orders,
 })
 
-type RealtimeDocChange<T> = {
-  type: 'added' | 'modified' | 'removed'
-  doc: {
-    id: string
-    data: () => T
-  }
-}
+const mapCatalogCategoryToItem = (category: CatalogCategory): CategoryItem => ({
+  id: category.id,
+  name: category.name,
+  description: category.note || '',
+  sortOrder: category.order,
+})
 
-export interface MasterCatalogSnapshot {
-  id: string
-  slug: string
-  ownerUid: string
-  ownerName: string
-  ownerEmail: string
-  businessName: string
-  planTier: CatalogRecord['planTier']
-  isBanned: boolean
-  status: CatalogRecord['status']
-  totalOrders: number
-  totalReviews: number
-  totalProducts: number
-  createdAt: string
-}
-
-export interface MasterDashboardSnapshot {
-  totalCatalogs: number
-  ecosystemInteractions: number
-  businesses: MasterCatalogSnapshot[]
-}
+const mapCatalogProductToItem = (product: CatalogProduct): ProductItem => ({
+  id: product.id,
+  categoryId: product.categoryId,
+  name: product.name,
+  description: product.description,
+  basePrice: product.price,
+  imageUrl: product.image || null,
+  imageUrls: product.images?.length
+    ? [...product.images.slice(0, 3), ...Array.from({ length: Math.max(0, 3 - product.images.length) }, () => null)]
+    : [null, null, null],
+  isActive: product.active,
+  variants: (product.variants || []).map((group, groupIndex) => ({
+    id: group.id || `${product.id}-group-${groupIndex}`,
+    groupName: group.groupName,
+    type: group.type,
+    required: Boolean(group.required),
+    sortOrder: groupIndex,
+    options: (group.options || []).map((option, optionIndex) => ({
+      id: option.id || `${product.id}-group-${groupIndex}-option-${optionIndex}`,
+      groupId: group.id || `${product.id}-group-${groupIndex}`,
+      name: option.name,
+      priceDelta: option.priceDelta,
+      isRequired: option.isRequired ?? Boolean(group.required),
+      sortOrder: optionIndex,
+    })),
+  })),
+  hasPromo: product.salePrice !== null && product.salePrice !== undefined,
+  promoPrice: product.salePrice,
+  sortOrder: product.order,
+  offerLabel: product.offerLabel || '',
+  offerLabelPosition: product.offerPosition || 'image',
+  timerHours: product.timerHours ?? null,
+  timerPosition: product.timerPosition || 'image-right',
+  timerShowMinutes: product.timerShowMinutes ?? true,
+  timerShowSeconds: product.timerShowSeconds ?? false,
+  timerLinkSale: product.timerLinkSale ?? false,
+  carouselEnabled: product.carouselEnabled ?? false,
+  carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
+  tags: product.tags || [],
+  productRating: Number(product.productRating || 0),
+  productRatingCount: Number(product.productRatingCount || 0),
+  freeShip: product.freeShip ?? false,
+  inventoryItems: (product.inventoryItems || []).map((item) => {
+    const quantity = Number(item.quantity || 0)
+    const reserved = Number(item.reserved || 0)
+    const available = quantity - reserved
+    return {
+      ...item,
+      quantity,
+      reserved,
+      available,
+      status: item.trackStock !== true
+        ? 'untracked'
+        : available <= 0
+          ? 'out'
+          : available <= Number(item.lowStockThreshold || 0)
+            ? 'low'
+            : 'ok',
+    }
+  }),
+  createdAt: null,
+  updatedAt: null,
+})
 
 export const useSupabaseBackend = () => {
   const { $supabase: supabaseRaw } = useNuxtApp()
-  const $supabase = supabaseRaw as any
+  const $supabase = supabaseRaw as BackendSupabaseClient
 
-  const ensureSuccess = (error: any, fallbackMessage: string) => {
+  const ensureSuccess: EnsureSuccess = (error, fallbackMessage) => {
     if (error) {
       throw new Error(error.message || fallbackMessage)
     }
   }
 
-  const getCatalogHeaderById = async (catalogId: string) => {
-    const { data, error } = await $supabase
-      .from('catalogs')
-      .select('*')
-      .eq('id', catalogId)
-      .maybeSingle()
-
-    ensureSuccess(error, 'No se pudo cargar el catálogo')
-    return data
-  }
-
-  const fetchCatalogRelations = async (catalogId: string) => {
-    const [categoriesRes, productsRes, reviewsRes, ordersRes] = await Promise.all([
-      $supabase.from('categories').select('*').eq('catalog_id', catalogId).order('sort_order'),
-      $supabase.from('products').select('*').eq('catalog_id', catalogId).order('sort_order'),
-      $supabase.from('reviews').select('*').eq('catalog_id', catalogId).order('created_at', { ascending: false }),
-      $supabase.from('orders').select('*').eq('catalog_id', catalogId).order('created_at', { ascending: false }),
-    ])
-
-    ensureSuccess(categoriesRes.error, 'No se pudieron cargar las categorías')
-    ensureSuccess(productsRes.error, 'No se pudieron cargar los productos')
-    ensureSuccess(reviewsRes.error, 'No se pudieron cargar las reseñas')
-    ensureSuccess(ordersRes.error, 'No se pudieron cargar los pedidos')
+  const mapAccessRowToProfile = (row: CatalogAccessRow): CatalogAccessProfile => {
+    if (row?.isOwner === true) {
+      return createOwnerAccessProfile(String(row.catalogId))
+    }
 
     return {
-      categories: (categoriesRes.data || []).map(mapRowToCategory),
-      products: (productsRes.data || []).map(mapRowToProduct),
-      reviews: (reviewsRes.data || []).map(mapRowToReview),
-      orders: (ordersRes.data || []).map(mapRowToOrder),
+      catalogId: String(row?.catalogId || ''),
+      isOwner: false,
+      role: row?.role || null,
+      permissions: normalizeTeamPermissions(row?.permissions || {}),
     }
   }
 
-  const fetchPublicCatalogRelations = async (catalogId: string) => {
-    const [categoriesRes, productsRes, reviewsRes] = await Promise.all([
-      $supabase.from('categories').select('*').eq('catalog_id', catalogId).order('sort_order'),
-      $supabase.from('products').select('*').eq('catalog_id', catalogId).eq('is_active', true).order('sort_order'),
-      $supabase.from('reviews').select('*').eq('catalog_id', catalogId).eq('approved', true).order('created_at', { ascending: false }),
-    ])
-
-    ensureSuccess(categoriesRes.error, 'No se pudieron cargar las categorías')
-    ensureSuccess(productsRes.error, 'No se pudieron cargar los productos')
-    ensureSuccess(reviewsRes.error, 'No se pudieron cargar las reseñas')
-
-    return {
-      categories: (categoriesRes.data || []).map(mapRowToCategory),
-      products: (productsRes.data || []).map(mapRowToProduct),
-      reviews: (reviewsRes.data || []).map(mapRowToReview),
-      orders: [], // Las órdenes NO son necesarias en la vista pública
-    }
-  }
-
-  const assembleCatalog = async (row: any): Promise<CatalogRecord> => {
-    const relations = await fetchCatalogRelations(row.id)
-    return mapRowToCatalogRecord(row, relations.categories, relations.products, relations.reviews, relations.orders)
-  }
-
-  const assemblePublicCatalog = async (row: any): Promise<CatalogRecord> => {
-    const relations = await fetchPublicCatalogRelations(row.id)
-    return mapRowToCatalogRecord(row, relations.categories, relations.products, relations.reviews, relations.orders)
-  }
-
-  const ensureUserProfile = async (authUser: any): Promise<UserProfile> => {
-    const { data, error } = await $supabase
-      .from('user_profiles')
-      .select('*')
-      .eq('uid', authUser.id)
-      .maybeSingle()
-
-    ensureSuccess(error, 'No se pudo consultar el perfil')
-
-    if (data) {
-      return mapRowToUserProfile(data)
-    }
-
-    const profile: UserProfile = {
-      uid: authUser.id,
-      email: authUser.email || '',
-      displayName: authUser.user_metadata?.display_name || authUser.email?.split('@')[0] || 'Owner',
-      defaultCatalogId: null,
-      systemRole: 'merchant',
-      createdAt: new Date().toISOString(),
-    }
-
-    const { error: insertError } = await $supabase.from('user_profiles').insert({
-      uid: profile.uid,
-      email: profile.email,
-      display_name: profile.displayName,
-      default_catalog_id: null,
-      system_role: profile.systemRole,
-      created_at: profile.createdAt,
-    })
-
-    ensureSuccess(insertError, 'No se pudo crear el perfil')
-    return profile
-  }
-
-  const ensurePaidPlan = async (catalogId: string) => {
-    const catalog = await getCatalogHeaderById(catalogId)
-    if (!catalog) {
-      throw new Error('Catalogo no encontrado')
-    }
-    // Paywall removed - developer has full access
-    return catalog
-  }
-
-  const updateCatalogJson = async (
-    catalogId: string,
-    key: 'settings' | 'theme',
-    payload: Record<string, any>,
-  ) => {
-    const { error } = await $supabase
-      .from('catalogs')
-      .update({ [key]: clone(payload) })
-      .eq('id', catalogId)
-
-    ensureSuccess(error, `No se pudo actualizar ${key}`)
-  }
-
-  const recalculateReviewStats = async (catalogId: string) => {
-    const [{ data: approvedReviews, error: reviewsError }, { data: products, error: productsError }] = await Promise.all([
-      $supabase.from('reviews').select('rating, product_id').eq('catalog_id', catalogId).eq('approved', true),
-      $supabase.from('products').select('id').eq('catalog_id', catalogId),
-    ])
-
-    ensureSuccess(reviewsError, 'No se pudieron recalcular las reseñas')
-    ensureSuccess(productsError, 'No se pudieron recalcular los productos')
-
-    const reviews = approvedReviews || []
-    const ratingApprovedCount = reviews.length
-    const ratingAverage = ratingApprovedCount
-      ? reviews.reduce((acc: number, review: any) => acc + Number(review.rating || 0), 0) / ratingApprovedCount
-      : 0
-
-    const { error: catalogError } = await $supabase
-      .from('catalogs')
-      .update({
-        rating_average: Number(ratingAverage.toFixed(2)),
-        rating_approved_count: ratingApprovedCount,
-      })
-      .eq('id', catalogId)
-
-    ensureSuccess(catalogError, 'No se pudo actualizar el rating del catálogo')
-
-    const reviewByProduct = new Map<string, { total: number, count: number }>()
-    reviews.forEach((review: any) => {
-      if (!review.product_id) {
-        return
-      }
-
-      const current = reviewByProduct.get(review.product_id) || { total: 0, count: 0 }
-      current.total += Number(review.rating || 0)
-      current.count += 1
-      reviewByProduct.set(review.product_id, current)
-    })
-
-    await Promise.all((products || []).map(async (product: any) => {
-      const stats = reviewByProduct.get(product.id) || { total: 0, count: 0 }
-      const { error } = await $supabase
-        .from('products')
-        .update({
-          product_rating: stats.count ? Number((stats.total / stats.count).toFixed(2)) : 0,
-          product_rating_count: stats.count,
-          reviews_approved_count: stats.count,
-        })
-        .eq('id', product.id)
-
-      ensureSuccess(error, 'No se pudo actualizar el rating del producto')
-    }))
-  }
-
-  const buildMasterDashboard = async (): Promise<MasterDashboardSnapshot> => {
-    const [{ data: catalogs, error: catalogsError }, { data: profiles, error: profilesError }] = await Promise.all([
-      $supabase.from('catalogs').select('*').order('created_at', { ascending: false }),
-      $supabase.from('user_profiles').select('*'),
-    ])
-
-    ensureSuccess(catalogsError, 'No se pudieron cargar los catálogos')
-    ensureSuccess(profilesError, 'No se pudieron cargar los perfiles')
-
-    const usersMap = new Map((profiles || []).map((profile: any) => [profile.uid, profile]))
-
-    const businesses = await Promise.all((catalogs || []).map(async (catalog: any) => {
-      const [{ count: totalOrders }, { count: totalReviews }, { count: totalProducts }] = await Promise.all([
-        $supabase.from('orders').select('id', { count: 'exact', head: true }).eq('catalog_id', catalog.id),
-        $supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('catalog_id', catalog.id),
-        $supabase.from('products').select('id', { count: 'exact', head: true }).eq('catalog_id', catalog.id),
-      ])
-
-      const owner = usersMap.get(catalog.owner_uid)
-
-      return {
-        id: catalog.id,
-        slug: catalog.slug,
-        ownerUid: catalog.owner_uid,
-        ownerName: owner?.display_name || 'Sin propietario',
-        ownerEmail: owner?.email || 'Sin correo',
-        businessName: catalog.settings?.businessName || 'Nueva Tienda',
-        planTier: catalog.plan_tier,
-        isBanned: catalog.is_banned === true,
-        status: catalog.status,
-        totalOrders: totalOrders || 0,
-        totalReviews: totalReviews || 0,
-        totalProducts: totalProducts || 0,
-        createdAt: catalog.created_at,
-      } satisfies MasterCatalogSnapshot
-    }))
-
-    return {
-      totalCatalogs: businesses.filter((item) => !item.isBanned).length,
-      ecosystemInteractions: businesses.reduce((acc, item) => acc + item.totalOrders + item.totalReviews, 0),
-      businesses,
-    }
-  }
-
-  const buildRealtimeDocChange = <T>(type: RealtimeDocChange<T>['type'], id: string, data: T): RealtimeDocChange<T> => ({
-    type,
-    doc: {
-      id,
-      data: () => data,
-    },
+  const catalogBackend = createSupabaseCatalogBackend({
+    supabase: $supabase,
+    ensureSuccess,
+    clone,
+    catalogSelect: CATALOG_SELECT,
+    categorySelect: CATEGORY_SELECT,
+    productSelect: PRODUCT_SELECT,
+    reviewSelect: REVIEW_SELECT,
+    orderSelect: ORDER_SELECT,
+    userProfileSelect: USER_PROFILE_SELECT,
+    defaultLivePageSize: DEFAULT_LIVE_PAGE_SIZE,
+    createCatalogRecord,
+    defaultSettings,
+    defaultTheme,
+    mapRowToCategory,
+    mapCategoryToRow,
+    mapRowToProduct,
+    mapProductToRow,
+    mapRowToReview,
+    mapReviewToRow,
+    mapRowToOrder,
+    mapRowToCatalogPlan,
+    mapCatalogPlanToRow,
+    mapRowToPlanHistoryEntry,
+    mapRowToCatalogRecord,
+    mapRowToUserProfile,
+    mapCatalogHeader,
+    mapCatalogCategoryToItem,
+    mapCatalogProductToItem,
+    mapRowToCoupon,
+    mapRowToMarketplaceStore,
+    mapRowToMarketplaceProduct,
+    mapRowToMarketplaceHub,
+    mapRowToMarketplaceFeedEntry,
   })
 
-  const getCatalogAnalytics = async (catalogId: string, rangeDays = 7) => {
-    const { data, error } = await $supabase.rpc('get_catalog_analytics_snapshot', {
-      target_catalog_id: catalogId,
-      range_days: rangeDays,
-    })
+  const authBackend = createSupabaseAuthBackend({
+    supabase: $supabase,
+    ensureSuccess,
+    ensureUserProfile: catalogBackend.ensureUserProfile,
+    catalogSelect: CATALOG_SELECT,
+    mapRowToCatalogRecord,
+    mapAccessRowToProfile,
+  })
 
-    if (!error) {
-      return mapAnalyticsOverview(data, rangeDays)
-    }
+  const commerceBackend = createSupabaseCommerceBackend({
+    supabase: $supabase,
+    ensureSuccess,
+    orderSelect: ORDER_SELECT,
+    reviewSelect: REVIEW_SELECT,
+    couponSelect: COUPON_SELECT,
+    defaultLivePageSize: DEFAULT_LIVE_PAGE_SIZE,
+    mapRowToOrder,
+    mapOrderToRow,
+    mapRowToReview,
+    mapReviewToRow,
+    recalculateReviewStats: catalogBackend.recalculateReviewStats,
+  })
 
-    const fallback = {
-      rangeDays,
-      totals: {
-        pageViews: 0,
-        activeUsers: 0,
-        newUsers: 0,
-        productClicks: 0,
-      },
-      daily: Array.from({ length: rangeDays }, (_, index) => {
-        const date = new Date()
-        date.setDate(date.getDate() - (rangeDays - 1 - index))
-        return {
-          day: date.toISOString().slice(0, 10),
-          pageViews: 0,
-          activeUsers: 0,
-          newUsers: 0,
-          productClicks: 0,
-        }
-      }),
-    }
+  const analyticsBackend = createSupabaseAnalyticsBackend({
+    supabase: $supabase,
+    ensureSuccess,
+  })
 
-    const isRecoverable =
-      String(error?.message || '').toLowerCase().includes('column "day" does not exist')
-      || String(error?.message || '').toLowerCase().includes('get_catalog_analytics_snapshot')
-
-    if (isRecoverable) {
-      console.warn('[analytics] fallback activado:', error.message || error)
-      return fallback
-    }
-
-    ensureSuccess(error, 'No se pudieron cargar las metricas del catalogo')
-    return fallback
-  }
-
-  const getMarketplaceLanding = async (userTags: string[] = [], options?: {
-    topStoresLimit?: number
-    viralProductsLimit?: number
-    feedLimit?: number
-  }): Promise<MarketplaceLandingPayload> => {
-    const topStoresLimit = Math.max(1, Math.min(options?.topStoresLimit ?? 10, 24))
-    const viralProductsLimit = Math.max(1, Math.min(options?.viralProductsLimit ?? 8, 24))
-    const feedLimit = Math.max(1, Math.min(options?.feedLimit ?? 18, 40))
-    const normalizedTags = [...new Set(userTags.map(tag => tag.trim().toLowerCase()).filter(Boolean))].slice(0, 18)
-
-    const [topStoresRes, viralProductsRes, hubsRes, feedRes] = await Promise.all([
-      $supabase.rpc('get_top_stores', { limit_count: topStoresLimit }),
-      $supabase.rpc('get_viral_products', { limit_count: viralProductsLimit }),
-      $supabase.rpc('get_hubs_by_region'),
-      $supabase.rpc('get_personalized_feed', {
-        user_tags: normalizedTags,
-        limit_count: feedLimit,
-      }),
-    ])
-
-    // Fault-tolerant: if any single RPC fails (e.g. function not yet created in Supabase),
-    // return an empty array for that section instead of crashing the whole page.
-    if (topStoresRes.error) console.warn('[marketplace] get_top_stores failed:', topStoresRes.error.message)
-    if (viralProductsRes.error) console.warn('[marketplace] get_viral_products failed:', viralProductsRes.error.message)
-    if (hubsRes.error) console.warn('[marketplace] get_hubs_by_region failed:', hubsRes.error.message)
-    if (feedRes.error) console.warn('[marketplace] get_personalized_feed failed:', feedRes.error.message)
-
-    return {
-      topStores: topStoresRes.error ? [] : (topStoresRes.data || []).map(mapRowToMarketplaceStore),
-      viralProducts: viralProductsRes.error ? [] : (viralProductsRes.data || []).map(mapRowToMarketplaceProduct),
-      hubs: hubsRes.error ? [] : (hubsRes.data || []).map(mapRowToMarketplaceHub),
-      forYou: feedRes.error ? [] : (feedRes.data || []).map(mapRowToMarketplaceFeedEntry),
-    }
-  }
-
-  const watchCatalogAnalytics = (
-    catalogId: string,
-    callback: (payload: CatalogAnalyticsOverview) => Promise<void> | void,
-    onError?: (error: Error) => void,
-    rangeDays = 7,
-    onRealtimeHit?: () => void,
-  ) => {
-    const fetchAnalytics = async () => {
-      await callback(await getCatalogAnalytics(catalogId, rangeDays))
-    }
-
-    fetchAnalytics().catch((error) => onError?.(error as Error))
-
-    const channel = $supabase
-      .channel(`catalog-analytics:${catalogId}`)
-      .on('postgres_changes', { event: '*', schema: 'public', table: 'catalog_analytics_daily', filter: `catalog_id=eq.${catalogId}` }, async () => {
-        try {
-          // Notificar inmediatamente para animar el pulso antes de re-fetchear
-          onRealtimeHit?.()
-          await fetchAnalytics()
-        } catch (error) {
-          onError?.(error as Error)
-        }
-      })
-      .subscribe()
-
-    return () => {
-      void $supabase.removeChannel(channel)
-    }
-  }
+  const operationsBackend = createSupabaseOperationsBackend({
+    supabase: $supabase,
+    ensureSuccess,
+    couponSelect: COUPON_SELECT,
+    catalogSelect: CATALOG_SELECT,
+    mapRowToCoupon,
+    mapCouponToRow,
+    mapRowToCatalogRecord,
+  })
 
   return {
-    async initPersistence() {},
-    async getSessionProfile(options?: { refresh?: boolean }) {
-      const shouldRefresh = options?.refresh === true
-      const {
-        data: { session: cachedSession },
-        error: cachedSessionError,
-      } = await $supabase.auth.getSession()
-
-      ensureSuccess(cachedSessionError, 'No se pudo restaurar la sesion')
-
-      if (!cachedSession?.user) {
-        return null
-      }
-
-      if (!shouldRefresh) {
-        return ensureUserProfile(cachedSession.user)
-      }
-
-      try {
-        const {
-          data: { session: refreshedSession },
-          error: refreshError,
-        } = await $supabase.auth.refreshSession()
-
-        ensureSuccess(refreshError, 'No se pudo refrescar la sesion')
-        return ensureUserProfile(refreshedSession?.user || cachedSession.user)
-      } catch {
-        // Keep the cached session when refresh fails transiently after resuming the app.
-        return ensureUserProfile(cachedSession.user)
-      }
-    },
-    watchSession(callback: (profile: UserProfile | null) => Promise<void> | void) {
-      $supabase.auth.getSession()
-        .then(async ({ data: { session } }) => {
-          if (!session?.user) {
-            await callback(null)
-            return
-          }
-
-          await callback(await ensureUserProfile(session.user))
-        })
-        .catch(async () => {
-          await callback(null)
-        })
-
-      const { data: { subscription } } = $supabase.auth.onAuthStateChange(async (event, session) => {
-        try {
-          if (event === 'SIGNED_OUT') {
-            await callback(null)
-            return
-          }
-
-          if (!session?.user) {
-            const { data } = await $supabase.auth.getSession()
-            if (!data.session?.user) {
-              await callback(null)
-              return
-            }
-
-            await callback(await ensureUserProfile(data.session.user))
-            return
-          }
-
-          await callback(await ensureUserProfile(session.user))
-        } catch {
-          await callback(null)
-        }
-      })
-
-      return () => subscription.unsubscribe()
-    },
-    async login(email: string, password: string) {
-      console.log('[auth] login: signInWithPassword start')
-      const signInPromise = $supabase.auth.signInWithPassword({ email, password })
-      const timeoutPromise = new Promise<never>((_, reject) =>
-        setTimeout(() => reject(new Error('Tiempo de espera agotado. Revisa tu conexión a internet.')), 10000),
-      )
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const { data, error } = (await Promise.race([signInPromise, timeoutPromise])) as any
-      console.log('[auth] login: signInWithPassword done', { hasUser: !!data?.user, error })
-      ensureSuccess(error, 'Correo o contraseña incorrectos')
-      if (!data?.user) {
-        throw new Error('No se recibió información del usuario')
-      }
-      console.log('[auth] login: ensureUserProfile start')
-      const profile = await ensureUserProfile(data.user)
-      console.log('[auth] login: ensureUserProfile done', profile)
-      return profile
-    },
-    async register(displayName: string, email: string, password: string) {
-      const { data, error } = await $supabase.auth.signUp({
-        email,
-        password,
-        options: {
-          data: {
-            display_name: displayName.trim(),
-          },
-        },
-      })
-
-      ensureSuccess(error, 'No se pudo crear la cuenta')
-      if (!data.user) {
-        throw new Error('Supabase no devolvió el usuario recién creado')
-      }
-      return ensureUserProfile(data.user)
-    },
-    async logout() {
-      const { error } = await $supabase.auth.signOut()
-      ensureSuccess(error, 'No se pudo cerrar sesión')
-    },
-    async saveUser(profile: UserProfile) {
-      const { error } = await $supabase.from('user_profiles').upsert({
-        uid: profile.uid,
-        email: profile.email,
-        display_name: profile.displayName,
-        default_catalog_id: profile.defaultCatalogId,
-        system_role: profile.systemRole,
-        created_at: profile.createdAt,
-      })
-
-      ensureSuccess(error, 'No se pudo guardar el usuario')
-    },
-    async getCatalogsByOwner(ownerUid: string) {
-      const { data, error } = await $supabase
-        .from('catalogs')
-        .select('*')
-        .eq('owner_uid', ownerUid)
-        .order('created_at', { ascending: false })
-
-      ensureSuccess(error, 'No se pudieron cargar los catálogos del propietario')
-      // Map empty relations for list view to avoid N+1 queries. Details are fetched by setActiveCatalog.
-      return (data || []).map(row => mapRowToCatalogRecord(row, [], [], [], []))
-    },
-    async getCatalogBySlug(slug: string) {
-      if (!slug) return null
-      
-      // Normalización preventiva del input
-      const normalizedSlug = slug.trim().toLowerCase().replace(/\s+/g, '-')
-      
-      const { data, error } = await $supabase
-        .from('catalogs')
-        .select('*')
-        .ilike('slug', normalizedSlug)
-        .maybeSingle()
-
-      ensureSuccess(error, 'No se pudo cargar el catálogo público')
-      if (!data || data.is_banned === true) {
-        return null
-      }
-
-      return assemblePublicCatalog(data)
-    },
-    async getCatalogById(catalogId: string) {
-      const data = await getCatalogHeaderById(catalogId)
-      if (!data) {
-        return null
-      }
-
-      return assembleCatalog(data)
-    },
-    async getMarketplaceCatalogs() {
-      const { data, error } = await $supabase
-        .from('catalogs')
-        .select('*')
-        .eq('status', 'published')
-        .eq('is_banned', false)
-        .order('created_at', { ascending: false })
-
-      ensureSuccess(error, 'No se pudo cargar el marketplace')
-      return (data || []).map(row => mapRowToCatalogRecord(row, [], [], [], []))
-    },
-    getMarketplaceLanding,
-    async createCatalog(ownerUid: string, name: string, slug: string) {
-      const { data: slugMatch, error: slugError } = await $supabase
-        .from('catalogs')
-        .select('id')
-        .eq('slug', slug)
-        .maybeSingle()
-
-      ensureSuccess(slugError, 'No se pudo validar el slug')
-      if (slugMatch) {
-        throw new Error('Ese slug ya esta en uso')
-      }
-
-      const template = createCatalogRecord(ownerUid, slug, name)
-      const { data: catalogRow, error } = await $supabase
-        .from('catalogs')
-        .insert({
-          slug: template.slug,
-          owner_uid: template.ownerUid,
-          status: template.status,
-          plan_tier: template.planTier,
-          is_banned: template.isBanned,
-          created_at: template.createdAt,
-          rating_average: template.ratingAverage,
-          rating_approved_count: template.ratingApprovedCount,
-          theme: template.theme,
-          settings: template.settings,
-        })
-        .select('*')
-        .single()
-
-      ensureSuccess(error, 'No se pudo crear el catálogo')
-
-      if (template.categories.length) {
-        const { error: categoriesError } = await $supabase
-          .from('categories')
-          .insert(template.categories.map((category) => mapCategoryToRow(catalogRow.id, category)))
-        ensureSuccess(categoriesError, 'No se pudieron crear las categorías iniciales')
-      }
-
-      if (template.products.length) {
-        const { error: productsError } = await $supabase
-          .from('products')
-          .insert(template.products.map((product) => mapProductToRow(catalogRow.id, product)))
-        ensureSuccess(productsError, 'No se pudieron crear los productos iniciales')
-      }
-
-      if (template.reviews.length) {
-        const { error: reviewsError } = await $supabase
-          .from('reviews')
-          .insert(template.reviews.map((review) => mapReviewToRow(catalogRow.id, review)))
-        ensureSuccess(reviewsError, 'No se pudieron crear las reseñas iniciales')
-      }
-
-      await recalculateReviewStats(catalogRow.id)
-      return assembleCatalog(catalogRow)
-    },
-    async updateSettings(catalogId: string, settings: Partial<CatalogOperationalSettings>) {
-      const { data, error } = await $supabase.from('catalogs').select('settings').eq('id', catalogId).single()
-      ensureSuccess(error, 'No se pudo cargar la configuración actual')
-      
-      const merged = { ...data?.settings, ...settings }
-      await updateCatalogJson(catalogId, 'settings', merged)
-    },
-    async updateStorefrontLayout(catalogId: string, storefrontLayout: CatalogOperationalSettings['storefrontLayout']) {
-      await this.updateSettings(catalogId, { storefrontLayout })
-    },
-    async updateTheme(catalogId: string, theme: Partial<CatalogThemeSettings>) {
-      const { data, error } = await $supabase.from('catalogs').select('theme').eq('id', catalogId).single()
-      ensureSuccess(error, 'No se pudo cargar el tema actual')
-      
-      const merged = { ...data?.theme, ...theme }
-      await updateCatalogJson(catalogId, 'theme', merged)
-    },
-    async updateCatalogBanStatus(catalogId: string, isBanned: boolean) {
-      const { error } = await $supabase.from('catalogs').update({ is_banned: isBanned }).eq('id', catalogId)
-      ensureSuccess(error, 'No se pudo cambiar el estado del catálogo')
-    },
-    async getMasterDashboard() {
-      return buildMasterDashboard()
-    },
-    watchMasterDashboard(
-      callback: (payload: MasterDashboardSnapshot) => Promise<void> | void,
-      onError?: (error: Error) => void,
-    ) {
-      buildMasterDashboard().then(callback).catch((error) => onError?.(error as Error))
-
-      const channel = $supabase
-        .channel('master-dashboard')
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'catalogs' }, async () => {
-          try {
-            await callback(await buildMasterDashboard())
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'user_profiles' }, async () => {
-          try {
-            await callback(await buildMasterDashboard())
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders' }, async () => {
-          try {
-            await callback(await buildMasterDashboard())
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews' }, async () => {
-          try {
-            await callback(await buildMasterDashboard())
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'products' }, async () => {
-          try {
-            await callback(await buildMasterDashboard())
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .subscribe()
-
-      return () => {
-        void $supabase.removeChannel(channel)
-      }
-    },
-    async upsertCategory(catalogId: string, category: CatalogCategory) {
-      const { error } = await $supabase.from('categories').upsert(mapCategoryToRow(catalogId, category))
-      ensureSuccess(error, 'No se pudo guardar la categoría')
-    },
-    async deleteCategory(catalogId: string, categoryId: string) {
-      const [{ error: deleteError }, { error: productsError }] = await Promise.all([
-        $supabase.from('categories').delete().eq('catalog_id', catalogId).eq('id', categoryId),
-        $supabase.from('products').update({ category_id: null }).eq('catalog_id', catalogId).eq('category_id', categoryId),
-      ])
-
-      ensureSuccess(deleteError, 'No se pudo eliminar la categoría')
-      ensureSuccess(productsError, 'No se pudieron desacoplar los productos de la categoría')
-    },
-    async upsertProduct(catalogId: string, product: CatalogProduct) {
-      const { error } = await $supabase.from('products').upsert(mapProductToRow(catalogId, product))
-      ensureSuccess(error, 'No se pudo guardar el producto')
-    },
-    async deleteProduct(catalogId: string, productId: string) {
-      const { error } = await $supabase.from('products').delete().eq('catalog_id', catalogId).eq('id', productId)
-      ensureSuccess(error, 'No se pudo eliminar el producto')
-    },
-    async updateReview(catalogId: string, reviewId: string, payload: Partial<CatalogReview>) {
-      const { error } = await $supabase
-        .from('reviews')
-        .update({
-          approved: payload.approved,
-          admin_reply: payload.adminReply,
-        })
-        .eq('catalog_id', catalogId)
-        .eq('id', reviewId)
-
-      ensureSuccess(error, 'No se pudo actualizar la reseña')
-      await recalculateReviewStats(catalogId)
-    },
-    async deleteReview(catalogId: string, reviewId: string) {
-      const { error } = await $supabase.from('reviews').delete().eq('catalog_id', catalogId).eq('id', reviewId)
-      ensureSuccess(error, 'No se pudo eliminar la reseña')
-      await recalculateReviewStats(catalogId)
-    },
-    async appendReview(catalogId: string, review: CatalogReview) {
-      const { error } = await $supabase.from('reviews').insert(mapReviewToRow(catalogId, review))
-      ensureSuccess(error, 'No se pudo guardar la reseña')
-      if (review.approved) {
-        await recalculateReviewStats(catalogId)
-      }
-    },
-    watchReviews(catalogId: string, callback: (reviews: CatalogReview[]) => void, onError?: (error: Error) => void) {
-      const fetchReviews = async () => {
-        const { data, error } = await $supabase
-          .from('reviews')
-          .select('*')
-          .eq('catalog_id', catalogId)
-          .order('created_at', { ascending: false })
-
-        if (error) {
-          throw error
-        }
-
-        callback((data || []).map(mapRowToReview))
-      }
-
-      fetchReviews().catch((error) => onError?.(error as Error))
-
-      const channel = $supabase
-        .channel(`reviews:${catalogId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `catalog_id=eq.${catalogId}` }, async () => {
-          try {
-            await fetchReviews()
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .subscribe()
-
-      return () => {
-        void $supabase.removeChannel(channel)
-      }
-    },
-    async updateOrderStatus(catalogId: string, orderId: string, status: CatalogOrder['status']) {
-      const { error } = await $supabase
-        .from('orders')
-        .update({ status })
-        .eq('catalog_id', catalogId)
-        .eq('id', orderId)
-
-      ensureSuccess(error, 'No se pudo actualizar el pedido')
-    },
-    async appendOrder(catalogId: string, order: CatalogOrder) {
-      const { error } = await $supabase.from('orders').insert(mapOrderToRow(catalogId, order))
-      ensureSuccess(error, 'No se pudo guardar el pedido')
-
-      if (order.appliedCoupon?.id) {
-        const { data: coupon, error: couponError } = await $supabase
-          .from('coupons')
-          .select('used_count')
-          .eq('id', order.appliedCoupon.id)
-          .eq('catalog_id', catalogId)
-          .maybeSingle()
-
-        ensureSuccess(couponError, 'No se pudo leer el cupón aplicado')
-        if (coupon) {
-          const { error: updateError } = await $supabase
-            .from('coupons')
-            .update({
-              used_count: Number(coupon.used_count || 0) + 1,
-              updated_at: new Date().toISOString(),
-            })
-            .eq('catalog_id', catalogId)
-            .eq('id', order.appliedCoupon.id)
-
-          ensureSuccess(updateError, 'No se pudo actualizar el uso del cupón')
-        }
-      }
-    },
-    watchOrders(
-      catalogId: string,
-      callback: (payload: { orders: CatalogOrder[], changes: RealtimeDocChange<CatalogOrder>[] }) => void,
-      onError?: (error: Error) => void,
-    ) {
-      const fetchOrders = async (changes: RealtimeDocChange<CatalogOrder>[] = []) => {
-        try {
-          const { data, error } = await $supabase
-            .from('orders')
-            .select('*')
-            .eq('catalog_id', catalogId)
-            .order('created_at', { ascending: false })
-
-          if (error) {
-            throw error
-          }
-
-          callback({
-            orders: (data || []).map(mapRowToOrder),
-            changes,
-          })
-        } catch (error) {
-          onError?.(error as Error)
-        }
-      }
-
-      fetchOrders()
-
-      const channel = $supabase
-        .channel(`orders:${catalogId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `catalog_id=eq.${catalogId}` }, async (payload) => {
-          try {
-            const changes: RealtimeDocChange<CatalogOrder>[] = []
-
-            if (payload.eventType === 'INSERT' && payload.new) {
-              changes.push(buildRealtimeDocChange('added', String((payload.new as any).id), mapRowToOrder(payload.new)))
-            } else if (payload.eventType === 'UPDATE' && payload.new) {
-              changes.push(buildRealtimeDocChange('modified', String((payload.new as any).id), mapRowToOrder(payload.new)))
-            } else if (payload.eventType === 'DELETE' && payload.old) {
-              changes.push(buildRealtimeDocChange('removed', String((payload.old as any).id), mapRowToOrder(payload.old)))
-            }
-
-            await fetchOrders(changes)
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .subscribe()
-
-      return () => {
-        void $supabase.removeChannel(channel)
-      }
-    },
-    async getCoupons(catalogId: string) {
-      const { data, error } = await $supabase
-        .from('coupons')
-        .select('*')
-        .eq('catalog_id', catalogId)
-        .order('created_at', { ascending: false })
-
-      ensureSuccess(error, 'No se pudieron cargar los cupones')
-      return (data || []).map(mapRowToCoupon)
-    },
-    getCatalogAnalytics,
-    watchCatalogAnalytics,
-    watchCoupons(catalogId: string, callback: (coupons: CatalogCoupon[]) => void, onError?: (error: Error) => void) {
-      const fetchCoupons = async () => {
-        const { data, error } = await $supabase
-          .from('coupons')
-          .select('*')
-          .eq('catalog_id', catalogId)
-          .order('created_at', { ascending: false })
-
-        if (error) {
-          throw error
-        }
-
-        callback((data || []).map(mapRowToCoupon))
-      }
-
-      fetchCoupons().catch((error) => onError?.(error as Error))
-
-      const channel = $supabase
-        .channel(`coupons:${catalogId}`)
-        .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons', filter: `catalog_id=eq.${catalogId}` }, async () => {
-          try {
-            await fetchCoupons()
-          } catch (error) {
-            onError?.(error as Error)
-          }
-        })
-        .subscribe()
-
-      return () => {
-        void $supabase.removeChannel(channel)
-      }
-    },
-    async upsertCoupon(catalogId: string, coupon: CatalogCoupon) {
-      const { error } = await $supabase.from('coupons').upsert(mapCouponToRow(catalogId, coupon))
-      ensureSuccess(error, 'No se pudo guardar el cupón')
-    },
-    async deleteCoupon(catalogId: string, couponId: string) {
-      const { error } = await $supabase.from('coupons').delete().eq('catalog_id', catalogId).eq('id', couponId)
-      ensureSuccess(error, 'No se pudo eliminar el cupón')
-    },
-    async hydrateCatalogList(catalogIds: string[]) {
-      if (!catalogIds.length) {
-        return []
-      }
-
-      const { data, error } = await $supabase.from('catalogs').select('*').in('id', catalogIds)
-      ensureSuccess(error, 'No se pudieron hidratar los catálogos')
-      
-      // Optimizacion: retornar solo headers con relaciones vacias para evitar N+1
-      return (data || []).map(row => mapRowToCatalogRecord(row, [], [], [], []))
-    },
-
-    // ─── Referidos ────────────────────────────────────────────────────────────
-
-    async ensureReferralCode(uid: string): Promise<string> {
-      // Si ya tiene código, retornarlo directo
-      const { data: existing } = await $supabase
-        .from('user_profiles')
-        .select('referral_code')
-        .eq('uid', uid)
-        .maybeSingle()
-
-      if (existing?.referral_code) {
-        return existing.referral_code
-      }
-
-      // Generar código único: 3 letras aleatorias + 5 chars del UUID
-      const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'
-      const prefix = Array.from({ length: 3 }, () => chars[Math.floor(Math.random() * chars.length)]).join('')
-      const suffix = uid.replace(/-/g, '').slice(0, 5).toUpperCase()
-      const code = `${prefix}${suffix}`
-
-      const { error } = await $supabase
-        .from('user_profiles')
-        .update({ referral_code: code })
-        .eq('uid', uid)
-
-      ensureSuccess(error, 'No se pudo generar el código de referido')
-      return code
-    },
-
-    async linkReferral(newUserUid: string, referralCode: string): Promise<void> {
-      if (!referralCode) return
-
-      // Buscar el UID del referidor por su código
-      const { data: referrerData } = await $supabase
-        .rpc('get_uid_by_referral_code', { code: referralCode.toUpperCase() })
-
-      if (!referrerData || referrerData === newUserUid) return
-
-      // Guardar referred_by en el perfil del nuevo usuario
-      await $supabase
-        .from('user_profiles')
-        .update({ referred_by: referrerData })
-        .eq('uid', newUserUid)
-
-      // Insertar en la tabla de referidos (ignorar si ya existe)
-      await $supabase
-        .from('referrals')
-        .upsert({
-          referrer_uid: referrerData,
-          referred_uid: newUserUid,
-          status: 'active',
-        }, { onConflict: 'referrer_uid,referred_uid', ignoreDuplicates: true })
-    },
-
-    async getReferralData(uid: string): Promise<{
-      code: string
-      referrals: Array<{ uid: string; displayName: string; email: string; createdAt: string; status: string }>
-      total: number
-    }> {
-      const code = await this.ensureReferralCode(uid)
-
-      const { data, error } = await $supabase
-        .from('referrals')
-        .select('referred_uid, status, created_at, user_profiles!referrals_referred_uid_fkey(display_name, email)')
-        .eq('referrer_uid', uid)
-        .order('created_at', { ascending: false })
-
-      ensureSuccess(error, 'No se pudieron cargar los referidos')
-
-      const referrals = (data || []).map((row: any) => ({
-        uid: row.referred_uid,
-        displayName: row.user_profiles?.display_name || 'Sin nombre',
-        email: row.user_profiles?.email || '',
-        createdAt: row.created_at,
-        status: row.status,
-      }))
-
-      return { code, referrals, total: referrals.length }
-    },
+    ...authBackend,
+    ...catalogBackend,
+    ...commerceBackend,
+    ...analyticsBackend,
+    ...operationsBackend,
   }
 }

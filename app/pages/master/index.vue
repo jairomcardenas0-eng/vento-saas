@@ -42,8 +42,28 @@
             <h2 class="mt-2 text-3xl font-semibold text-white">Tabla estelar de negocios</h2>
           </div>
           <div class="text-sm text-white/50">
-            {{ snapshot.businesses.length }} registros sincronizados
+            {{ filteredBusinesses.length }} de {{ snapshot.businesses.length }} registros
           </div>
+        </div>
+
+        <div class="mt-5 flex flex-wrap gap-2">
+          <button
+            v-for="filter in planFilters"
+            :key="filter.value"
+            type="button"
+            class="rounded-full border px-4 py-2 text-xs font-semibold uppercase tracking-[0.16em] transition"
+            :class="selectedPlanStatus === filter.value ? 'border-amber-300/40 bg-amber-400/20 text-amber-50' : 'border-white/10 bg-black/20 text-white/60 hover:bg-white/10'"
+            @click="selectedPlanStatus = filter.value"
+          >
+            {{ filter.label }}
+          </button>
+        </div>
+
+        <div v-if="expiredBusinesses.length" class="mt-5 rounded-[24px] border border-amber-300/25 bg-amber-400/10 px-5 py-4 text-sm text-amber-50/90">
+          <strong class="block text-amber-100">Alertas de catálogos expirados</strong>
+          <p class="mt-2">
+            {{ expiredBusinesses.map(item => item.businessName).join(', ') }}
+          </p>
         </div>
 
         <div v-if="loading" class="mt-6 rounded-[28px] border border-dashed border-white/15 bg-black/15 px-6 py-10 text-center text-white/60">
@@ -64,7 +84,7 @@
                 </tr>
               </thead>
               <tbody class="divide-y divide-white/10 bg-white/5">
-                <tr v-for="business in snapshot.businesses" :key="business.id" class="align-top">
+                <tr v-for="business in filteredBusinesses" :key="business.id" class="align-top">
                   <td class="px-4 py-4">
                     <strong class="block text-white">{{ business.businessName }}</strong>
                     <span class="text-white/50">/b/{{ business.slug }}</span>
@@ -76,6 +96,9 @@
                   <td class="px-4 py-4">
                     <span class="inline-flex rounded-full border border-white/10 px-3 py-1 text-xs uppercase tracking-[0.18em] text-amber-100/80">
                       {{ business.planTier }}
+                    </span>
+                    <span class="mt-2 block text-xs text-white/45">
+                      {{ business.planStatus || 'active' }}<template v-if="business.planExpiresAt"> · {{ formatDate(business.planExpiresAt) }}</template>
                     </span>
                   </td>
                   <td class="px-4 py-4 text-white/70">
@@ -92,15 +115,24 @@
                     <span class="mt-2 block text-xs text-white/45">{{ formatDate(business.createdAt) }}</span>
                   </td>
                   <td class="px-4 py-4">
-                    <button
-                      type="button"
-                      class="inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 py-2 font-medium text-white transition"
-                      :class="business.isBanned ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-rose-600 hover:bg-rose-500'"
-                      :disabled="pendingIds.includes(business.id)"
-                      @click="toggleBan(business.id, !business.isBanned)"
-                    >
-                      {{ pendingIds.includes(business.id) ? 'Procesando...' : (business.isBanned ? 'Reactivar' : 'Banear / Congelar') }}
-                    </button>
+                    <div class="flex flex-col gap-2">
+                      <button
+                        type="button"
+                        class="inline-flex min-h-[44px] items-center justify-center rounded-2xl px-4 py-2 font-medium text-white transition"
+                        :class="business.isBanned ? 'bg-emerald-500 hover:bg-emerald-400' : 'bg-rose-600 hover:bg-rose-500'"
+                        :disabled="pendingIds.includes(business.id)"
+                        @click="toggleBan(business.id, !business.isBanned)"
+                      >
+                        {{ pendingIds.includes(business.id) ? 'Procesando...' : (business.isBanned ? 'Reactivar' : 'Banear / Congelar') }}
+                      </button>
+                      <button
+                        type="button"
+                        class="inline-flex min-h-[40px] items-center justify-center rounded-2xl border border-white/10 bg-white/10 px-4 py-2 text-xs font-semibold uppercase tracking-[0.14em] text-white transition hover:bg-white/15"
+                        @click="openPlanModal(business)"
+                      >
+                        Cambiar plan
+                      </button>
+                    </div>
                   </td>
                 </tr>
               </tbody>
@@ -110,12 +142,66 @@
 
         <p v-if="errorMessage" class="mt-4 text-sm text-rose-300">{{ errorMessage }}</p>
       </section>
+
+      <Transition
+        enter-active-class="transition duration-200 ease-out"
+        enter-from-class="opacity-0"
+        enter-to-class="opacity-100"
+        leave-active-class="transition duration-150 ease-in"
+        leave-from-class="opacity-100"
+        leave-to-class="opacity-0"
+      >
+        <div v-if="planModalOpen && editingBusiness" class="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" @click.self="closePlanModal">
+          <div class="absolute inset-x-4 top-10 mx-auto max-w-xl rounded-[32px] border border-white/10 bg-[#120d0c] p-6 shadow-[0_30px_90px_rgba(0,0,0,0.38)]">
+            <div class="flex items-start justify-between gap-4">
+              <div>
+                <p class="text-xs uppercase tracking-[0.22em] text-white/45">Cambio de plan</p>
+                <h3 class="mt-2 text-2xl font-semibold text-white">{{ editingBusiness.businessName }}</h3>
+              </div>
+              <button type="button" class="rounded-full border border-white/10 px-3 py-2 text-xs text-white/70" @click="closePlanModal">Cerrar</button>
+            </div>
+
+            <div class="mt-5 grid gap-4">
+              <label class="text-sm text-white/70">
+                <span class="mb-2 block font-medium text-white">Plan</span>
+                <select v-model="planDraft.planType" class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none">
+                  <option value="free">Free</option>
+                  <option value="basic">Basic</option>
+                  <option value="pro">Pro</option>
+                  <option value="enterprise">Enterprise</option>
+                </select>
+              </label>
+              <label class="text-sm text-white/70">
+                <span class="mb-2 block font-medium text-white">Estado</span>
+                <select v-model="planDraft.status" class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none">
+                  <option value="trial">Trial</option>
+                  <option value="active">Active</option>
+                  <option value="paused">Paused</option>
+                  <option value="blocked">Blocked</option>
+                  <option value="expired">Expired</option>
+                </select>
+              </label>
+              <label class="text-sm text-white/70">
+                <span class="mb-2 block font-medium text-white">Razón</span>
+                <textarea v-model.trim="planDraft.reason" rows="4" class="w-full rounded-2xl border border-white/10 bg-black/20 px-4 py-3 text-white outline-none" placeholder="Motivo del cambio manual" />
+              </label>
+            </div>
+
+            <div class="mt-5 flex justify-end">
+              <button type="button" class="rounded-2xl bg-amber-400 px-5 py-3 text-sm font-semibold text-stone-950 transition hover:bg-amber-300" :disabled="savingPlan" @click="savePlanChange">
+                {{ savingPlan ? 'Guardando...' : 'Guardar cambio' }}
+              </button>
+            </div>
+          </div>
+        </div>
+      </Transition>
     </div>
   </section>
 </template>
 
 <script setup lang="ts">
-import type { MasterDashboardSnapshot } from '~/composables/useSupabaseBackend'
+import type { MasterCatalogSnapshot, MasterDashboardSnapshot } from '~/composables/useSupabaseBackend'
+import type { CatalogPlan } from '~/types/catalog'
 
 const authStore = useAuthStore()
 const backend = useSupabaseBackend()
@@ -128,8 +214,30 @@ const snapshot = ref<MasterDashboardSnapshot>({
 const loading = ref(true)
 const errorMessage = ref('')
 const pendingIds = ref<string[]>([])
+const selectedPlanStatus = ref<'all' | CatalogPlan['status']>('all')
+const planModalOpen = ref(false)
+const savingPlan = ref(false)
+const editingBusiness = ref<MasterCatalogSnapshot | null>(null)
+const planDraft = reactive({
+  planType: 'free' as CatalogPlan['planType'],
+  status: 'active' as CatalogPlan['status'],
+  reason: '',
+})
 
 const frozenBusinesses = computed(() => snapshot.value.businesses.filter(item => item.isBanned).length)
+const expiredBusinesses = computed(() => snapshot.value.businesses.filter(item => item.planStatus === 'expired'))
+const planFilters = [
+  { value: 'all' as const, label: 'Todos' },
+  { value: 'trial' as const, label: 'Trial' },
+  { value: 'active' as const, label: 'Active' },
+  { value: 'paused' as const, label: 'Paused' },
+  { value: 'expired' as const, label: 'Expired' },
+]
+const filteredBusinesses = computed(() =>
+  selectedPlanStatus.value === 'all'
+    ? snapshot.value.businesses
+    : snapshot.value.businesses.filter(item => item.planStatus === selectedPlanStatus.value),
+)
 
 let stopDashboardWatcher: (() => void) | null = null
 
@@ -152,6 +260,46 @@ const toggleBan = async (catalogId: string, isBanned: boolean) => {
     errorMessage.value = error instanceof Error ? error.message : 'No se pudo cambiar el estado del negocio.'
   } finally {
     pendingIds.value = pendingIds.value.filter(item => item !== catalogId)
+  }
+}
+
+const openPlanModal = (business: MasterCatalogSnapshot) => {
+  editingBusiness.value = business
+  planDraft.planType = (business.planTier === 'gold' ? 'pro' : business.planTier) as CatalogPlan['planType']
+  planDraft.status = business.planStatus || 'active'
+  planDraft.reason = ''
+  planModalOpen.value = true
+}
+
+const closePlanModal = () => {
+  planModalOpen.value = false
+  editingBusiness.value = null
+  planDraft.reason = ''
+}
+
+const savePlanChange = async () => {
+  if (!editingBusiness.value || !planDraft.reason.trim()) {
+    errorMessage.value = 'Debes indicar una razón para el cambio manual.'
+    return
+  }
+
+  savingPlan.value = true
+  try {
+    await backend.upsertCatalogPlan(editingBusiness.value.id, {
+      id: crypto.randomUUID(),
+      planType: planDraft.planType,
+      status: planDraft.status,
+      activatedAt: new Date().toISOString(),
+      expiresAt: editingBusiness.value.planExpiresAt || null,
+      paymentReference: '',
+      notes: planDraft.reason.trim(),
+    }, planDraft.reason.trim())
+    await syncDashboard()
+    closePlanModal()
+  } catch (error) {
+    errorMessage.value = error instanceof Error ? error.message : 'No se pudo actualizar el plan.'
+  } finally {
+    savingPlan.value = false
   }
 }
 

@@ -39,9 +39,9 @@ export const createTimerText = (hours: number | null) => {
 
 export const summarizeVariantGroups = (groups: ProductVariantGroup[]) =>
   groups.map(group => ({
-    title: group.group,
+    title: group.groupName,
     options: group.options.length,
-    mode: group.selection === 'multiple' ? 'multi' : 'single',
+    mode: group.type === 'multiple' ? 'multi' : 'single',
     required: group.required,
   }))
 

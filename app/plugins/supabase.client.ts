@@ -2,27 +2,6 @@ import { createClient } from '@supabase/supabase-js'
 
 let supabaseClient: ReturnType<typeof createClient> | null = null
 
-// Keeps the Supabase connection warm so the first query doesn't hit a cold start.
-// Runs a lightweight ping every 4 minutes.
-const KEEP_ALIVE_INTERVAL_MS = 4 * 60 * 1000
-
-let keepAliveTimer: ReturnType<typeof setInterval> | null = null
-
-function startKeepAlive(client: ReturnType<typeof createClient>) {
-  if (keepAliveTimer) {
-    return
-  }
-
-  keepAliveTimer = setInterval(async () => {
-    try {
-      // Cheapest possible query — just checks the connection, no data transfer
-      await (client as any).from('catalogs').select('id').limit(1).maybeSingle()
-    } catch {
-      // Ignore — it's just a keep-alive ping
-    }
-  }, KEEP_ALIVE_INTERVAL_MS)
-}
-
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig().public
 
@@ -35,10 +14,10 @@ export default defineNuxtPlugin(() => {
         lock: async (_name, _acquireTimeout, fn) => fn(),
       },
       global: {
-        // Aggressive connection timeout to fail fast and retry
+        // Give weak mobile networks a bit more room before aborting.
         fetch: (url, init) => {
           const controller = new AbortController()
-          const timer = setTimeout(() => controller.abort(), 12000)
+          const timer = setTimeout(() => controller.abort(), 18000)
           return fetch(url, { ...init, signal: controller.signal }).finally(() => clearTimeout(timer))
         },
       },
@@ -48,9 +27,6 @@ export default defineNuxtPlugin(() => {
         },
       },
     })
-
-    // Start warm-up ping immediately, then on interval
-    startKeepAlive(supabaseClient)
   }
 
   return {

@@ -7,7 +7,34 @@
 
   <div v-else class="admin-grid">
     <section class="panel-card span-2 min-w-0">
-      <UiSectionHeader eyebrow="Operación" title="Pedidos en tiempo real" description="Bandeja de pedidos con detalle expandible y control de estados." />
+      <UiSectionHeader eyebrow="Operación" title="Pedidos en tiempo real" description="Bandeja operativa con SLA, timeline, asignación y seguimiento interno." />
+
+      <div class="mb-4 grid gap-3 lg:grid-cols-[1.2fr,0.8fr]">
+        <div class="rounded-[22px] border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+          <label class="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Buscar en la bandeja cargada</label>
+          <div class="mt-2 flex items-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+            <span class="text-zinc-400">⌕</span>
+            <input
+              v-model.trim="searchTerm"
+              type="search"
+              inputmode="search"
+              placeholder="Cliente, ID o producto"
+              class="w-full bg-transparent text-sm outline-none placeholder:text-zinc-400"
+            >
+          </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-3">
+          <article class="metric-card">
+            <p class="metric-label">Ventas del mes</p>
+            <p class="metric-value">{{ money(ordersStore.monthSales, catalog.settings.currency) }}</p>
+          </article>
+          <article class="metric-card">
+            <p class="metric-label">Cargados</p>
+            <p class="metric-value">{{ ordersStore.items.length }}/{{ ordersStore.filteredTotal }}</p>
+          </article>
+        </div>
+      </div>
 
       <div class="mb-4 space-y-3">
         <div
@@ -29,22 +56,37 @@
           v-for="tab in tabs"
           :key="tab.key"
           class="order-filter"
-          :class="{ 'is-active': activeTab === tab.key }"
-          @click="activeTab = tab.key"
+          :class="{ 'is-active': ordersStore.currentFilter === tab.key }"
+          @click="setActiveTab(tab.key)"
         >
           <span class="order-filter-label">{{ tab.label }}</span>
           <span class="text-xs opacity-70">{{ tab.count }}</span>
         </button>
       </div>
 
-      <div v-if="!filteredOrders.length" class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-        No hay pedidos en este estado.
+      <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300">
+        <span>
+          Mostrando <strong>{{ visibleOrders.length }}</strong> de <strong>{{ ordersStore.filteredTotal }}</strong> pedidos en <strong>{{ activeTabLabel }}</strong>.
+        </span>
+        <span v-if="ordersStore.remainingCount > 0" class="text-xs uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+          Restan {{ ordersStore.remainingCount }}
+        </span>
+      </div>
+
+      <div v-if="!visibleOrders.length" class="rounded-[20px] border border-dashed border-zinc-300 px-6 py-10 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+        {{ emptyStateMessage }}
       </div>
 
       <div v-else class="table-list">
-        <article v-for="order in filteredOrders" :key="order.id" class="list-row min-w-0">
+        <article v-for="order in visibleOrders" :key="order.id" class="list-row min-w-0">
           <div class="min-w-0">
-            <strong class="block break-words">#{{ order.id }} · {{ order.customerName || 'Cliente sin nombre' }}</strong>
+            <div class="flex flex-wrap items-center gap-2">
+              <strong class="block break-words">#{{ order.id }}</strong>
+              <span class="status-pill" :class="`status-${normalizeStatus(order.status)}`">{{ statusLabel(order.status) }}</span>
+              <span class="sla-pill" :class="`sla-${slaState(order.createdAt)}`">{{ elapsedLabel(order.createdAt) }}</span>
+              <span v-if="order.internalNotes?.trim()" class="note-pill" title="Este pedido tiene notas internas">Nota</span>
+            </div>
+            <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ order.customerName || 'Cliente sin nombre' }}</p>
             <p class="break-words">{{ order.items.map(item => `${item.qty}x ${item.productName}`).join(', ') }}</p>
             <small class="inline-muted block break-words">
               {{ new Date(order.createdAt).toLocaleString('es-MX') }} · {{ deliveryModeLabel(order.deliveryMode) }} · {{ order.deliveryZoneName || 'Sin zona' }}
@@ -52,15 +94,19 @@
           </div>
           <div class="row-meta wrap min-w-0">
             <span>{{ money(order.total, catalog.settings.currency) }}</span>
-            <select :value="normalizeStatus(order.status)" @change="changeStatus(order.id, ($event.target as HTMLSelectElement).value as OrderStatus)">
-              <option value="new">Nuevo</option>
-              <option value="preparing">Preparando</option>
-              <option value="completed">Completado</option>
-              <option value="cancelled">Cancelado</option>
-            </select>
-            <button class="ghost-btn small" @click="selectedOrder = order">Ver detalle</button>
+            <button class="ghost-btn small" @click="openStatusModal(order)">Cambiar estado</button>
+            <button class="ghost-btn small" @click="openOrderDetail(order)">Ver detalle</button>
           </div>
         </article>
+      </div>
+
+      <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+        <p class="text-xs uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+          {{ ordersStore.listening ? 'Realtime activo' : 'Realtime en espera' }}
+        </p>
+        <button v-if="ordersStore.hasMore" class="ghost-btn" :disabled="ordersStore.loadingMore" @click="ordersStore.loadMore()">
+          {{ ordersStore.loadingMore ? 'Cargando más pedidos...' : `Cargar ${Math.min(ordersStore.remainingCount || 25, 25)} más` }}
+        </button>
       </div>
     </section>
 
@@ -73,12 +119,16 @@
       leave-to-class="opacity-0"
     >
       <div v-if="selectedOrder" class="fixed inset-0 z-50 bg-black/45 backdrop-blur-sm" @click.self="selectedOrder = null">
-        <div class="absolute inset-x-4 inset-y-4 mx-auto max-w-3xl overflow-y-auto rounded-[32px] border border-zinc-200 bg-white/95 p-6 shadow-[0_30px_90px_rgba(16,12,10,0.28)] dark:border-zinc-800 dark:bg-zinc-950/95">
+        <div class="absolute inset-x-4 inset-y-4 mx-auto max-w-5xl overflow-y-auto rounded-[32px] border border-zinc-200 bg-white/95 p-6 shadow-[0_30px_90px_rgba(16,12,10,0.28)] dark:border-zinc-800 dark:bg-zinc-950/95">
           <div class="mb-5 flex items-start justify-between gap-4">
             <div class="min-w-0">
               <p class="eyebrow">Pedido</p>
               <h3 class="m-0 break-all text-2xl text-zinc-900 dark:text-zinc-100">#{{ selectedOrder.id }}</h3>
               <p class="section-copy mt-2 text-sm">{{ new Date(selectedOrder.createdAt).toLocaleString('es-MX') }}</p>
+              <div class="mt-3 flex flex-wrap gap-2">
+                <span class="status-pill" :class="`status-${normalizeStatus(selectedOrder.status)}`">{{ statusLabel(selectedOrder.status) }}</span>
+                <span class="sla-pill" :class="`sla-${slaState(selectedOrder.createdAt)}`">{{ elapsedLabel(selectedOrder.createdAt) }}</span>
+              </div>
             </div>
             <button class="ghost-btn small" @click="selectedOrder = null">Cerrar</button>
           </div>
@@ -94,7 +144,18 @@
               <strong class="block text-zinc-900 dark:text-zinc-100">Operación</strong>
               <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Modalidad: {{ deliveryModeLabel(selectedOrder.deliveryMode) }}</p>
               <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Zona: {{ selectedOrder.deliveryZoneName || 'No aplica' }}</p>
-              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Estado: {{ statusLabel(normalizeStatus(selectedOrder.status)) }}</p>
+              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Estado: {{ statusLabel(selectedOrder.status) }}</p>
+              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Asignado a: {{ selectedOrder.assignedToName || 'Sin asignar' }}</p>
+              <div class="mt-4 flex flex-wrap gap-2">
+                <button
+                  v-for="nextStatus in getAllowedTransitions(selectedOrder.status)"
+                  :key="nextStatus"
+                  class="ghost-btn small"
+                  @click="openStatusModal(selectedOrder, nextStatus)"
+                >
+                  {{ transitionButtonLabel(nextStatus) }}
+                </button>
+              </div>
             </div>
           </div>
 
@@ -123,6 +184,92 @@
               <div v-if="selectedOrder.appliedCoupon?.code" class="pt-2 text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Cupón aplicado: {{ selectedOrder.appliedCoupon.code }}</div>
             </div>
           </div>
+
+          <div class="mt-5 grid gap-4 md:grid-cols-[0.95fr,1.05fr]">
+            <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <strong class="block text-zinc-900 dark:text-zinc-100">Seguimiento interno</strong>
+              <label class="mt-4 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Asignado a</label>
+              <select
+                v-model="workflowDraft.assignedToUid"
+                class="mt-2 w-full rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                @change="applySelectedAssignee"
+              >
+                <option value="">Sin asignar</option>
+                <option v-for="member in teamMembers" :key="member.id" :value="member.id">
+                  {{ member.name }} · {{ member.email }}
+                </option>
+              </select>
+              <p class="mt-2 text-sm text-zinc-500 dark:text-zinc-400">
+                Responsable actual: {{ workflowDraft.assignedToName || 'Sin asignar' }}
+              </p>
+
+              <label class="mt-4 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Notas internas</label>
+              <textarea
+                v-model.trim="workflowDraft.internalNotes"
+                rows="5"
+                placeholder="Notas para el equipo, SLA, incidencias o contexto del pedido."
+                class="mt-2 w-full rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+                @blur="saveWorkflow"
+              />
+              <div class="mt-4 flex flex-wrap items-center gap-3">
+                <button class="ghost-btn" :disabled="savingWorkflow" @click="saveWorkflow">
+                  {{ savingWorkflow ? 'Guardando...' : 'Guardar seguimiento' }}
+                </button>
+                <span v-if="workflowSavedMessage" class="text-xs uppercase tracking-[0.14em] text-emerald-600 dark:text-emerald-400">{{ workflowSavedMessage }}</span>
+              </div>
+            </div>
+
+            <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+              <strong class="block text-zinc-900 dark:text-zinc-100">Timeline</strong>
+              <div class="mt-4">
+                <AdminOrderTimeline :order-id="selectedOrder.id" :catalog-id="selectedOrder.catalogId" />
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Transition>
+
+    <Transition
+      enter-active-class="transition duration-200 ease-out"
+      enter-from-class="opacity-0 scale-95"
+      enter-to-class="opacity-100 scale-100"
+      leave-active-class="transition duration-150 ease-in"
+      leave-from-class="opacity-100 scale-100"
+      leave-to-class="opacity-0 scale-95"
+    >
+      <div v-if="statusModal.open && statusModal.order" class="fixed inset-0 z-[60] flex items-center justify-center p-4">
+        <div class="absolute inset-0 bg-black/50 backdrop-blur-sm" @click="closeStatusModal" />
+        <div class="relative z-10 w-full max-w-lg rounded-[28px] border border-zinc-200 bg-white p-6 shadow-2xl dark:border-zinc-800 dark:bg-zinc-950">
+          <div class="flex items-start justify-between gap-4">
+            <div>
+              <p class="eyebrow">Cambio de estado</p>
+              <h3 class="m-0 text-xl text-zinc-900 dark:text-zinc-100">Pedido #{{ statusModal.order.id }}</h3>
+            </div>
+            <button class="ghost-btn small" @click="closeStatusModal">Cerrar</button>
+          </div>
+
+          <label class="mt-5 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Nuevo estado</label>
+          <select v-model="statusModal.nextStatus" class="mt-2 w-full rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950">
+            <option v-for="option in statusModal.options" :key="option" :value="option">
+              {{ statusLabel(option) }}
+            </option>
+          </select>
+
+          <label class="mt-5 block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Nota interna</label>
+          <textarea
+            v-model.trim="statusModal.note"
+            rows="4"
+            placeholder="Motivo, contexto o instrucción para el equipo."
+            class="mt-2 w-full rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
+          />
+
+          <div class="mt-5 flex justify-end gap-3">
+            <button class="ghost-btn" @click="closeStatusModal">Cancelar</button>
+            <button class="solid-btn" :disabled="savingStatusModal" @click="confirmStatusChange">
+              {{ savingStatusModal ? 'Guardando...' : 'Confirmar' }}
+            </button>
+          </div>
         </div>
       </div>
     </Transition>
@@ -130,54 +277,182 @@
 </template>
 
 <script setup lang="ts">
-import type { CatalogOrder, OrderStatus } from '~/types/catalog'
+import type { CatalogOrder, CatalogTeamMember, OrderStatus } from '~/types/catalog'
 import { money } from '~/utils/catalog'
+import type { OrdersFilterKey } from '~/stores/orders'
 
 definePageMeta({ layout: 'admin' })
 
 const catalogStore = useCatalogStore()
 const ordersStore = useOrdersStore()
+const backend = useSupabaseBackend()
+const { $supabase } = useNuxtApp()
 const catalog = computed(() => catalogStore.activeCatalog)
-const activeTab = ref<'all' | 'new' | 'preparing' | 'completed' | 'cancelled'>('all')
 const selectedOrder = ref<CatalogOrder | null>(null)
+const searchTerm = ref('')
+const savingWorkflow = ref(false)
+const savingStatusModal = ref(false)
+const workflowSavedMessage = ref('')
+const teamMembers = ref<CatalogTeamMember[]>([])
+const statusCounts = ref({
+  new: 0,
+  preparing: 0,
+  ready: 0,
+  cancelled: 0,
+})
+
+const workflowDraft = ref({
+  assignedToUid: '',
+  assignedToName: '',
+  internalNotes: '',
+})
+
+const statusModal = reactive<{
+  open: boolean
+  order: CatalogOrder | null
+  nextStatus: OrderStatus
+  note: string
+  options: OrderStatus[]
+}>({
+  open: false,
+  order: null,
+  nextStatus: 'viewed',
+  note: '',
+  options: [],
+})
 
 const normalizeStatus = (status: OrderStatus) => {
-  if (status === 'viewed') {
+  if (status === 'viewed' || status === 'ready') {
     return 'preparing'
   }
 
-  if (status === 'closed') {
+  if (status === 'closed' || status === 'completed' || status === 'delivered') {
     return 'completed'
   }
 
   return status
 }
 
-const statusLabel = (status: string) => {
+const statusLabel = (status: OrderStatus | string) => {
   if (status === 'new') return 'Nuevo'
+  if (status === 'viewed') return 'Visto'
   if (status === 'preparing') return 'Preparando'
+  if (status === 'ready') return 'Listo'
+  if (status === 'delivered') return 'Entregado'
   if (status === 'completed') return 'Completado'
+  if (status === 'closed') return 'Cerrado'
   if (status === 'cancelled') return 'Cancelado'
-  return status
+  return String(status)
 }
 
 const deliveryModeLabel = (mode: CatalogOrder['deliveryMode']) =>
   mode === 'delivery' ? 'Entrega a domicilio' : 'Recogida'
 
 const tabs = computed(() => [
-  { key: 'all' as const, label: 'Todos', count: ordersStore.items.length },
-  { key: 'new' as const, label: 'Pendientes', count: ordersStore.byStatus('new').length },
-  { key: 'preparing' as const, label: 'En proceso', count: ordersStore.byStatus('preparing').length },
-  { key: 'completed' as const, label: 'Completados', count: ordersStore.byStatus('completed').length },
-  { key: 'cancelled' as const, label: 'Cancelados', count: ordersStore.byStatus('cancelled').length },
+  { key: 'all' as const, label: 'Todos', count: ordersStore.stats.total },
+  { key: 'new' as const, label: 'Nuevos', count: statusCounts.value.new },
+  { key: 'preparing' as const, label: 'En preparación', count: statusCounts.value.preparing + statusCounts.value.ready },
+  { key: 'completed' as const, label: 'Entregados', count: ordersStore.stats.completed },
+  { key: 'cancelled' as const, label: 'Cancelados', count: statusCounts.value.cancelled },
 ])
 
-const filteredOrders = computed(() => {
-  if (activeTab.value === 'all') {
+const activeTabLabel = computed(() =>
+  tabs.value.find(tab => tab.key === ordersStore.currentFilter)?.label || 'Todos',
+)
+
+const visibleOrders = computed(() => {
+  const needle = searchTerm.value.trim().toLowerCase()
+  if (!needle) {
     return ordersStore.items
   }
 
-  return ordersStore.items.filter(order => normalizeStatus(order.status) === activeTab.value)
+  return ordersStore.items.filter((order) => {
+    const haystack = [
+      order.id,
+      order.customerName,
+      order.customerAddress,
+      order.deliveryZoneName,
+      order.paymentMethod,
+      order.assignedToName,
+      ...order.items.map(item => item.productName),
+    ]
+
+    return haystack.some(value => String(value || '').toLowerCase().includes(needle))
+  })
+})
+
+const emptyStateMessage = computed(() => {
+  if (searchTerm.value.trim()) {
+    return `No hubo coincidencias dentro de la bandeja cargada para "${searchTerm.value.trim()}".`
+  }
+
+  return `No hay pedidos en ${activeTabLabel.value.toLowerCase()}.`
+})
+
+const getAllowedTransitions = (status: OrderStatus): OrderStatus[] => {
+  if (status === 'new') return ['viewed', 'cancelled']
+  if (status === 'viewed') return ['preparing', 'cancelled']
+  if (status === 'preparing') return ['ready', 'cancelled']
+  if (status === 'ready') return ['delivered', 'cancelled']
+  return []
+}
+
+const transitionButtonLabel = (status: OrderStatus) => {
+  if (status === 'viewed') return 'Marcar visto'
+  if (status === 'preparing') return 'Pasar a preparación'
+  if (status === 'ready') return 'Marcar listo'
+  if (status === 'delivered') return 'Marcar entregado'
+  if (status === 'cancelled') return 'Cancelar pedido'
+  return statusLabel(status)
+}
+
+const elapsedMinutes = (createdAt: string) =>
+  Math.max(0, Math.floor((Date.now() - Date.parse(createdAt)) / 60000))
+
+const elapsedLabel = (createdAt: string) => {
+  const minutes = elapsedMinutes(createdAt)
+  if (minutes < 1) return 'Hace segundos'
+  if (minutes < 60) return `Hace ${minutes} min`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `Hace ${hours}h`
+  const days = Math.floor(hours / 24)
+  return `Hace ${days}d`
+}
+
+const slaState = (createdAt: string) => {
+  const minutes = elapsedMinutes(createdAt)
+  if (minutes < 15) return 'green'
+  if (minutes < 60) return 'yellow'
+  return 'red'
+}
+
+const loadTeamMembers = async (catalogId: string) => {
+  teamMembers.value = await backend.getTeamMembers(catalogId).catch(() => [])
+}
+
+const refreshStatusCounts = async (catalogId: string) => {
+  const [newRes, preparingRes, readyRes, cancelledRes] = await Promise.all([
+    $supabase.from('orders').select('id', { count: 'exact', head: true }).eq('catalog_id', catalogId).eq('status', 'new'),
+    $supabase.from('orders').select('id', { count: 'exact', head: true }).eq('catalog_id', catalogId).in('status', ['viewed', 'preparing']),
+    $supabase.from('orders').select('id', { count: 'exact', head: true }).eq('catalog_id', catalogId).eq('status', 'ready'),
+    $supabase.from('orders').select('id', { count: 'exact', head: true }).eq('catalog_id', catalogId).eq('status', 'cancelled'),
+  ])
+
+  statusCounts.value = {
+    new: Number(newRes.count || 0),
+    preparing: Number(preparingRes.count || 0),
+    ready: Number(readyRes.count || 0),
+    cancelled: Number(cancelledRes.count || 0),
+  }
+}
+
+watch(selectedOrder, (value) => {
+  workflowSavedMessage.value = ''
+  workflowDraft.value = {
+    assignedToUid: value?.assignedToUid || '',
+    assignedToName: value?.assignedToName || '',
+    internalNotes: value?.internalNotes || '',
+  }
 })
 
 watch(catalog, (value) => {
@@ -187,20 +462,121 @@ watch(catalog, (value) => {
   }
 
   ordersStore.startRealtime(value.id)
+  void loadTeamMembers(value.id)
+  void refreshStatusCounts(value.id)
 }, { immediate: true })
+
+watch(() => ordersStore.items.map(order => `${order.id}:${order.status}`).join('|'), () => {
+  if (catalog.value?.id) {
+    void refreshStatusCounts(catalog.value.id)
+  }
+})
 
 onBeforeUnmount(() => {
   ordersStore.stopRealtime()
 })
 
-const changeStatus = async (orderId: string, status: OrderStatus) => {
-  if (!catalog.value) {
+const setActiveTab = async (filter: OrdersFilterKey) => {
+  searchTerm.value = ''
+  selectedOrder.value = null
+  await ordersStore.setFilter(filter)
+}
+
+const openOrderDetail = async (order: CatalogOrder) => {
+  selectedOrder.value = order
+  if (!catalog.value || order.status !== 'new') {
     return
   }
 
-  await ordersStore.updateStatus(catalog.value.id, orderId, status)
-  if (selectedOrder.value?.id === orderId) {
-    selectedOrder.value.status = status
+  await backend.updateOrderStatus(catalog.value.id, order.id, {
+    status: 'viewed',
+    assignedToUid: order.assignedToUid || null,
+    assignedToName: order.assignedToName || null,
+    internalNotes: order.internalNotes || '',
+  })
+
+  order.status = 'viewed'
+  if (selectedOrder.value?.id === order.id) {
+    selectedOrder.value.status = 'viewed'
+  }
+  await refreshStatusCounts(catalog.value.id)
+}
+
+const openStatusModal = (order: CatalogOrder, preferredStatus?: OrderStatus) => {
+  const options = getAllowedTransitions(order.status)
+  if (!options.length) {
+    return
+  }
+
+  statusModal.open = true
+  statusModal.order = order
+  statusModal.options = options
+  statusModal.nextStatus = preferredStatus && options.includes(preferredStatus) ? preferredStatus : options[0] || 'cancelled'
+  statusModal.note = ''
+}
+
+const closeStatusModal = () => {
+  statusModal.open = false
+  statusModal.order = null
+  statusModal.nextStatus = 'viewed'
+  statusModal.note = ''
+  statusModal.options = []
+}
+
+const confirmStatusChange = async () => {
+  if (!catalog.value || !statusModal.order) {
+    return
+  }
+
+  savingStatusModal.value = true
+  try {
+    await backend.updateOrderStatus(catalog.value.id, statusModal.order.id, {
+      status: statusModal.nextStatus,
+      note: statusModal.note || '',
+      assignedToUid: statusModal.order.assignedToUid || null,
+      assignedToName: statusModal.order.assignedToName || null,
+      internalNotes: statusModal.order.internalNotes || '',
+    })
+
+    statusModal.order.status = statusModal.nextStatus
+    if (selectedOrder.value?.id === statusModal.order.id) {
+      selectedOrder.value.status = statusModal.nextStatus
+    }
+    await refreshStatusCounts(catalog.value.id)
+    closeStatusModal()
+  } finally {
+    savingStatusModal.value = false
+  }
+}
+
+const applySelectedAssignee = () => {
+  const member = teamMembers.value.find(item => item.id === workflowDraft.value.assignedToUid)
+  workflowDraft.value.assignedToName = member?.name || ''
+}
+
+const saveWorkflow = async () => {
+  if (!catalog.value || !selectedOrder.value) {
+    return
+  }
+
+  savingWorkflow.value = true
+  workflowSavedMessage.value = ''
+
+  try {
+    await backend.updateOrderStatus(catalog.value.id, selectedOrder.value.id, {
+      status: selectedOrder.value.status,
+      assignedToName: workflowDraft.value.assignedToName || null,
+      assignedToUid: workflowDraft.value.assignedToUid || null,
+      internalNotes: workflowDraft.value.internalNotes || '',
+    })
+
+    selectedOrder.value.assignedToName = workflowDraft.value.assignedToName || null
+    selectedOrder.value.assignedToUid = workflowDraft.value.assignedToUid || null
+    selectedOrder.value.internalNotes = workflowDraft.value.internalNotes || ''
+    workflowSavedMessage.value = 'Seguimiento guardado'
+    await refreshStatusCounts(catalog.value.id)
+  } finally {
+    savingWorkflow.value = false
   }
 }
 </script>
@@ -210,7 +586,7 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
   gap: 0.5rem;
-  margin-bottom: 1.25rem;
+  margin-bottom: 1rem;
 }
 
 .order-filter {
@@ -254,6 +630,84 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
   min-width: 0;
 }
 
+.metric-card {
+  border-radius: 18px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.06), rgba(15, 23, 42, 0.02));
+  padding: 0.95rem 0.9rem;
+  text-align: center;
+}
+
+.metric-label {
+  margin: 0;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: #64748b;
+  font-weight: 700;
+}
+
+.metric-value {
+  margin: 0.35rem 0 0;
+  font-size: 1.2rem;
+  line-height: 1.15;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.status-pill,
+.sla-pill,
+.note-pill {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.status-new {
+  background: rgba(59, 130, 246, 0.12);
+  color: #1d4ed8;
+}
+
+.status-preparing {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.status-completed {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.status-cancelled {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.sla-green {
+  background: rgba(34, 197, 94, 0.14);
+  color: #15803d;
+}
+
+.sla-yellow {
+  background: rgba(245, 158, 11, 0.14);
+  color: #b45309;
+}
+
+.sla-red {
+  background: rgba(239, 68, 68, 0.14);
+  color: #b91c1c;
+}
+
+.note-pill {
+  background: rgba(24, 24, 27, 0.08);
+  color: #3f3f46;
+}
+
 .dark .order-filter {
   border-color: rgba(100, 116, 139, 0.35);
   background: linear-gradient(160deg, rgba(15, 23, 42, 0.85), rgba(30, 41, 59, 0.8));
@@ -271,6 +725,24 @@ const changeStatus = async (orderId: string, status: OrderStatus) => {
   border-color: rgba(59, 130, 246, 0.85);
   background: linear-gradient(135deg, #3b82f6, #2563eb);
   box-shadow: 0 8px 24px rgba(59, 130, 246, 0.4);
+}
+
+.dark .metric-card {
+  border-color: rgba(100, 116, 139, 0.35);
+  background: linear-gradient(160deg, rgba(15, 23, 42, 0.6), rgba(15, 23, 42, 0.3));
+}
+
+.dark .metric-label {
+  color: #94a3b8;
+}
+
+.dark .metric-value {
+  color: #f8fafc;
+}
+
+.dark .note-pill {
+  background: rgba(244, 244, 245, 0.12);
+  color: #e4e4e7;
 }
 
 @media (min-width: 480px) {

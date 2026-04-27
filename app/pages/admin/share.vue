@@ -143,6 +143,7 @@
 </template>
 
 <script setup lang="ts">
+import type QRCodeStyling from 'qr-code-styling'
 import type { CatalogOperationalSettings } from '~/types/catalog'
 
 definePageMeta({ layout: 'admin' })
@@ -156,6 +157,10 @@ const feedbackMessage = ref('')
 const feedbackTone = ref<'success' | 'error'>('success')
 
 type QrDraft = Pick<CatalogOperationalSettings, 'qrDotColor' | 'qrBgColor' | 'qrDotType' | 'qrCornerType' | 'qrLogoUrl'>
+type QRCodeStylingModule = {
+  default?: typeof QRCodeStyling
+  QRCodeStyling?: typeof QRCodeStyling
+}
 
 const qrDraft = reactive<QrDraft>({
   qrDotColor: '#20130f',
@@ -282,6 +287,11 @@ const buildQrOptions = (settings: CatalogOperationalSettings, url: string, size:
   },
 })
 
+const resolveQRCodeStyling = async (): Promise<typeof QRCodeStyling> => {
+  const mod = await import('qr-code-styling') as QRCodeStylingModule
+  return mod.default ?? mod.QRCodeStyling ?? mod as unknown as typeof QRCodeStyling
+}
+
 const currentQrSettings = (): CatalogOperationalSettings => ({
   ...(catalog.value?.settings as CatalogOperationalSettings),
   qrDotColor: qrDraft.qrDotColor,
@@ -297,9 +307,7 @@ const renderQR = async () => {
   }
 
   try {
-    const mod = await import('qr-code-styling')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const QRCodeStyling = (mod as any).default ?? (mod as any).QRCodeStyling ?? mod
+    const QRCodeStyling = await resolveQRCodeStyling()
     const qr = new QRCodeStyling(buildQrOptions(currentQrSettings(), publicUrl.value, 400))
     const blob = await qr.getRawData('png')
     if (blob instanceof Blob) {
@@ -321,9 +329,7 @@ const downloadQR = async (extension: 'png' | 'svg') => {
   }
 
   try {
-    const mod = await import('qr-code-styling')
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    const QRCodeStyling = (mod as any).default ?? (mod as any).QRCodeStyling ?? mod
+    const QRCodeStyling = await resolveQRCodeStyling()
     const exporter = new QRCodeStyling(buildQrOptions(currentQrSettings(), publicUrl.value, 1024))
     exporter.download({ name: `QR-${catalog.value.slug}`, extension })
   } catch (error) {

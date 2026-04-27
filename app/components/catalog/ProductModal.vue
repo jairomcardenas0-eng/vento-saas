@@ -22,18 +22,18 @@
         <p>{{ product.description }}</p>
 
         <div v-if="product.variants.length" class="variant-list">
-          <article v-for="group in product.variants" :key="group.group">
-            <strong>{{ group.group }}</strong>
-            <small>{{ group.required ? 'Obligatorio' : 'Opcional' }} · {{ group.selection === 'multiple' ? 'Múltiple' : 'Único' }}</small>
+          <article v-for="group in product.variants" :key="group.id">
+            <strong>{{ group.groupName }}</strong>
+            <small>{{ group.required ? 'Obligatorio' : 'Opcional' }} · {{ group.type === 'multiple' ? 'Múltiple' : 'Único' }}</small>
             <div class="chip-row">
               <button
                 v-for="option in group.options"
                 :key="option.name"
                 class="chip"
-                :class="{ active: isSelected(group.group, option.name) }"
-                @click="toggleOption(group.group, group.selection, option.name)"
+                :class="{ active: isSelected(group.groupName, option.name) }"
+                @click="toggleOption(group.groupName, group.type, option.name)"
               >
-                {{ option.name }} <small v-if="option.price">+{{ money(option.price, currency) }}</small>
+                {{ option.name }} <small v-if="option.priceDelta">+{{ money(option.priceDelta, currency) }}</small>
               </button>
             </div>
           </article>
@@ -90,16 +90,16 @@ const toggleOption = (group: string, selection: 'single' | 'multiple', option: s
 }
 
 const computedExtra = computed(() => props.product.variants.reduce((sum, group) => {
-  const chosen = selections.value[group.group] || []
-  return sum + group.options.reduce((groupSum, option) => chosen.includes(option.name) ? groupSum + option.price : groupSum, 0)
+  const chosen = selections.value[group.groupName] || []
+  return sum + group.options.reduce((groupSum, option) => chosen.includes(option.name) ? groupSum + option.priceDelta : groupSum, 0)
 }, 0))
 
 const computedTotal = computed(() => effectivePrice(props.product) + computedExtra.value)
 
 const submit = () => {
-  const missing = props.product.variants.find(group => group.required && !(selections.value[group.group] || []).length)
+  const missing = props.product.variants.find(group => group.required && !(selections.value[group.groupName] || []).length)
   if (missing) {
-    window.alert(`Selecciona una opción para ${missing.group}`)
+    window.alert(`Selecciona una opción para ${missing.groupName}`)
     return
   }
 

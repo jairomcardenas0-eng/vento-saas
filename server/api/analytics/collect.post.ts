@@ -1,20 +1,15 @@
-/**
- * POST /api/analytics/collect
- *
- * Server route que recibe eventos de analítica desde el cliente público.
- * Usa la RPC atómica `track_analytics_event` para evitar race conditions.
- *
- * Seguridad:
- *  - Valida UUIDs antes de tocar la base de datos.
- *  - Valida event_type contra lista blanca.
- *  - Siempre responde 202 (no revela errores internos al cliente).
- *  - Usa anon key: la RPC tiene SECURITY DEFINER para bypassear RLS.
- */
-
-import { createClient } from '@supabase/supabase-js'
-import type { H3Event } from 'h3'
-
-// ─── Tipos ───────────────────────────────────────────────────────────────────
+import { randomUUID } from 'node:crypto'
+import {
+  getRequestMeta,
+  isValidUuid,
+  logApiWarn,
+  safeReadJsonBody,
+  sanitizePath,
+  sanitizeText,
+} from '../../utils/security'
+import { logError, logInfo, setCorrelationId } from '../../utils/logger'
+import { enforceRequestRateLimit } from '../../utils/rateLimit'
+import { createSupabaseServiceRoleClient } from '../../utils/supabase'
 
 type AnalyticsRequestBody = {
   catalogId?: string
@@ -24,76 +19,65 @@ type AnalyticsRequestBody = {
   path?: string | null
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-
-const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
 const VALID_EVENT_TYPES = new Set(['page_view', 'product_click'])
-
-const isValidUuid = (value: unknown): value is string =>
-  typeof value === 'string' && UUID_REGEX.test(value)
+const RATE_LIMIT_WINDOW_MS = 60 * 1000
+const RATE_LIMIT_MAX_EVENTS = 100
 
 const isValidEventType = (value: unknown): value is 'page_view' | 'product_click' =>
   typeof value === 'string' && VALID_EVENT_TYPES.has(value)
 
-const parsePayload = async (event: H3Event): Promise<AnalyticsRequestBody> => {
-  try {
-    const raw = await readRawBody(event)
-    if (!raw) return {}
-    return JSON.parse(raw)
-  } catch {
-    return {}
-  }
-}
-
-// ─── Handler ─────────────────────────────────────────────────────────────────
-
 export default defineEventHandler(async (event) => {
-  // Siempre responder 202 Accepted (fire-and-forget desde el cliente)
+  setCorrelationId(event, randomUUID())
   setResponseStatus(event, 202)
 
-  const payload = await parsePayload(event)
+  const requestMeta = getRequestMeta(event, 'analytics')
+  const { requestId, userAgent } = requestMeta
+  logInfo(event, 'analytics:collect', 'received request', { requestId })
+  const payload = await safeReadJsonBody<AnalyticsRequestBody>(event, 8 * 1024).catch(() => null)
 
-  // Validación estricta de campos requeridos
-  if (
-    !isValidUuid(payload.catalogId)
-    || !isValidUuid(payload.sessionUuid)
-    || !isValidEventType(payload.eventType)
-  ) {
-    return { ok: false, reason: 'invalid_payload' }
+  if (!payload) {
+    return { ok: false, reason: 'invalid_payload', requestId }
   }
 
-  const config = useRuntimeConfig(event)
+  if (await enforceRequestRateLimit(event, {
+    scope: 'analytics:collect',
+    limit: RATE_LIMIT_MAX_EVENTS,
+    windowMs: RATE_LIMIT_WINDOW_MS,
+    requestMeta,
+  })) {
+    return { ok: false, reason: 'rate_limited', requestId }
+  }
 
-  // Usamos anon key: la RPC track_analytics_event tiene SECURITY DEFINER
-  // y maneja sus propias validaciones internas.
-  const supabase = createClient(
-    config.public.supabaseUrl,
-    config.public.supabaseAnonKey,
-    {
-      auth: {
-        persistSession: false,
-        autoRefreshToken: false,
-      },
-    },
-  )
+  if (
+    !isValidUuid(sanitizeText(payload.catalogId, 64))
+    || !isValidUuid(sanitizeText(payload.sessionUuid, 64))
+    || !isValidEventType(payload.eventType)
+  ) {
+    return { ok: false, reason: 'invalid_payload', requestId }
+  }
 
-  const userAgent = getHeader(event, 'user-agent') || null
+  const supabase = createSupabaseServiceRoleClient(event)
 
-  // Llamada a la RPC atómica: upsert sesión + insert evento en una transacción
   const { error } = await supabase.rpc('track_analytics_event', {
-    p_catalog_id: payload.catalogId,
-    p_session_uuid: payload.sessionUuid,
+    p_catalog_id: sanitizeText(payload.catalogId, 64),
+    p_session_uuid: sanitizeText(payload.sessionUuid, 64),
     p_event_type: payload.eventType,
-    p_product_id: payload.productId || null,
-    p_path: payload.path || null,
+    p_product_id: sanitizeText(payload.productId, 120) || null,
+    p_path: sanitizePath(payload.path) || null,
     p_user_agent: userAgent,
   })
 
   if (error) {
-    // Log interno sin exponer detalles al cliente
-    console.warn('[analytics:collect] RPC error:', error.message)
-    return { ok: false }
+    logApiWarn('analytics:collect', 'rpc failed', {
+      requestId,
+      catalogId: payload.catalogId,
+      sessionUuid: payload.sessionUuid,
+      eventType: payload.eventType,
+      error: error.message,
+    })
+    logError(event, 'analytics:collect', error, { requestId, catalogId: payload.catalogId, eventType: payload.eventType })
+    return { ok: false, requestId }
   }
 
-  return { ok: true }
+  return { ok: true, requestId }
 })

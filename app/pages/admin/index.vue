@@ -134,13 +134,21 @@
 
   </div>
 
-  <section v-else-if="catalogStore.loading" class="panel-card">
-    <p class="text-sm text-slate-500 dark:text-slate-400">Cargando catalogo y metricas...</p>
-  </section>
+  <ClientOnly v-else>
+    <section v-if="catalogStore.loading" class="panel-card">
+      <p class="text-sm text-slate-500 dark:text-slate-400">Cargando catalogo y metricas...</p>
+    </section>
 
-  <section v-else class="panel-card">
-    <p class="text-sm text-slate-500 dark:text-slate-400">No hay un catalogo activo para mostrar analiticas.</p>
-  </section>
+    <section v-else class="panel-card">
+      <p class="text-sm text-slate-500 dark:text-slate-400">No hay un catalogo activo para mostrar analiticas.</p>
+    </section>
+
+    <template #fallback>
+      <section class="panel-card">
+        <p class="text-sm text-slate-500 dark:text-slate-400">Cargando catalogo y metricas...</p>
+      </section>
+    </template>
+  </ClientOnly>
 </template>
 
 <script setup lang="ts">

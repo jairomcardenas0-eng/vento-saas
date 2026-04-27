@@ -98,6 +98,7 @@
 <script setup lang="ts">
 import { ref, computed, watch, onMounted, shallowRef } from 'vue'
 import { Country, State, City } from 'country-state-city'
+import type { LeafletMouseEvent, Marker } from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 
 // Vue Leaflet imports need to be dynamic or under client-only to avoid SSR issues with 'window'
@@ -140,6 +141,10 @@ const zoom = ref(2)
 const center = ref<[number, number]>([23.6345, -102.5528]) // Default Mexico approx
 const markerPosition = ref<[number, number]>([23.6345, -102.5528])
 
+type LeafletDefaultIconPrototype = typeof import('leaflet').Icon.Default.prototype & {
+  _getIconUrl?: string
+}
+
 onMounted(async () => {
   const [{ LMap: LeafletMap, LTileLayer: LeafletTileLayer, LMarker: LeafletMarker }, L] = await Promise.all([
     import('@vue-leaflet/vue-leaflet'),
@@ -147,7 +152,7 @@ onMounted(async () => {
   ])
 
   // Fix default Leaflet marker icons not loading correctly in Nuxt/Vite
-  delete (L.Icon.Default.prototype as any)._getIconUrl
+  delete (L.Icon.Default.prototype as LeafletDefaultIconPrototype)._getIconUrl
   L.Icon.Default.mergeOptions({
     iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
     iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
@@ -247,8 +252,9 @@ const onCityChange = async () => {
   }
 }
 
-const onMarkerDrag = (event: any) => {
-  const { lat, lng } = event
+const onMarkerDrag = (event: LeafletMouseEvent) => {
+  const marker = event.target as Marker
+  const { lat, lng } = marker.getLatLng()
   markerPosition.value = [lat, lng]
   internalData.value.lat = lat
   internalData.value.lng = lng

@@ -24,7 +24,7 @@
         description="Invita colaboradores y define exactamente a qué secciones tienen acceso."
       >
         <template #actions>
-          <button class="solid-btn flex items-center gap-2" @click="openInvite">
+          <button class="solid-btn flex items-center gap-2" :disabled="teamLimitReached" :title="teamLimitReached ? teamLimitMessage : ''" @click="openInvite">
             <svg class="h-4 w-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
               <path stroke-linecap="round" stroke-linejoin="round" d="M12 5v14m-7-7h14" />
             </svg>
@@ -32,6 +32,11 @@
           </button>
         </template>
       </UiSectionHeader>
+
+      <div class="rounded-[18px] border px-4 py-3 text-sm" :class="usageClass(teamUsageRatio)">
+        <strong>{{ teamUsageText }}</strong>
+        <span class="ml-2">{{ teamLimitMessage }}</span>
+      </div>
 
       <div class="flex flex-wrap gap-3">
         <div v-for="role in roles" :key="role.key" class="flex min-w-0 items-center gap-2 rounded-full border border-zinc-200 px-3 py-1.5 dark:border-zinc-800">
@@ -298,22 +303,9 @@ import type { CatalogTeamMember, TeamMemberPermissions, TeamMemberRole, TeamMemb
 
 definePageMeta({ layout: 'admin' })
 
-type TeamRow = {
-  id: string
-  catalog_id: string
-  email: string
-  name: string
-  role: TeamMemberRole
-  permissions: TeamMemberPermissions
-  status: TeamMemberStatus
-  invited_by: string | null
-  created_at: string
-  updated_at: string
-}
-
-const { $supabase: supabase } = useNuxtApp()
 const catalogStore = useCatalogStore()
 const authStore = useAuthStore()
+const backend = useSupabaseBackend()
 const catalog = computed(() => catalogStore.activeCatalog)
 const catalogId = computed(() => catalog.value?.id ?? '')
 
@@ -326,6 +318,12 @@ const saving = ref(false)
 const formError = ref('')
 const editingMember = ref<CatalogTeamMember | null>(null)
 const deletingMember = ref<CatalogTeamMember | null>(null)
+const planLimits = {
+  free: { maxTeamMembers: 2 },
+  basic: { maxTeamMembers: 5 },
+  pro: { maxTeamMembers: 15 },
+  enterprise: { maxTeamMembers: Number.POSITIVE_INFINITY },
+} as const
 
 const roles = [
   { key: 'admin' as TeamMemberRole, label: 'Administrador', desc: 'Acceso casi total', dot: 'bg-violet-500' },
@@ -334,9 +332,9 @@ const roles = [
 ]
 
 const rolePermMap: Record<TeamMemberRole, Partial<TeamMemberPermissions>> = {
-  admin: { viewOrders: true, manageOrders: true, viewProducts: true, manageProducts: true, viewReviews: true, manageReviews: true, viewCoupons: true, manageCoupons: true, viewStats: true, viewSettings: true },
-  editor: { viewOrders: true, manageOrders: true, viewProducts: true, manageProducts: true, viewReviews: true, manageReviews: false, viewCoupons: true, manageCoupons: false, viewStats: true, viewSettings: false },
-  viewer: { viewOrders: true, manageOrders: false, viewProducts: true, manageProducts: false, viewReviews: true, manageReviews: false, viewCoupons: false, manageCoupons: false, viewStats: true, viewSettings: false },
+  admin: { viewOrders: true, manageOrders: true, viewProducts: true, manageProducts: true, viewInventory: true, manageInventory: true, viewReviews: true, manageReviews: true, viewCoupons: true, manageCoupons: true, viewStats: true, viewSettings: true },
+  editor: { viewOrders: true, manageOrders: true, viewProducts: true, manageProducts: true, viewInventory: true, manageInventory: true, viewReviews: true, manageReviews: false, viewCoupons: true, manageCoupons: false, viewStats: true, viewSettings: false },
+  viewer: { viewOrders: true, manageOrders: false, viewProducts: true, manageProducts: false, viewInventory: true, manageInventory: false, viewReviews: true, manageReviews: false, viewCoupons: false, manageCoupons: false, viewStats: true, viewSettings: false },
 }
 
 const roleConfig = (role: TeamMemberRole) => ({
@@ -356,6 +354,8 @@ const permDefs: Array<{ key: keyof TeamMemberPermissions, label: string, desc: s
   { key: 'manageOrders', label: 'Gestionar pedidos', desc: 'Cambia estados y detalles' },
   { key: 'viewProducts', label: 'Ver productos', desc: 'Consulta el catálogo' },
   { key: 'manageProducts', label: 'Gestionar productos', desc: 'Crear, editar y eliminar' },
+  { key: 'viewInventory', label: 'Ver inventario', desc: 'Consulta stock y alertas' },
+  { key: 'manageInventory', label: 'Gestionar inventario', desc: 'Ajusta stock y reservas' },
   { key: 'viewReviews', label: 'Ver reseñas', desc: 'Consulta valoraciones' },
   { key: 'manageReviews', label: 'Moderar reseñas', desc: 'Aprobar y responder' },
   { key: 'viewCoupons', label: 'Ver cupones', desc: 'Consulta descuentos' },
@@ -369,6 +369,8 @@ const defaultPerms = (): TeamMemberPermissions => ({
   manageOrders: false,
   viewProducts: true,
   manageProducts: false,
+  viewInventory: true,
+  manageInventory: false,
   viewReviews: false,
   manageReviews: false,
   viewCoupons: false,
@@ -402,6 +404,52 @@ const filteredMembers = computed(() => {
   )
 })
 
+const teamLimit = computed(() =>
+  planLimits[catalog.value?.planTier === 'basic' || catalog.value?.planTier === 'pro' || catalog.value?.planTier === 'enterprise' ? catalog.value.planTier : 'free'].maxTeamMembers,
+)
+
+const teamUsageRatio = computed(() =>
+  Number.isFinite(teamLimit.value) && teamLimit.value > 0 ? members.value.length / teamLimit.value : 0,
+)
+
+const teamLimitReached = computed(() =>
+  Number.isFinite(teamLimit.value) && members.value.length >= teamLimit.value,
+)
+
+const teamUsageText = computed(() =>
+  Number.isFinite(teamLimit.value)
+    ? `${members.value.length}/${teamLimit.value} miembros`
+    : `${members.value.length} miembros activos`,
+)
+
+const teamLimitMessage = computed(() => {
+  if (!Number.isFinite(teamLimit.value)) {
+    return 'Tu plan actual no tiene tope de miembros.'
+  }
+
+  if (teamLimitReached.value && !editingMember.value) {
+    return 'Has alcanzado el límite de tu plan. Actualiza para invitar más personas.'
+  }
+
+  if (teamUsageRatio.value >= 0.8) {
+    return 'Estás cerca del límite de miembros de tu plan.'
+  }
+
+  return 'Aún tienes margen para ampliar el equipo.'
+})
+
+const usageClass = (ratio: number) => {
+  if (ratio >= 1) {
+    return 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
+  }
+
+  if (ratio >= 0.8) {
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300'
+  }
+
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300'
+}
+
 const allPermsEnabled = computed(() => Object.values(form.value.permissions).every(Boolean))
 
 const initials = (name: string) =>
@@ -412,19 +460,6 @@ const formatDate = (iso: string) =>
 
 const activePermissions = (permissions: TeamMemberPermissions) =>
   permDefs.filter(permission => permissions[permission.key]).map(permission => permission.label)
-
-const mapMemberRow = (row: TeamRow): CatalogTeamMember => ({
-  id: row.id,
-  catalogId: row.catalog_id,
-  email: row.email,
-  name: row.name,
-  role: row.role,
-  permissions: row.permissions,
-  status: row.status,
-  invitedBy: row.invited_by,
-  createdAt: row.created_at,
-  updatedAt: row.updated_at,
-})
 
 const loadMembers = async () => {
   if (!catalogId.value) {
@@ -437,17 +472,7 @@ const loadMembers = async () => {
   loading.value = true
   loadError.value = ''
   try {
-    const { data, error } = await supabase
-      .from('catalog_team_members')
-      .select('*')
-      .eq('catalog_id', catalogId.value)
-      .order('created_at', { ascending: false })
-
-    if (error) {
-      throw error
-    }
-
-    members.value = ((data || []) as TeamRow[]).map(mapMemberRow)
+    members.value = await backend.getTeamMembers(catalogId.value)
   } catch (error) {
     console.error('Error loading team:', error)
     loadError.value = error instanceof Error ? error.message : 'No fue posible cargar el equipo.'
@@ -457,6 +482,10 @@ const loadMembers = async () => {
 }
 
 const openInvite = () => {
+  if (teamLimitReached.value) {
+    return
+  }
+
   editingMember.value = null
   form.value = {
     name: '',
@@ -513,55 +542,36 @@ const saveMember = async () => {
 
   try {
     if (editingMember.value) {
-      const { error } = await supabase
-        .from('catalog_team_members')
-        .update({
-          name: form.value.name.trim(),
-          role: form.value.role,
-          status: form.value.status,
-          permissions: form.value.permissions,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', editingMember.value.id)
+      const saved = await backend.saveTeamMember({
+        id: editingMember.value.id,
+        catalogId: catalogId.value,
+        email: form.value.email,
+        name: form.value.name,
+        role: form.value.role,
+        status: form.value.status,
+        permissions: form.value.permissions,
+      })
 
-      if (error) {
-        throw error
-      }
-
-      const index = members.value.findIndex(member => member.id === editingMember.value?.id)
+      const index = members.value.findIndex(member => member.id === saved.id)
       if (index !== -1) {
-        members.value[index] = {
-          ...members.value[index],
-          name: form.value.name.trim(),
-          role: form.value.role,
-          status: form.value.status,
-          permissions: { ...form.value.permissions },
-          updatedAt: new Date().toISOString(),
-        }
+        members.value[index] = saved
       }
     } else {
-      const { data, error } = await supabase
-        .from('catalog_team_members')
-        .insert({
-          catalog_id: catalogId.value,
-          email: form.value.email.trim().toLowerCase(),
-          name: form.value.name.trim(),
-          role: form.value.role,
-          status: 'pending',
-          permissions: form.value.permissions,
-          invited_by: authStore.user?.uid ?? null,
-        })
-        .select()
-        .single()
-
-      if (error) {
-        if (error.code === '23505') {
-          throw new Error('Ese correo ya forma parte del equipo.')
-        }
-        throw error
+      if (teamLimitReached.value) {
+        throw new Error('Has alcanzado el limite de miembros de tu plan. Actualiza para invitar mas.')
       }
 
-      members.value.unshift(mapMemberRow(data as TeamRow))
+      const saved = await backend.saveTeamMember({
+        catalogId: catalogId.value,
+        email: form.value.email,
+        name: form.value.name,
+        role: form.value.role,
+        status: 'pending',
+        permissions: form.value.permissions,
+        invitedBy: authStore.user?.uid ?? null,
+      })
+
+      members.value.unshift(saved)
     }
 
     closeModal()
@@ -583,15 +593,7 @@ const deleteMember = async () => {
 
   saving.value = true
   try {
-    const { error } = await supabase
-      .from('catalog_team_members')
-      .delete()
-      .eq('id', deletingMember.value.id)
-
-    if (error) {
-      throw error
-    }
-
+    await backend.deleteTeamMember(deletingMember.value.id)
     members.value = members.value.filter(member => member.id !== deletingMember.value?.id)
     deletingMember.value = null
   } catch (error) {

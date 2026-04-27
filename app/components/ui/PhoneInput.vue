@@ -91,6 +91,8 @@ const parse = (raw: string): { country: CountryCode, number: string } => {
 const selected = ref<CountryCode>(parse(props.modelValue).country)
 const localNumber = ref<string>(parse(props.modelValue).number)
 
+const normalizeDigits = (value: string) => value.replace(/\D/g, '')
+
 watch(
   () => props.modelValue,
   (val) => {
@@ -101,12 +103,12 @@ watch(
 )
 
 const emitValue = () => {
-  const digits = localNumber.value.replace(/[^\d]/g, '')
+  const digits = normalizeDigits(localNumber.value)
   emit('update:modelValue', digits ? `+${selected.value.dial}${digits}` : '')
 }
 
 const onNumberInput = (value: string) => {
-  localNumber.value = value.replace(/[^\d\s]/g, '')
+  localNumber.value = normalizeDigits(value)
   emitValue()
 }
 

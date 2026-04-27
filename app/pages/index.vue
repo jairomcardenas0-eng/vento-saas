@@ -33,7 +33,7 @@
             >
               <span class="shrink-0 text-base text-white/50 dark:text-stone-950/50">⌕</span>
               <span class="block min-w-0 flex-1 truncate text-sm font-medium">
-                {{ searchQuery || 'Busca tacos, sushi, café o una región...' }}
+                {{ searchQuery || 'Busca tu restaurante o plato preferido' }}
               </span>
             </button>
           </div>
@@ -294,7 +294,7 @@
           <div class="flex items-center justify-between border-t border-white/10 px-5 py-4 text-[11px] text-white/40">
             <div class="flex items-center gap-2">
               <p>© {{ currentYear }} Vento Platform</p>
-              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60">v1.2</span>
+              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60">v1.3</span>
             </div>
             <p>Smart commerce ecosystem</p>
           </div>
@@ -321,7 +321,7 @@
                 v-model="searchDraft"
                 type="search"
                 inputmode="search"
-                placeholder="Busca una tienda, producto o ciudad"
+                placeholder="Busca tu restaurante o plato preferido"
                 class="h-12 w-full rounded-full border border-white/10 bg-white/10 px-4 text-sm outline-none placeholder:text-white/40"
                 @keydown.enter.prevent="commitSearch(searchDraft)"
               >
@@ -444,7 +444,7 @@
 </template>
 
 <script setup lang="ts">
-import type { MarketplaceFeedEntry, MarketplaceHub, MarketplaceProductCard, MarketplaceStoreCard } from '~/types/catalog'
+import type { MarketplaceFeedEntry, MarketplaceHub, MarketplaceLandingPayload, MarketplaceProductCard, MarketplaceStoreCard } from '~/types/catalog'
 
 definePageMeta({
   pageTransition: false,
@@ -464,10 +464,16 @@ type GeoCountryNode = {
   states: GeoStateNode[]
 }
 
-const backend = useSupabaseBackend()
 const trackerEngine = useAlgorithmicTracker()
 const colorMode = useColorMode()
 const marketplaceCache = useMarketplaceCache()
+
+const emptyLandingPayload = (): MarketplaceLandingPayload => ({
+  topStores: [],
+  viralProducts: [],
+  hubs: [],
+  forYou: [],
+})
 
 // --- STATE ---
 /**
@@ -480,28 +486,48 @@ const isSearchOpen = ref(false)
 const isGeoMenuOpen = ref(false)
 const searchQuery = ref('')
 const searchDraft = ref('')
+const searchResults = ref<MarketplaceLandingPayload | null>(null)
 const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
 
-// Hydrate localStorage cache into reactive state BEFORE any render so the
-// first paint already has data (instant perceived load).
-// This runs synchronously during setup — zero delay.
-if (import.meta.client) {
-  marketplaceCache.hydrateFromStorage()
-}
+// NOTE: hydrateFromStorage is called in onMounted (below) so it only runs
+// on the client. Running it synchronously during setup caused hydration
+// mismatches because the server rendered empty lists while the client
+// immediately painted cached data — the two DOMs didn't match.
 
 // Convenient aliases for the template
-const topStores = computed(() => marketplaceCache.cache.value.topStores)
-const viralProducts = computed(() => marketplaceCache.cache.value.viralProducts)
-const hubs = computed(() => marketplaceCache.cache.value.hubs)
-const forYou = computed(() => marketplaceCache.cache.value.forYou)
-const hasContent = marketplaceCache.hasContent
+const activePayload = computed<MarketplaceLandingPayload>(() => {
+  if (searchQuery.value.trim()) {
+    return searchResults.value || emptyLandingPayload()
+  }
+
+  return {
+    topStores: marketplaceCache.cache.value.topStores,
+    viralProducts: marketplaceCache.cache.value.viralProducts,
+    hubs: marketplaceCache.cache.value.hubs,
+    forYou: marketplaceCache.cache.value.forYou,
+  }
+})
+
+const topStores = computed(() => activePayload.value.topStores)
+const viralProducts = computed(() => activePayload.value.viralProducts)
+const hubs = computed(() => activePayload.value.hubs)
+const forYou = computed(() => activePayload.value.forYou)
+const hasContent = computed(() =>
+  topStores.value.length > 0
+  || viralProducts.value.length > 0
+  || hubs.value.length > 0
+  || forYou.value.length > 0,
+)
 
 // Only show the full skeleton when there is literally nothing to display
 const showSkeleton = computed(() => isFetching.value && !hasContent.value)
 
 const preferredTags = trackerEngine.preferredTags
 const recentSearches = trackerEngine.recentSearches
-const currentYear = new Date().getFullYear()
+// Use a ref so the server always renders the same value as the client.
+// Initializing with new Date() during SSR can mismatch the client's value
+// if the year rolls over between server render and client hydration.
+const currentYear = ref<number | null>(null)
 
 const chips = computed(() => {
   const base = preferredTags.value.length ? preferredTags.value : ['delivery', 'viral', 'nuevo', 'cerca']
@@ -657,29 +683,57 @@ const trackerSignature = computed(() => preferredTags.value.join('|'))
  *  4. Never blocks the UI unnecessarily.
  */
 const refreshLanding = async (force = false) => {
+  const activeSearch = searchQuery.value.trim()
   const nextSignature = trackerSignature.value
   const signatureChanged = marketplaceCache.cache.value.signature !== nextSignature
 
+  if (activeSearch) {
+    isFetching.value = true
+    fetchError.value = ''
+
+    try {
+      searchResults.value = await $fetch<MarketplaceLandingPayload>('/api/marketplace/landing', {
+        query: {
+          q: activeSearch,
+          tags: preferredTags.value.join(','),
+        },
+      })
+    } catch (error: unknown) {
+      fetchError.value = error instanceof Error ? error.message : 'No se pudo buscar en el marketplace'
+      searchResults.value = emptyLandingPayload()
+    } finally {
+      isFetching.value = false
+    }
+
+    return
+  }
+
+  searchResults.value = null
+
   // Nothing to do: cache is fresh and signature matches
-  if (!force && !signatureChanged && !marketplaceCache.isStale.value && hasContent.value) {
+  if (!force && !signatureChanged && !marketplaceCache.isStale.value && marketplaceCache.hasContent.value) {
     return
   }
 
   // If we have NO content at all, flag as fetching so skeleton shows
-  if (!hasContent.value || marketplaceCache.isExpired.value) {
+  if (!marketplaceCache.hasContent.value || marketplaceCache.isExpired.value) {
     isFetching.value = true
   }
 
   fetchError.value = ''
 
   try {
-    const payload = await backend.getMarketplaceLanding(preferredTags.value)
+    const payload = await $fetch<MarketplaceLandingPayload>('/api/marketplace/landing', {
+      query: {
+        tags: preferredTags.value.join(','),
+      },
+    })
     marketplaceCache.write(payload, nextSignature)
-  } catch (error: any) {
-    fetchError.value = error?.message || 'No se pudo refrescar el feed'
+  } catch (error: unknown) {
+    fetchError.value = error instanceof Error ? error.message : 'No se pudo refrescar el feed'
 
     // If we still have stale data, keep showing it — just stop the spinner
-    if (!hasContent.value) {
+    if (!marketplaceCache.hasContent.value) {
       // No data at all — nothing useful to show
       console.error('[marketplace] fetch failed, no cache available:', fetchError.value)
     }
@@ -706,7 +760,9 @@ const commitSearch = async (term: string) => {
   const normalized = term.trim()
   if (!normalized) {
     searchQuery.value = ''
+    searchResults.value = null
     closeSearch()
+    await refreshLanding(true)
     return
   }
 
@@ -774,10 +830,18 @@ watch(trackerSignature, async () => {
 })
 
 onMounted(async () => {
-  // 1. Hydrate tracker (reads localStorage with user's history)
+  // 0. Set client-only values that must not be rendered by the server
+  //    to avoid hydration mismatches.
+  currentYear.value = new Date().getFullYear()
+
+  // 1. Hydrate cache from localStorage BEFORE fetching so the first paint
+  //    is instant when the user has visited before.
+  marketplaceCache.hydrateFromStorage()
+
+  // 2. Hydrate tracker (reads localStorage with user's history)
   trackerEngine.hydrate()
 
-  // 2. Trigger fetch — if cache is warm from localStorage this is a silent
+  // 3. Trigger fetch — if cache is warm from localStorage this is a silent
   //    background refresh; if cold it starts the skeleton spinner.
   await refreshLanding()
 })

@@ -53,7 +53,7 @@
               <div class="min-w-0 flex-1">
                 <h3 class="truncate text-base font-semibold text-[color:var(--catalog-text)]">{{ product.name }}</h3>
                 <div v-if="product.productRatingCount" class="mt-1 text-[11px] text-[color:var(--catalog-muted)]">★ {{ product.productRating.toFixed(1) }} · {{ product.productRatingCount }} reseñas</div>
-                <p class="truncate text-sm text-[color:var(--catalog-muted)]">{{ product.description || 'Sin descripcion disponible.' }}</p>
+                <p class="truncate text-sm text-[color:var(--catalog-muted)]">{{ product.description || 'Sin descripción disponible.' }}</p>
                 <div class="mt-2 flex items-center gap-2">
                   <strong class="text-sm text-[color:var(--catalog-price)]">{{ money(activeBasePrice(product), storefront.settings.currency) }}</strong>
                   <span v-if="product.hasPromo && product.promoPrice !== null" class="text-xs text-[color:var(--catalog-muted)] line-through">{{ money(product.basePrice, storefront.settings.currency) }}</span>

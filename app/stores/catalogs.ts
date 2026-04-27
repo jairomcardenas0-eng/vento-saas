@@ -1,5 +1,6 @@
 import { defineStore } from 'pinia'
-import type { CatalogCategory, CatalogOrder, CatalogProduct, CatalogRecord, CatalogReview } from '~/types/catalog'
+import type { CatalogAccessProfile, CatalogCategory, CatalogOrder, CatalogProduct, CatalogRecord, CatalogReview, TeamMemberPermissions, UserProfile } from '~/types/catalog'
+import { createOwnerAccessProfile, hasAdminRouteAccess } from '~/utils/adminAccess'
 
 const sortCategories = (items: CatalogCategory[]) => [...items].sort((a, b) => a.order - b.order)
 const sortProducts = (items: CatalogProduct[]) => [...items].sort((a, b) => a.order - b.order)
@@ -9,10 +10,12 @@ export const useCatalogStore = defineStore('catalogs', {
     ownerCatalogs: [] as CatalogRecord[],
     activeCatalogId: null as string | null,
     publicCatalog: null as CatalogRecord | null,
+    accessByCatalogId: {} as Record<string, CatalogAccessProfile>,
     loading: false,
+    adminBootstrapKey: null as string | null,
   }),
   getters: {
-    activeCatalog(state) {
+    activeCatalog(state): CatalogRecord | null {
       return state.ownerCatalogs.find(item => item.id === state.activeCatalogId) || null
     },
     categories(): CatalogCategory[] {
@@ -28,27 +31,65 @@ export const useCatalogStore = defineStore('catalogs', {
       return this.activeCatalog ? this.activeCatalog.reviews.filter(item => !item.approved) : []
     },
     orderStats() {
-      const orders = this.activeCatalog?.orders || []
+      const orders: CatalogOrder[] = this.activeCatalog?.orders || []
       return {
         total: orders.length,
-        new: orders.filter(item => item.status === 'new').length,
-        closed: orders.filter(item => item.status === 'closed').length,
+        new: orders.filter((item: CatalogOrder) => item.status === 'new').length,
+        closed: orders.filter((item: CatalogOrder) => ['closed', 'completed', 'delivered'].includes(item.status)).length,
       }
+    },
+    activeCatalogAccess(state): CatalogAccessProfile | null {
+      return state.activeCatalogId ? state.accessByCatalogId[state.activeCatalogId] || null : null
     },
   },
   actions: {
-    async loadOwnerCatalogs(ownerUid: string, preferredCatalogId?: string | null) {
+    resetAdminState() {
+      this.ownerCatalogs = []
+      this.activeCatalogId = null
+      this.accessByCatalogId = {}
+      this.adminBootstrapKey = null
+    },
+    async loadAdminBootstrap(preferredCatalogId?: string | null, options?: { cacheKey?: string | null, force?: boolean }) {
+      const cacheKey = options?.cacheKey || null
+
+      if (!options?.force && cacheKey && this.adminBootstrapKey === cacheKey && this.ownerCatalogs.length && Object.keys(this.accessByCatalogId).length) {
+        if (preferredCatalogId && this.ownerCatalogs.some(item => item.id === preferredCatalogId)) {
+          this.activeCatalogId = preferredCatalogId
+        } else if (!this.activeCatalogId && this.ownerCatalogs[0]?.id) {
+          this.activeCatalogId = this.ownerCatalogs[0].id
+        }
+        return
+      }
+
       this.loading = true
       try {
         const backend = useSupabaseBackend()
-        this.ownerCatalogs = await backend.getCatalogsByOwner(ownerUid)
+        const bootstrap = await backend.getAdminBootstrap()
         const preferredMatch = preferredCatalogId
-          ? this.ownerCatalogs.find(item => item.id === preferredCatalogId)
+          ? bootstrap.catalogs.find(item => item.id === preferredCatalogId)
           : null
-        this.activeCatalogId = preferredMatch?.id || this.ownerCatalogs[0]?.id || null
+
+        this.ownerCatalogs = bootstrap.catalogs
+        this.accessByCatalogId = bootstrap.accessByCatalogId
+        this.activeCatalogId = preferredMatch?.id || bootstrap.activeCatalogId || bootstrap.catalogs[0]?.id || null
+        this.adminBootstrapKey = cacheKey
       } finally {
         this.loading = false
       }
+    },
+    async loadOwnerCatalogs(ownerUid: string, preferredCatalogId?: string | null, userEmail?: string | null) {
+      void ownerUid
+      void userEmail
+      await this.loadAdminBootstrap(preferredCatalogId)
+    },
+    async ensureAccessForUser(user: UserProfile | null) {
+      if (!user) {
+        this.resetAdminState()
+        return
+      }
+
+      const cacheKey = `${user.uid}:${user.email || ''}:${user.defaultCatalogId || ''}`
+      await this.loadAdminBootstrap(user.defaultCatalogId, { cacheKey })
     },
     async loadPublicCatalog(slug: string) {
       this.loading = true
@@ -72,23 +113,29 @@ export const useCatalogStore = defineStore('catalogs', {
       const backend = useSupabaseBackend()
       const created = await backend.createCatalog(ownerUid, name, slug)
       this.ownerCatalogs.push(created)
+      this.accessByCatalogId[created.id] = createOwnerAccessProfile(created.id)
       this.activeCatalogId = created.id
       return created
     },
     async setActiveCatalog(catalogId: string) {
       this.activeCatalogId = catalogId
-      const backend = useSupabaseBackend()
-      const refreshed = await backend.getCatalogById(catalogId)
-      if (!refreshed) {
-        return
+    },
+    hasPermission(permission: keyof TeamMemberPermissions, catalogId?: string | null) {
+      const targetCatalogId = catalogId || this.activeCatalogId
+      if (!targetCatalogId) {
+        return false
       }
 
-      const index = this.ownerCatalogs.findIndex(item => item.id === catalogId)
-      if (index >= 0) {
-        this.ownerCatalogs[index] = refreshed
-      } else {
-        this.ownerCatalogs.push(refreshed)
+      const access = this.accessByCatalogId[targetCatalogId]
+      return Boolean(access?.isOwner || access?.permissions?.[permission])
+    },
+    hasRouteAccess(path: string, catalogId?: string | null) {
+      const targetCatalogId = catalogId || this.activeCatalogId
+      if (!targetCatalogId) {
+        return false
       }
+
+      return hasAdminRouteAccess(path, this.accessByCatalogId[targetCatalogId] || null)
     },
     async updateSettings(payload: Partial<CatalogRecord['settings']>) {
       if (!this.activeCatalog) {
@@ -178,7 +225,12 @@ export const useCatalogStore = defineStore('catalogs', {
 
       order.status = status
       const backend = useSupabaseBackend()
-      await backend.updateOrderStatus(this.activeCatalog.id, orderId, status)
+      await backend.updateOrderStatus(this.activeCatalog.id, orderId, {
+        status,
+        assignedToUid: order.assignedToUid || null,
+        assignedToName: order.assignedToName || null,
+        internalNotes: order.internalNotes || '',
+      })
     },
     async addOrder(order: CatalogOrder) {
       const backend = useSupabaseBackend()

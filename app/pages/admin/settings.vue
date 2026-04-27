@@ -20,13 +20,25 @@
               <label><span>Nombre del negocio</span><input v-model="draft.businessName" /><small>Nombre visible en el storefront público.</small></label>
               <label class="full">
                 <span>Logo del negocio</span>
+                <p class="mb-2 text-xs" :class="imageUsageClass">
+                  {{ imageUsageText }}
+                </p>
+                <div v-if="uploadingLogo" class="mt-2 mb-3">
+                  <div class="flex items-center justify-between mb-1">
+                    <span class="text-xs font-semibold text-zinc-700 dark:text-zinc-300">Comprimiendo y subiendo...</span>
+                    <span class="text-xs font-mono font-bold text-zinc-500">{{ uploadLogoProgress }}%</span>
+                  </div>
+                  <div class="h-1.5 w-full overflow-hidden rounded-full bg-zinc-100 dark:bg-zinc-800">
+                    <div class="h-full rounded-full bg-gradient-to-r from-blue-500 to-indigo-500 transition-all duration-300 ease-out" :style="{ width: `${uploadLogoProgress}%` }" />
+                  </div>
+                </div>
                 <div v-if="draft.logoUrl" class="mb-3 flex items-center gap-3">
                   <img :src="draft.logoUrl" alt="Logo" class="h-16 w-16 rounded-xl object-cover border border-zinc-200 dark:border-zinc-800" />
                   <button class="ghost-btn small !text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30" type="button" @click="clearLogo">Quitar logo</button>
                 </div>
                 <input id="logo-file" type="file" accept="image/*" class="hidden" @change="onLogoSelected" />
                 <label for="logo-file" class="ghost-btn small !w-full !cursor-pointer !justify-center">
-                  {{ draft.logoUrl ? 'Cambiar logo' : 'Subir logo' }}
+                  {{ uploadingLogo ? 'Subiendo...' : draft.logoUrl ? 'Cambiar logo' : 'Subir logo' }}
                 </label>
                 <small class="mt-2 block">Este logo aparece en la tienda y en el panel de administración.</small>
               </label>
@@ -150,13 +162,69 @@
       </p>
       <p v-if="saveError" class="mt-4 text-sm text-rose-500">{{ saveError }}</p>
     </section>
+
+    <section class="panel-card span-2">
+      <UiSectionHeader eyebrow="Plan" title="Suscripción activa" description="Estado del plan, vencimiento y capacidades disponibles." />
+
+      <div class="grid gap-4 md:grid-cols-[1.15fr,0.85fr]">
+        <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-5 dark:border-zinc-800 dark:bg-zinc-900">
+          <div class="flex flex-wrap items-start justify-between gap-3">
+            <div>
+              <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Plan actual</p>
+              <h3 class="mt-2 text-2xl font-semibold text-zinc-900 dark:text-zinc-100">{{ planDisplayName }}</h3>
+              <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Estado: {{ planStatusLabel }}</p>
+            </div>
+            <span class="rounded-full border px-3 py-1 text-xs font-semibold uppercase tracking-[0.16em]" :class="planStatusClass">
+              {{ currentPlan?.status || 'sin_plan' }}
+            </span>
+          </div>
+
+          <p class="mt-4 text-sm text-zinc-600 dark:text-zinc-300">{{ planExpiryText }}</p>
+          <p v-if="planWarningText" class="mt-3 rounded-[16px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300">
+            {{ planWarningText }}
+          </p>
+        </div>
+
+        <div class="rounded-[24px] border border-zinc-200 bg-white p-5 dark:border-zinc-800 dark:bg-zinc-950">
+          <p class="text-xs font-semibold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Features activas</p>
+          <ul class="mt-4 space-y-2 text-sm text-zinc-700 dark:text-zinc-300">
+            <li v-for="feature in planFeatureLabels" :key="feature" class="rounded-[14px] bg-zinc-50 px-3 py-2 dark:bg-zinc-900">
+              {{ feature }}
+            </li>
+          </ul>
+
+          <a href="/master" class="solid-btn mt-5 inline-flex !w-full !justify-center">
+            Upgrade plan
+          </a>
+        </div>
+      </div>
+    </section>
+
+    <!-- Credenciales / Cambiar contraseña -->
+    <section class="panel-card span-2">
+      <UiSectionHeader eyebrow="Seguridad" title="Credenciales" description="Cambia tu contraseña de acceso al panel de administración." />
+
+      <form class="grid-form max-w-lg" @submit.prevent="changePassword">
+        <label><span>Contraseña actual</span><input v-model="credForm.currentPassword" type="password" required autocomplete="current-password" /></label>
+        <label><span>Nueva contraseña</span><input v-model="credForm.newPassword" type="password" required minlength="8" autocomplete="new-password" /></label>
+        <label><span>Confirmar nueva contraseña</span><input v-model="credForm.confirmPassword" type="password" required minlength="8" autocomplete="new-password" /></label>
+        <div>
+          <button class="solid-btn" type="submit" :disabled="credSaving">
+            {{ credSaving ? 'Cambiando...' : 'Cambiar contraseña' }}
+          </button>
+        </div>
+      </form>
+
+      <p v-if="credError" class="mt-4 text-sm text-rose-500">{{ credError }}</p>
+      <p v-if="credSuccess" class="mt-4 rounded-[16px] border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300">{{ credSuccess }}</p>
+    </section>
   </div>
 </template>
 
 
 <script setup lang="ts">
 import { createDeliveryZone, defaultSettings } from '~/data/defaults'
-import type { BusinessDaySchedule, CatalogOperationalSettings } from '~/types/catalog'
+import type { BusinessDaySchedule, CatalogOperationalSettings, CatalogPlan } from '~/types/catalog'
 import { getCurrentScheduleState } from '~/utils/catalog'
 
 definePageMeta({ layout: 'admin' })
@@ -171,6 +239,7 @@ const timezones = [
 
 const catalogStore = useCatalogStore()
 const previewStore = usePreviewStore()
+const backend = useSupabaseBackend()
 const catalog = computed(() => catalogStore.activeCatalog)
 const isPaywalled = computed(() => false)
 const draft = ref<CatalogOperationalSettings>(defaultSettings())
@@ -178,6 +247,7 @@ const saving = ref(false)
 const saveError = ref('')
 const saveSuccess = ref('')
 const draftRecoveredNotice = ref('')
+const currentPlan = ref<CatalogPlan | null>(null)
 
 const SETTINGS_SAVE_TIMEOUT_MS = 15000
 const SETTINGS_DRAFT_STORAGE_PREFIX = 'mi-tienda:settings-draft:'
@@ -240,6 +310,121 @@ const scheduleAlwaysOpen = computed({
 })
 
 const scheduleStatusLabel = computed(() => getCurrentScheduleState(draft.value).label)
+const PLAN_FEATURES: Record<string, string[]> = {
+  free: ['Analíticas básicas'],
+  basic: ['Analíticas básicas', 'Multi-catálogos'],
+  pro: ['Analíticas avanzadas', 'Multi-catálogos', 'Webhooks', 'Dominio personalizado'],
+  enterprise: ['Analíticas avanzadas', 'Multi-catálogos', 'Webhooks', 'Dominio personalizado', 'Acceso API'],
+}
+
+const planDisplayName = computed(() => {
+  const planType = currentPlan.value?.planType || catalog.value?.planTier || 'free'
+  return String(planType).charAt(0).toUpperCase() + String(planType).slice(1)
+})
+
+const planStatusLabel = computed(() => {
+  const status = currentPlan.value?.status || 'active'
+  const map: Record<string, string> = {
+    trial: 'Prueba',
+    active: 'Activo',
+    paused: 'Pausado',
+    blocked: 'Bloqueado',
+    expired: 'Expirado',
+  }
+  return map[status] || status
+})
+
+const planStatusClass = computed(() => {
+  const status = currentPlan.value?.status || 'active'
+  if (status === 'expired' || status === 'blocked') {
+    return 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
+  }
+  if (status === 'trial' || status === 'paused') {
+    return 'border-amber-200 bg-amber-50 text-amber-700 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-300'
+  }
+  return 'border-emerald-200 bg-emerald-50 text-emerald-700 dark:border-emerald-900/60 dark:bg-emerald-950/30 dark:text-emerald-300'
+})
+
+const planFeatureLabels = computed(() => PLAN_FEATURES[currentPlan.value?.planType || catalog.value?.planTier || 'free'] || PLAN_FEATURES.free)
+
+const planExpiryText = computed(() => {
+  if (!currentPlan.value?.expiresAt) {
+    return 'Sin fecha de vencimiento definida todavía.'
+  }
+
+  return `Vence el ${new Intl.DateTimeFormat('es-MX', { dateStyle: 'long' }).format(new Date(currentPlan.value.expiresAt))}.`
+})
+
+const planWarningText = computed(() => {
+  if (!currentPlan.value?.expiresAt) {
+    return ''
+  }
+
+  const expiresAt = Date.parse(currentPlan.value.expiresAt)
+  if (Number.isNaN(expiresAt)) {
+    return ''
+  }
+
+  const daysRemaining = Math.ceil((expiresAt - Date.now()) / (24 * 60 * 60 * 1000))
+  if (daysRemaining <= 7) {
+    return daysRemaining > 0
+      ? `Tu plan vence en ${daysRemaining} día${daysRemaining === 1 ? '' : 's'}. Revisa renovación o upgrade cuanto antes.`
+      : 'Tu plan ya venció o está por vencer hoy. Revisa renovación inmediata.'
+  }
+
+  return ''
+})
+
+const imageLimit = computed(() => {
+  const limits = {
+    free: 5,
+    basic: 10,
+    pro: Number.POSITIVE_INFINITY,
+    enterprise: Number.POSITIVE_INFINITY,
+  } as const
+
+  const planTier = currentPlan.value?.planType === 'basic' || currentPlan.value?.planType === 'pro' || currentPlan.value?.planType === 'enterprise'
+    ? currentPlan.value.planType
+    : catalog.value?.planTier === 'basic' || catalog.value?.planTier === 'pro' || catalog.value?.planTier === 'enterprise'
+      ? catalog.value.planTier
+      : 'free'
+
+  return limits[planTier]
+})
+
+const currentImageCount = computed(() => {
+  if (!catalog.value) {
+    return 0
+  }
+
+  return catalog.value.products.reduce((sum, product) => {
+    const main = product.image ? 1 : 0
+    const gallery = product.images.filter(Boolean).length
+    return sum + main + gallery
+  }, 0) + (draft.value.logoUrl ? 1 : 0) + (draft.value.storeHeroBackgroundImage ? 1 : 0)
+})
+
+const imageUsageRatio = computed(() =>
+  Number.isFinite(imageLimit.value) && imageLimit.value > 0 ? currentImageCount.value / imageLimit.value : 0,
+)
+
+const imageUsageText = computed(() =>
+  Number.isFinite(imageLimit.value)
+    ? `${currentImageCount.value}/${imageLimit.value} imágenes usadas en este catálogo.`
+    : `${currentImageCount.value} imágenes usadas en este catálogo.`
+)
+
+const imageUsageClass = computed(() => {
+  if (imageUsageRatio.value >= 1) {
+    return 'text-rose-600 dark:text-rose-400'
+  }
+
+  if (imageUsageRatio.value >= 0.8) {
+    return 'text-amber-600 dark:text-amber-400'
+  }
+
+  return 'text-zinc-500 dark:text-zinc-400'
+})
 
 watch(catalog, (value) => {
   if (!value) {
@@ -267,7 +452,7 @@ watch(catalog, (value) => {
 
   // Backwards compatibility
   if (typeof draft.value.businessType === 'string') {
-    draft.value.businessType = [(draft.value as any).businessType]
+    draft.value.businessType = [draft.value.businessType]
   } else if (!Array.isArray(draft.value.businessType)) {
     draft.value.businessType = []
   }
@@ -292,6 +477,15 @@ watch(catalog, (value) => {
       lng: -102.5528,
     }
   }
+}, { immediate: true })
+
+watch(catalog, async (value) => {
+  if (!value) {
+    currentPlan.value = null
+    return
+  }
+
+  currentPlan.value = await backend.getCatalogPlan(value.id).catch(() => null)
 }, { immediate: true })
 
 const businessTypeOptions = [
@@ -399,6 +593,33 @@ const toggleBusinessType = (type: string) => {
 
 const storageEngine = useStorageEngine()
 const uploadingLogo = ref(false)
+const uploadLogoProgress = ref(0)
+
+// Compress image before upload using canvas
+function compressImage(file: File, maxWidth = 512, maxHeight = 512, quality = 0.85): Promise<Blob> {
+  return new Promise((resolve, reject) => {
+    const img = new Image()
+    img.onload = () => {
+      let { width, height } = img
+      if (width > maxWidth || height > maxHeight) {
+        const ratio = Math.min(maxWidth / width, maxHeight / height)
+        width = Math.round(width * ratio)
+        height = Math.round(height * ratio)
+      }
+      const canvas = document.createElement('canvas')
+      canvas.width = width
+      canvas.height = height
+      const ctx = canvas.getContext('2d')!
+      ctx.drawImage(img, 0, 0, width, height)
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob)
+        else reject(new Error('Compression failed'))
+      }, file.type || 'image/jpeg', quality)
+    }
+    img.onerror = () => reject(new Error('Failed to load image'))
+    img.src = URL.createObjectURL(file)
+  })
+}
 
 const onLogoSelected = async (event: Event) => {
   if (!catalog.value) return
@@ -408,12 +629,19 @@ const onLogoSelected = async (event: Event) => {
   if (!file) return
 
   uploadingLogo.value = true
+  uploadLogoProgress.value = 30
   try {
-    draft.value.logoUrl = await storageEngine.uploadProductImage(catalog.value.id, file)
+    const compressed = await compressImage(file)
+    uploadLogoProgress.value = 70
+    draft.value.logoUrl = await storageEngine.uploadProductImage(catalog.value.id, new File([compressed], file.name, { type: compressed.type }))
+    uploadLogoProgress.value = 100
   } catch (error) {
     console.error('Error al subir logo:', error)
   } finally {
-    uploadingLogo.value = false
+    setTimeout(() => {
+      uploadingLogo.value = false
+      uploadLogoProgress.value = 0
+    }, 500)
     target.value = ''
   }
 }
@@ -460,10 +688,26 @@ const save = async () => {
     return
   }
 
+  const whatsappDigits = draft.value.whatsapp.replace(/\D/g, '')
+  const phoneDigits = draft.value.phone.replace(/\D/g, '')
+
+  if (whatsappDigits && whatsappDigits.length < 10) {
+    saveError.value = 'El WhatsApp debe tener al menos 10 digitos.'
+    return
+  }
+
+  if (phoneDigits && phoneDigits.length < 10) {
+    saveError.value = 'El telefono debe tener al menos 10 digitos.'
+    return
+  }
+
   saving.value = true
   saveError.value = ''
   saveSuccess.value = ''
   try {
+    draft.value.whatsapp = whatsappDigits
+    draft.value.phone = phoneDigits
+
     const payload = {
       ...draft.value,
       weeklySchedule: sanitizeSchedule(),
@@ -490,6 +734,48 @@ const save = async () => {
     saveError.value = error instanceof Error ? error.message : 'No se pudieron guardar los ajustes.'
   } finally {
     saving.value = false
+  }
+}
+
+// ─── Credentials change ─────────────────────────────────────────────────────
+const credForm = reactive({
+  currentPassword: '',
+  newPassword: '',
+  confirmPassword: '',
+})
+const credSaving = ref(false)
+const credError = ref('')
+const credSuccess = ref('')
+
+const changePassword = async () => {
+  credError.value = ''
+  credSuccess.value = ''
+
+  if (credForm.newPassword.length < 8) {
+    credError.value = 'La nueva contraseña debe tener al menos 8 caracteres.'
+    return
+  }
+  if (credForm.newPassword !== credForm.confirmPassword) {
+    credError.value = 'Las contraseñas no coinciden.'
+    return
+  }
+
+  credSaving.value = true
+  try {
+    const { $supabase: supabase } = useNuxtApp()
+    const { error } = await supabase.auth.updateUser({ password: credForm.newPassword })
+    if (error) {
+      credError.value = error.message
+      return
+    }
+    credSuccess.value = 'Contraseña actualizada correctamente.'
+    credForm.currentPassword = ''
+    credForm.newPassword = ''
+    credForm.confirmPassword = ''
+  } catch (err) {
+    credError.value = 'Error al cambiar la contraseña.'
+  } finally {
+    credSaving.value = false
   }
 }
 </script>

@@ -461,6 +461,7 @@ import { defaultSettings, defaultTheme } from '~/data/defaults'
 import type { CatalogOrder, CatalogReview, ProductVariantGroup } from '~/types/catalog'
 import type { StorefrontPayload } from '~/composables/useStorefrontExperience'
 import type { CartItem } from '~/stores/cart'
+import { generatePublicEntityId } from '~/utils/entityIds'
 import type { ProductItem } from '~/stores/catalog'
 import { getAllProductImages, getCurrentScheduleState, money, resolveDeliveryFee } from '~/utils/catalog'
 
@@ -612,6 +613,11 @@ const closedTextStyle = computed(() => ({
   fontSize: `${settings.value.closedTextSizeLarge}px`,
 }))
 
+const closedMenuButtonStyle = computed(() => ({
+  backgroundColor: settings.value.closedMenuBtnBg,
+  color: settings.value.closedMenuBtnText,
+}))
+
 const closedTextBoxStyle = computed(() => settings.value.closedTextBox
   ? {
       backgroundColor: hexToRgba(settings.value.closedTextBoxColor, settings.value.closedTextBoxOpacity / 100),
@@ -651,6 +657,7 @@ const productImages = (product: ProductItem) => {
     carouselIntervalSeconds: product.carouselIntervalSeconds,
     tags: product.tags,
     variants: [],
+    freeShip: product.freeShip ?? false,
     reviewsApprovedCount: product.productRatingCount,
     productRating: product.productRating,
     productRatingCount: product.productRatingCount,
@@ -1000,7 +1007,7 @@ const sendCartOrder = async () => {
   sendingCartOrder.value = true
 
   const order: CatalogOrder = {
-    id: `order-${Date.now()}`,
+    id: generatePublicEntityId('order'),
     catalogId: props.storefront.id,
     channel: 'whatsapp',
     status: 'new',
@@ -1063,7 +1070,7 @@ const submitReview = async () => {
 
   reviewSubmitting.value = true
   const review: CatalogReview = {
-    id: `review-${Date.now()}`,
+    id: generatePublicEntityId('review'),
     productId: selectedProduct.value.id,
     productName: selectedProduct.value.name,
     name: reviewForm.name.trim(),
@@ -1075,7 +1082,9 @@ const submitReview = async () => {
 
   try {
     await backend.appendReview(props.storefront.id, review)
-    localReviews.value.unshift(review)
+    if (review.approved) {
+      localReviews.value.unshift(review)
+    }
     reviewForm.name = ''
     reviewForm.rating = 5
     reviewForm.comment = ''

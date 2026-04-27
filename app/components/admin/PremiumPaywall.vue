@@ -5,9 +5,9 @@
         <span aria-hidden="true">🔒</span>
       </div>
       <p class="mt-5 text-xs font-semibold uppercase tracking-[0.32em] text-[#f7db83]">Plan Premium</p>
-      <h3 class="mt-3 text-3xl font-semibold leading-tight">Sube de Nivel la Jerarquia de tu Negocio</h3>
+      <h3 class="mt-3 text-3xl font-semibold leading-tight">Sube de Nivel la Jerarquía de tu Negocio</h3>
       <p class="mt-3 text-sm leading-6 text-white/75">
-        Desbloquea personalizacion avanzada, ajustes operativos premium y una presencia mas potente para tu catalogo.
+        Desbloquea personalización avanzada, ajustes operativos premium y una presencia más potente para tu catálogo.
       </p>
       <button
         type="button"

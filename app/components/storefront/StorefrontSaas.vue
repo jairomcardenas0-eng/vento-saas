@@ -6,7 +6,7 @@
         <h1>{{ storefront.settings.businessName }}</h1>
         <p>{{ storefront.settings.tagline }}</p>
       </div>
-      <NuxtLink to="/catalogos" class="ghost-btn">Marketplace</NuxtLink>
+      <NuxtLink to="/catálogos" class="ghost-btn">Marketplace</NuxtLink>
     </header>
 
     <div v-if="storefront.theme.bannerText" class="catalog-banner">{{ storefront.theme.bannerText }}</div>
@@ -74,7 +74,7 @@
               <div class="space-y-3 p-4">
                 <div>
                   <h3 class="m-0 text-xl text-[color:var(--catalog-text)]">{{ product.name }}</h3>
-                  <p class="mt-2 line-clamp-3 text-sm text-[color:var(--catalog-muted)]">{{ product.description || 'Sin descripcion disponible.' }}</p>
+                  <p class="mt-2 line-clamp-3 text-sm text-[color:var(--catalog-muted)]">{{ product.description || 'Sin descripción disponible.' }}</p>
                 </div>
                 <div class="flex items-end justify-between gap-3">
                   <div>
@@ -122,7 +122,7 @@
       >
         <button class="flex w-full items-center justify-between gap-4 text-left" @click="cartStore.isOpen = true">
           <div>
-            <strong class="block">{{ cartStore.totalItems }} articulos</strong>
+            <strong class="block">{{ cartStore.totalItems }} artículos</strong>
             <span class="text-sm text-white/70">Carrito persistente y listo para checkout</span>
           </div>
           <span class="text-lg font-semibold">{{ money(finalTotal, storefront.settings.currency) }}</span>

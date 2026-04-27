@@ -1,18 +1,30 @@
 import { defineStore } from 'pinia'
-import type { CatalogCategory, CatalogProduct } from '~/types/catalog'
+import type { CatalogCategory, CatalogProduct, CatalogVariantGroup, InventoryItem } from '~/types/catalog'
+import { useSupabaseBackend } from '~/composables/useSupabaseBackend'
 
-export type VariantOption = {
+export interface VariantOption {
   id: string
+  groupId?: string
   name: string
   priceDelta: number
   isRequired: boolean
+  sortOrder?: number
 }
 
 export interface VariantGroup {
   id: string
+  catalogId?: string
+  productId?: string
   groupName: string
   type: 'single' | 'multiple'
+  required?: boolean
+  sortOrder?: number
   options: VariantOption[]
+}
+
+export interface InventoryItemSummary extends InventoryItem {
+  available?: number
+  status?: 'untracked' | 'out' | 'low' | 'ok'
 }
 
 export interface ProductItem {
@@ -38,6 +50,8 @@ export interface ProductItem {
   carouselEnabled: boolean
   carouselIntervalSeconds: 1 | 2 | 3 | 4 | 5
   tags: string[]
+  freeShip: boolean
+  inventoryItems?: InventoryItemSummary[]
   productRating: number
   productRatingCount: number
   createdAt: string | null
@@ -74,13 +88,17 @@ const mapCatalogProductToItem = (product: CatalogProduct): ProductItem => ({
   isActive: product.active,
   variants: product.variants.map((group, groupIndex) => ({
     id: `${product.id}-group-${groupIndex}`,
-    groupName: group.group,
-    type: group.selection,
+    groupName: group.groupName,
+    type: group.type,
+    required: Boolean(group.required),
+    sortOrder: groupIndex,
     options: group.options.map((option, optionIndex) => ({
       id: `${product.id}-group-${groupIndex}-option-${optionIndex}`,
+      groupId: `${product.id}-group-${groupIndex}`,
       name: option.name,
-      priceDelta: option.price,
-      isRequired: group.required,
+      priceDelta: option.priceDelta,
+      isRequired: option.isRequired ?? Boolean(group.required),
+      sortOrder: optionIndex,
     })),
   })),
   hasPromo: product.salePrice !== null && product.salePrice !== undefined,
@@ -93,7 +111,24 @@ const mapCatalogProductToItem = (product: CatalogProduct): ProductItem => ({
   timerShowMinutes: product.timerShowMinutes ?? true,
   timerShowSeconds: product.timerShowSeconds ?? true,
   timerLinkSale: product.timerLinkSale ?? false,
+  carouselEnabled: product.carouselEnabled ?? false,
+  carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
   tags: product.tags || [],
+  freeShip: product.freeShip ?? false,
+  inventoryItems: (product.inventoryItems || []).map((item) => {
+    const available = Number(item.quantity || 0) - Number(item.reserved || 0)
+    return {
+      ...item,
+      available,
+      status: item.trackStock !== true
+        ? 'untracked'
+        : available <= 0
+          ? 'out'
+          : available <= Number(item.lowStockThreshold || 0)
+            ? 'low'
+            : 'ok',
+    }
+  }),
   productRating: Number(product.productRating || 0),
   productRatingCount: Number(product.productRatingCount || 0),
   createdAt: null,
@@ -129,17 +164,40 @@ const mapItemProductToCatalog = (product: ProductItem): CatalogProduct => ({
   carouselEnabled: product.carouselEnabled ?? false,
   carouselIntervalSeconds: product.carouselIntervalSeconds ?? 3,
   tags: product.tags || [],
-  variants: (product.variants || []).map((group) => ({
-    group: group.groupName,
-    required: group.options.some((option) => option.isRequired),
-    selection: group.type,
+  freeShip: product.freeShip ?? false,
+  variants: (product.variants || []).map((group, groupIndex) => ({
+    id: group.id || `${product.id}-variant-group-${groupIndex}`,
+    groupName: group.groupName,
+    type: group.type,
+    required: Boolean(group.required),
     options: group.options
       .filter((option) => option.name.trim())
-      .map((option) => ({
+      .map((option, optionIndex) => ({
+        id: option.id || `${product.id}-variant-group-${groupIndex}-option-${optionIndex}`,
         name: option.name.trim(),
-        price: Number(option.priceDelta || 0),
+        priceDelta: Number(option.priceDelta || 0),
+        isRequired: Boolean(option.isRequired),
       })),
   })),
+  variantGroups: (product.variants || []).map((group, groupIndex) => ({
+    id: group.id || `${product.id}-variant-group-${groupIndex}`,
+    productId: product.id,
+    groupName: group.groupName,
+    selectionType: group.type,
+    required: Boolean(group.required),
+    sortOrder: Number(group.sortOrder ?? groupIndex),
+    options: group.options
+      .filter((option) => option.name.trim())
+      .map((option, optionIndex) => ({
+        id: option.id || `${product.id}-variant-group-${groupIndex}-option-${optionIndex}`,
+        groupId: group.id || `${product.id}-variant-group-${groupIndex}`,
+        name: option.name.trim(),
+        priceDelta: Number(option.priceDelta || 0),
+        isRequired: Boolean(option.isRequired),
+        sortOrder: Number(option.sortOrder ?? optionIndex),
+      })),
+  })),
+  inventoryItems: (product.inventoryItems || []).map(({ available, status, ...item }) => item),
   reviewsApprovedCount: Number(product.productRatingCount || 0),
   productRating: Number(product.productRating || 0),
   productRatingCount: Number(product.productRatingCount || 0),
@@ -147,15 +205,21 @@ const mapItemProductToCatalog = (product: ProductItem): CatalogProduct => ({
 
 export const createEmptyVariantOption = (): VariantOption => ({
   id: crypto.randomUUID(),
+  groupId: '',
   name: '',
   priceDelta: 0,
   isRequired: false,
+  sortOrder: 0,
 })
 
 export const createEmptyVariantGroup = (): VariantGroup => ({
   id: crypto.randomUUID(),
+  catalogId: undefined,
+  productId: undefined,
   groupName: '',
   type: 'single',
+  required: false,
+  sortOrder: 0,
   options: [createEmptyVariantOption()],
 })
 
@@ -182,6 +246,8 @@ export const createEmptyProduct = (categoryId = ''): ProductItem => ({
   carouselEnabled: false,
   carouselIntervalSeconds: 3,
   tags: [],
+  freeShip: false,
+  inventoryItems: [],
   productRating: 0,
   productRatingCount: 0,
   createdAt: null,
@@ -218,12 +284,9 @@ export const useCatalogEngineStore = defineStore('catalog-engine', {
       this.loadingEngine = true
 
       try {
-        const catalog = await backend.getCatalogById(storeId)
-        if (!catalog) {
-          throw new Error('El catálogo no respondió. Verifica tu conexión e intenta de nuevo.')
-        }
-        this.categories = (catalog.categories || []).map(mapCatalogCategoryToItem)
-        this.products = (catalog.products || []).map(mapCatalogProductToItem)
+        const payload = await backend.getCatalogEditorPayload(storeId)
+        this.categories = payload.categories
+        this.products = payload.products
       } catch (error) {
         console.error('DataHydration Error:', error)
         throw error // propagar para que la página muestre el error
@@ -262,6 +325,8 @@ export const useCatalogEngineStore = defineStore('catalog-engine', {
         carouselEnabled: payload.carouselEnabled ?? false,
         carouselIntervalSeconds: (payload.carouselIntervalSeconds ?? 3) as 1 | 2 | 3 | 4 | 5,
         tags: payload.tags ?? [],
+        freeShip: payload.freeShip ?? false,
+        inventoryItems: payload.inventoryItems ?? [],
         productRating: Number(payload.productRating || 0),
         productRatingCount: Number(payload.productRatingCount || 0),
         createdAt: payload.createdAt || nowIso(),
