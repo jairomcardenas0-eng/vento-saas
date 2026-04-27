@@ -5,6 +5,15 @@ let supabaseClient: ReturnType<typeof createClient> | null = null
 export default defineNuxtPlugin(() => {
   const config = useRuntimeConfig().public
 
+  if (!config.supabaseUrl || !config.supabaseAnonKey) {
+    console.warn('[supabase] Missing NUXT_PUBLIC_SUPABASE_URL or NUXT_PUBLIC_SUPABASE_ANON_KEY. Add them in your hosting environment variables.')
+    return {
+      provide: {
+        supabase: null,
+      },
+    }
+  }
+
   if (!supabaseClient) {
     supabaseClient = createClient(config.supabaseUrl, config.supabaseAnonKey, {
       auth: {

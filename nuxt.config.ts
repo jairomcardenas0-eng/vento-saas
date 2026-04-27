@@ -64,10 +64,6 @@ export default defineNuxtConfig({
       title: 'Vento - Tu catálogo digital inteligente',
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, maximum-scale=1' },
-        { 'http-equiv': 'X-Frame-Options', content: 'DENY' },
-        { 'http-equiv': 'X-Content-Type-Options', content: 'nosniff' },
-        { name: 'Referrer-Policy', content: 'strict-origin-when-cross-origin' },
-        { 'http-equiv': 'Content-Security-Policy', content: contentSecurityPolicy },
         { name: 'description', content: 'Vento es la plataforma líder para crear tu escaparate móvil en segundos y gestionar pedidos en tiempo real.' },
         { property: 'og:type', content: 'website' },
         { property: 'og:title', content: 'Vento - Tu catálogo digital inteligente' },
