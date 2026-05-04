@@ -1,6 +1,7 @@
 import { createCouponSchema } from '../../schemas/coupon.schema'
 import { invalidateByCatalog, invalidateMarketplaceLanding } from '../../utils/cache'
 import { createSupabaseServiceRoleClient } from '../../utils/supabase'
+import { requireCatalogAccess } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -9,8 +10,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: JSON.stringify(parsed.error.flatten()) })
   }
 
-  const supabase = createSupabaseServiceRoleClient(event)
   const payload = parsed.data
+  await requireCatalogAccess(event, payload.catalogId, 'manageCoupons')
+
+  const supabase = createSupabaseServiceRoleClient(event)
 
   const { data: existingCoupon, error: duplicateError } = await supabase
     .from('coupons')

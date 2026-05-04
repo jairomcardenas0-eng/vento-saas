@@ -408,12 +408,44 @@ const hasAnyContent = computed(() =>
 )
 
 const coverageLabel = computed(() => {
+  const detectedCity = landing.value?.detectedCity
   const firstHub = hubs.value[0]
+  const storeCount = topStores.value.length || firstHub?.storeCount || 0
+
+  if (detectedCity) {
+    return `${storeCount} tiendas activas en ${detectedCity}`
+  }
+
   if (!firstHub) {
     return 'Marketplace activo con tiendas disponibles'
   }
 
   return `${firstHub.storeCount} tiendas activas en ${firstHub.city || firstHub.regionLabel}`
+})
+
+useSeoMeta(() => {
+  const detectedCity = landing.value?.detectedCity
+  const firstHub = hubs.value[0]
+  const city = detectedCity || firstHub?.city || firstHub?.regionLabel || 'tu ciudad'
+  const storeCount = topStores.value.length || firstHub?.storeCount || 0
+  const title = storeCount > 0
+    ? `Vento Marketplace — ${storeCount} tiendas activas en ${city}`
+    : 'Vento Marketplace — Descubre tiendas locales y productos destacados'
+  const description = `Explora ${storeCount} tiendas activas, productos populares y envía tu pedido directo por WhatsApp en ${city}.`
+  const image = topStores.value[0]?.logoUrl || topStores.value[0]?.coverImage || ''
+
+  return {
+    title,
+    ogTitle: title,
+    description,
+    ogDescription: description,
+    ogImage: image || undefined,
+    ogUrl: 'https://vento.smartiadigital.com',
+    twitterCard: 'summary_large_image',
+    twitterTitle: title,
+    twitterDescription: description,
+    twitterImage: image || undefined,
+  }
 })
 
 const categoryChips = computed(() => {

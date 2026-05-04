@@ -4,6 +4,7 @@ import { invalidateByCatalog } from '../../utils/cache'
 import { checkPlanLimit } from '../../utils/plans'
 import { sanitizePlainText } from '../../utils/sanitize'
 import { createSupabaseServiceRoleClient } from '../../utils/supabase'
+import { requireOwnerAccess } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -12,8 +13,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: JSON.stringify(parsed.error.flatten()) })
   }
 
-  const supabase = createSupabaseServiceRoleClient(event)
   const payload = parsed.data
+  await requireOwnerAccess(event, payload.catalogId)
+
+  const supabase = createSupabaseServiceRoleClient(event)
 
   const [{ data: catalog, error: catalogError }, { count: memberCount, error: memberError }] = await Promise.all([
     supabase.from('catalogs').select('plan_tier').eq('id', payload.catalogId).maybeSingle(),

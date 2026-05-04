@@ -8,6 +8,7 @@ import {
   mapMarketplaceProduct,
   mapMarketplaceStore,
 } from '../../utils/marketplace'
+import { getCityFromIp, prioritizeByCity } from '../../utils/geo'
 
 const parseTags = (value: string | string[] | undefined) => {
   const source = Array.isArray(value) ? value.join(',') : (value || '')
@@ -99,12 +100,24 @@ export default defineEventHandler(async (event) => {
     return payload
   }
 
+  const detectedCity = await getCityFromIp(event)
+
   const payload = await getOrReconstruct(
-    q || tags.length ? cacheKeys.marketplaceLandingSearch(queryKey) : cacheKeys.marketplaceLanding(),
+    q || tags.length
+      ? cacheKeys.marketplaceLandingSearch(`${queryKey}:${detectedCity || 'all'}`)
+      : `${cacheKeys.marketplaceLanding()}:${detectedCity || 'all'}`,
     q ? 30 : 60,
     q ? 120 : 120,
     loadLanding,
   )
+
+  // Priorizar hubs y tiendas por ciudad detectada
+  payload.hubs = prioritizeByCity(payload.hubs, detectedCity)
+  payload.topStores = prioritizeByCity(payload.topStores, detectedCity)
+  payload.viralProducts = prioritizeByCity(payload.viralProducts, detectedCity)
+  payload.forYou = prioritizeByCity(payload.forYou, detectedCity)
+
+  payload.detectedCity = detectedCity || undefined
 
   setHeader(
     event,

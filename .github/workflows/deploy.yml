@@ -16,9 +16,12 @@ jobs:
           node-version: '20'
           cache: 'npm'
       - run: npm ci
-      - run: npx nuxt typecheck
+      - run: npm run typecheck
+      - run: npm run test:unit
+      - run: npm run test:component
+      - run: npm run test:api
+      - run: npm run test:performance
       - run: npm run build
-      - run: npm test
 
   deploy-staging:
     if: github.event_name == 'pull_request'

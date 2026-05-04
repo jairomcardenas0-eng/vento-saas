@@ -110,6 +110,29 @@ const { data, status } = await useAsyncData<StorefrontPayload | null>(
 const storefront = computed(() => data.value)
 const layout = computed(() => storefront.value?.settings.storefrontLayout ?? 'classic')
 
+useSeoMeta(() => {
+  const s = storefront.value
+  if (!s) return {}
+
+  const title = s.settings.businessName || s.settings.storeHeaderName || 'Vento Marketplace'
+  const description = s.settings.tagline || s.settings.storeHeroDescription || `Explora productos y envía tu pedido en segundos.`
+  const image = s.settings.logoUrl || s.settings.coverImage || s.settings.storeHeroBackgroundImage || ''
+  const url = `https://vento.smartiadigital.com/b/${slugKey.value}`
+
+  return {
+    title,
+    ogTitle: title,
+    description,
+    ogDescription: description,
+    ogImage: image || undefined,
+    ogUrl: url,
+    twitterCard: 'summary_large_image',
+    twitterTitle: title,
+    twitterDescription: description,
+    twitterImage: image || undefined,
+  }
+})
+
 const refreshStorefront = async () => {
   if (!slugKey.value) {
     return

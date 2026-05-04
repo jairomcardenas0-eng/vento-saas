@@ -3,6 +3,7 @@ import { insertAuditLog } from '../../utils/auditLog'
 import { invalidateByCatalog, invalidateMarketplaceLanding } from '../../utils/cache'
 import { sanitizePlainText } from '../../utils/sanitize'
 import { createSupabaseServiceRoleClient } from '../../utils/supabase'
+import { requireCatalogAccess } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -15,6 +16,8 @@ export default defineEventHandler(async (event) => {
   if (!catalogId) {
     throw createError({ statusCode: 400, statusMessage: 'catalogId es requerido' })
   }
+
+  await requireCatalogAccess(event, catalogId, 'viewSettings')
 
   const supabase = createSupabaseServiceRoleClient(event)
   const payload = parsed.data

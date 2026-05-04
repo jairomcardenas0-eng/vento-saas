@@ -526,4 +526,5 @@ export interface MarketplaceLandingPayload {
   viralProducts: MarketplaceProductCard[]
   hubs: MarketplaceHub[]
   forYou: MarketplaceFeedEntry[]
+  detectedCity?: string
 }

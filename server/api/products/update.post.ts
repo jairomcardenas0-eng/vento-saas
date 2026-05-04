@@ -2,6 +2,7 @@ import { updateProductSchema } from '../../schemas/product.schema'
 import { invalidateByCatalog, invalidateMarketplaceLanding } from '../../utils/cache'
 import { sanitizePlainText } from '../../utils/sanitize'
 import { createSupabaseServiceRoleClient } from '../../utils/supabase'
+import { requireCatalogAccess } from '../../utils/auth'
 
 export default defineEventHandler(async (event) => {
   const body = await readBody(event)
@@ -10,8 +11,10 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 400, statusMessage: JSON.stringify(parsed.error.flatten()) })
   }
 
-  const supabase = createSupabaseServiceRoleClient(event)
   const payload = parsed.data
+  await requireCatalogAccess(event, payload.catalogId, 'manageProducts')
+
+  const supabase = createSupabaseServiceRoleClient(event)
 
   const { data: existingProduct, error: existingError } = await supabase
     .from('products')
