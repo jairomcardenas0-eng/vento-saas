@@ -26,8 +26,8 @@
         >
           <div class="flex items-center justify-between border-b border-slate-100 px-5 py-5 dark:border-slate-800/80">
             <div class="flex min-w-0 items-center gap-3">
-              <div v-if="activeCatalog?.settings.logoUrl" class="h-10 w-10 overflow-hidden rounded-2xl border border-slate-200 shadow-lg dark:border-slate-800">
-                <img :src="activeCatalog.settings.logoUrl" :alt="activeCatalog.settings.businessName" class="h-full w-full object-cover" />
+              <div v-if="activeCatalog?.settings?.logoUrl" class="h-10 w-10 overflow-hidden rounded-2xl border border-slate-200 shadow-lg dark:border-slate-800">
+                <img :src="activeCatalog.settings.logoUrl" :alt="activeCatalog.settings?.businessName || 'Logo'" class="h-full w-full object-cover" />
               </div>
               <div v-else class="flex h-10 w-10 items-center justify-center rounded-2xl bg-gradient-to-br from-blue-500 to-indigo-600 shadow-lg shadow-blue-500/20">
                 <svg class="h-5 w-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -35,7 +35,7 @@
                 </svg>
               </div>
               <div class="min-w-0">
-                <h1 class="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-slate-100">{{ activeCatalog?.settings.businessName || 'Mi catálogo' }}</h1>
+                <h1 class="truncate text-[15px] font-bold tracking-tight text-slate-900 dark:text-slate-100">{{ activeCatalog?.settings?.businessName || 'Mi catálogo' }}</h1>
                 <p class="text-[11px] font-medium text-slate-400">Panel de administración</p>
               </div>
             </div>
@@ -63,12 +63,20 @@
                       class="nav-link group flex w-full min-w-0 items-center gap-3.5 rounded-[22px] p-2 pr-4 text-[14.5px] font-semibold text-slate-500 transition-all duration-300 hover:bg-slate-100/70 hover:text-slate-900 active:scale-[0.98] dark:text-slate-400 dark:hover:bg-slate-800/60 dark:hover:text-slate-100"
                       active-class="!bg-gradient-to-r !from-blue-600 !to-indigo-600 !text-white shadow-[0_8px_16px_-6px_rgba(59,130,246,0.5)] ring-1 ring-white/10 dark:!from-blue-500 dark:!to-indigo-500"
                       :class="[archivedNavItems.includes(item.to) && isEditingNav ? 'opacity-40 grayscale' : '']"
-                      @click.prevent="!isEditingNav && goTo(item.to)"
+                      @click.prevent="handleNavClick(item.to)"
                     >
                       <div class="nav-icon relative flex h-11 w-11 flex-shrink-0 items-center justify-center rounded-[16px] bg-slate-100 text-slate-500 transition-all duration-300 group-hover:scale-105 group-hover:bg-white group-hover:text-blue-600 group-hover:shadow-md dark:bg-slate-800/80 dark:text-slate-400 dark:group-hover:bg-slate-700 dark:group-hover:text-blue-400">
                         <svg class="h-[20px] w-[20px] transition-transform duration-300 group-hover:scale-110" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" viewBox="0 0 24 24" v-html="navIcons[item.icon]" />
                       </div>
                       <span class="min-w-0 flex-1 truncate text-left">{{ item.label }}</span>
+                      <span
+                        v-if="!isEditingNav && notificationBadge(item.to)"
+                        class="notification-badge"
+                        :class="`notification-badge-${notificationBadge(item.to)?.severity || 'neutral'}`"
+                        :title="notificationBadge(item.to)?.label"
+                      >
+                        {{ formatNotificationCount(notificationBadge(item.to)?.count || 0) }}
+                      </span>
                       <span v-if="!isEditingNav" class="opacity-0 transition-all duration-300 group-hover:opacity-100 group-hover:-translate-x-1 text-slate-400 dark:text-slate-500">›</span>
                     </NuxtLink>
 
@@ -131,13 +139,12 @@
                   </svg>
                 </div>
                 <NuxtLink
-                  to="/admin/settings"
+                  to="/onboarding/create-catalog"
                   class="flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 px-4 text-slate-500 transition hover:bg-slate-100 hover:text-slate-700 dark:border-slate-700 dark:bg-slate-800 dark:text-slate-400 dark:hover:bg-slate-700 dark:hover:text-slate-200"
-                  title="Ajustes del catálogo"
+                  title="Agregar catálogo"
                 >
                   <svg class="h-5 w-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
                   </svg>
                 </NuxtLink>
               </div>
@@ -198,8 +205,21 @@
             </button>
             <div class="min-w-0 flex-1">
               <h2 class="text-[17px] font-bold leading-tight tracking-tight text-slate-900 dark:text-slate-100">{{ pageTitle }}</h2>
-              <p class="truncate text-[11px] font-medium text-slate-400"><ClientOnly>{{ authStore.displayName }}<template #fallback>Invitado</template></ClientOnly><span v-if="activeCatalog"> · {{ activeCatalog.slug }}</span></p>
+              <p class="truncate text-[11px] font-medium text-slate-400"><ClientOnly>{{ authStore.user?.displayName || authStore.user?.email || 'Invitado' }}<template #fallback>Invitado</template></ClientOnly><span v-if="activeCatalog"> · {{ activeCatalog.slug }}</span></p>
             </div>
+            <button
+              class="press flex h-10 w-10 items-center justify-center rounded-2xl border border-slate-200/60 bg-white shadow-sm transition dark:border-slate-700 dark:bg-slate-800"
+              :title="colorMode.preference === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
+              @click="toggleColorMode"
+            >
+              <svg v-if="colorMode.preference === 'dark'" class="h-[18px] w-[18px] text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42m12.72-12.72l1.42-1.42" />
+              </svg>
+              <svg v-else class="h-[18px] w-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
+            </button>
             <button
               class="flex items-center gap-1.5 rounded-full bg-blue-500 px-3 py-2 text-white shadow-sm shadow-blue-500/30 transition hover:bg-blue-600"
               title="Ver vista previa"
@@ -277,9 +297,10 @@ const navIcons: Record<NavIconKey, string> = {
 }
 
 const route = useRoute()
-const colorMode = useColorMode()
 const authStore = useAuthStore()
 const catalogStore = useCatalogStore()
+const notificationsStore = useAdminNotificationsStore()
+const colorMode = useColorMode()
 
 const sidebarOpen = ref(false)
 const previewStore = usePreviewStore()
@@ -303,12 +324,16 @@ const toggleArchive = (path: string) => {
   if (archivedNavItems.value.includes(path)) {
     archivedNavItems.value = archivedNavItems.value.filter(p => p !== path)
   } else {
-    archivedNavItems.value.push(path)
+    archivedNavItems.value = [...archivedNavItems.value, path]
   }
-  
+
   if (import.meta.client && activeCatalog.value?.id) {
     const key = `vento-archived-nav-${activeCatalog.value.id}`
-    localStorage.setItem(key, JSON.stringify(archivedNavItems.value))
+    try {
+      localStorage.setItem(key, JSON.stringify(archivedNavItems.value))
+    } catch {
+      // Storage may be unavailable or full
+    }
   }
 }
 
@@ -390,12 +415,20 @@ const titleMap: Record<string, string> = {
 
 const pageTitle = computed(() => titleMap[route.path] || 'Panel')
 const activeCatalog = computed(() => catalogStore.activeCatalog)
+const notificationBadge = (path: string) => notificationsStore.badgeForRoute(path)
+const formatNotificationCount = (count: number) => count > 99 ? '99+' : String(count)
 const loadingCatalogs = ref(false)
 const catalogsLoadedForUser = ref<string | null>(null)
 const userInitials = computed(() => {
   const user = authStore.user
   if (!user) return '?'
   const name = user.displayName || user.email || ''
+  const parts = name.trim().split(/\s+/).filter(Boolean)
+  if (parts.length >= 2) {
+    const first = parts[0] || ''
+    const last = parts[parts.length - 1] || ''
+    return ((first[0] || '') + (last[0] || '')).toUpperCase()
+  }
   return name.slice(0, 2).toUpperCase()
 })
 let visibilityCleanup: (() => void) | null = null
@@ -414,8 +447,16 @@ watch(
   () => {
     loadArchivedItems()
     isEditingNav.value = false
+    notificationsStore.start(activeCatalog.value?.id || null, authStore.user?.uid || null)
   },
   { immediate: true },
+)
+
+watch(
+  () => authStore.user?.uid || '',
+  () => {
+    notificationsStore.start(activeCatalog.value?.id || null, authStore.user?.uid || null)
+  },
 )
 
 const ensureOwnerCatalogs = async () => {
@@ -441,6 +482,8 @@ const ensureOwnerCatalogs = async () => {
       cacheKey: `${user.uid}:${user.email || ''}:${user.defaultCatalogId || ''}`,
     })
     catalogsLoadedForUser.value = user.uid
+  } catch (err) {
+    console.error('Failed to load admin catalogs:', err)
   } finally {
     loadingCatalogs.value = false
   }
@@ -473,12 +516,13 @@ const goTo = async (path: string) => {
   await navigateTo(path)
 }
 
-const goToCreateCatalog = async () => {
-  await goTo('/onboarding/create-catalog')
+const handleNavClick = (path: string) => {
+  if (isEditingNav.value) return
+  goTo(path)
 }
 
 const openStorefront = () => {
-  if (!activeCatalog.value || import.meta.server) {
+  if (!activeCatalog.value?.slug || import.meta.server) {
     return
   }
 
@@ -488,7 +532,7 @@ const openStorefront = () => {
 }
 
 const toggleColorMode = () => {
-  colorMode.preference = colorMode.value === 'dark' ? 'light' : 'dark'
+  colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
 }
 
 const handleLogout = async () => {
@@ -528,6 +572,10 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   visibilityCleanup?.()
+  notificationsStore.stop()
+  if (import.meta.client) {
+    document.body.style.overflow = ''
+  }
 })
 </script>
 
@@ -537,5 +585,40 @@ onBeforeUnmount(() => {
   background: rgba(255, 255, 255, 0.18) !important;
   color: #ffffff !important;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.25);
+}
+
+.notification-badge {
+  display: inline-flex;
+  min-width: 1.55rem;
+  height: 1.55rem;
+  align-items: center;
+  justify-content: center;
+  border-radius: 999px;
+  padding: 0 0.42rem;
+  font-size: 0.68rem;
+  font-weight: 900;
+  line-height: 1;
+  letter-spacing: 0;
+  color: #ffffff;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.14);
+}
+
+.notification-badge-attention {
+  background: linear-gradient(135deg, #f97316, #ef4444);
+}
+
+.notification-badge-success {
+  background: linear-gradient(135deg, #10b981, #059669);
+}
+
+.notification-badge-neutral {
+  background: linear-gradient(135deg, #64748b, #334155);
+}
+
+.nav-link.router-link-active .notification-badge,
+.nav-link.router-link-exact-active .notification-badge {
+  background: rgba(255, 255, 255, 0.95);
+  color: #1d4ed8;
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.16);
 }
 </style>

@@ -46,7 +46,13 @@ export const useStorefrontCache = () => {
     }
   }
 
-  const normalizeSlug = (slug: string) => slug.trim().toLowerCase().replace(/\s+/g, '-')
+  const normalizeSlug = (slug: string) =>
+    slug
+      .trim()
+      .toLowerCase()
+      .replace(/[^a-z0-9\-_]/g, '')
+      .replace(/\s+/g, '-')
+      .replace(/-+/g, '-')
 
   const read = (slug: string): StorefrontPayload | null => {
     const entry = cache.value[normalizeSlug(slug)]

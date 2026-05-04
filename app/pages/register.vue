@@ -1,6 +1,11 @@
 <template>
   <section class="auth-shell">
     <form class="auth-card" @submit.prevent="submit">
+      <div class="flex justify-end mb-2">
+        <button type="button" class="ghost-btn small" @click="cancel">
+          Cancelar
+        </button>
+      </div>
       <p class="eyebrow">Registro</p>
       <h1>Crea tu cuenta</h1>
 
@@ -48,7 +53,7 @@
             v-model="manualRefCode"
             type="text"
             placeholder="Ej: ABCDE1234"
-            maxlength="12"
+            maxlength="20"
             :class="{ 'uppercase': true, 'opacity-70 cursor-not-allowed': autoFilled }"
             :readonly="autoFilled"
             @input="manualRefCode = manualRefCode.toUpperCase()"
@@ -76,10 +81,21 @@
 <script setup lang="ts">
 const authStore = useAuthStore()
 const backend = useSupabaseBackend()
+const route = useRoute()
 const name = ref('')
 const email = ref('')
 const password = ref('')
 const error = ref('')
+
+const router = useRouter()
+
+const cancel = () => {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    navigateTo('/')
+  }
+}
 
 // Cookie puesta por el middleware referral.global.ts cuando llega con ?ref=
 const refCookie = useCookie<string | null>('_ref_code')
@@ -116,6 +132,11 @@ const submit = async () => {
       }
     }
 
+    const redirectPath = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    if (redirectPath && redirectPath.startsWith('/')) {
+      await navigateTo(redirectPath)
+      return
+    }
     await navigateTo('/onboarding/create-catalog')
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo crear la cuenta'

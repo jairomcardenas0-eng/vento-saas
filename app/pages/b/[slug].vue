@@ -1,5 +1,6 @@
 <template>
   <template v-if="storefront">
+    <div ref="pageRoot">
     <div
       v-if="offlineFallbackActive"
       class="sticky top-0 z-[70] flex items-center justify-center bg-amber-100 px-4 py-2 text-center text-xs font-medium text-amber-900 dark:bg-amber-500/15 dark:text-amber-100"
@@ -10,6 +11,7 @@
     <StorefrontList v-else-if="layout === 'list'" :storefront="storefront" :slug-key="slugKey" />
     <StorefrontShop v-else-if="layout === 'store'" :storefront="storefront" :slug-key="slugKey" />
     <StorefrontSaas v-else :storefront="storefront" :slug-key="slugKey" />
+    </div>
   </template>
 
   <template v-else>
@@ -43,10 +45,16 @@ import type { StorefrontPayload } from '~/composables/useStorefrontExperience'
 
 const route = useRoute()
 const storefrontCache = useStorefrontCache()
+const catalogCache = useCatalogCache<StorefrontPayload>()
+const dataSaver = useDataSaver()
+const memoryManager = useMemoryManager()
 const offlineFallbackActive = ref(false)
-const { $supabase } = useNuxtApp()
-let storefrontChannel: ReturnType<typeof $supabase.channel> | null = null
+const nuxtApp = useNuxtApp()
+const $supabase = nuxtApp.$supabase as any
+const storefrontChannel = ref<any>(null)
+const pageRoot = ref<HTMLElement | null>(null)
 let storefrontRefreshTimer: ReturnType<typeof setInterval> | null = null
+let storefrontVisibilityCleanup: (() => void) | null = null
 
 if (import.meta.client) {
   storefrontCache.hydrateFromStorage()
@@ -62,6 +70,9 @@ const slugKey = computed(() => {
 })
 
 const analytics = useAnalytics()
+const initialOfflineSnapshot = import.meta.client
+  ? await catalogCache.read(slugKey.value)
+  : { payload: null, stale: true, entry: null }
 
 const { data, status } = await useAsyncData<StorefrontPayload | null>(
   `storefront-${slugKey.value}`,
@@ -74,12 +85,14 @@ const { data, status } = await useAsyncData<StorefrontPayload | null>(
       const payload = await $fetch<StorefrontPayload>(`/api/storefront/${slugKey.value}`)
       offlineFallbackActive.value = false
       storefrontCache.write(slugKey.value, payload)
+      await catalogCache.write(slugKey.value, payload)
       return payload
     } catch (error) {
-      const cached = storefrontCache.read(slugKey.value)
-      if (cached) {
+      const offlineCatalog = await catalogCache.read(slugKey.value)
+      const fallbackPayload = offlineCatalog.payload || storefrontCache.read(slugKey.value)
+      if (fallbackPayload) {
         offlineFallbackActive.value = true
-        return cached
+        return fallbackPayload
       }
 
       offlineFallbackActive.value = false
@@ -87,7 +100,7 @@ const { data, status } = await useAsyncData<StorefrontPayload | null>(
     }
   },
   {
-    default: () => storefrontCache.read(slugKey.value),
+    default: () => initialOfflineSnapshot.payload || storefrontCache.read(slugKey.value),
     watch: [slugKey],
     server: true,
     lazy: false,
@@ -106,6 +119,7 @@ const refreshStorefront = async () => {
     const payload = await $fetch<StorefrontPayload>(`/api/storefront/${slugKey.value}`)
     data.value = payload
     storefrontCache.write(slugKey.value, payload)
+    await catalogCache.write(slugKey.value, payload)
     offlineFallbackActive.value = false
   } catch (error) {
     console.warn('Storefront refresh failed', error)
@@ -118,9 +132,12 @@ const stopStorefrontLiveSync = () => {
     storefrontRefreshTimer = null
   }
 
-  if (storefrontChannel) {
-    void $supabase.removeChannel(storefrontChannel)
-    storefrontChannel = null
+  storefrontVisibilityCleanup?.()
+  storefrontVisibilityCleanup = null
+
+  if (storefrontChannel.value) {
+    void $supabase.removeChannel(storefrontChannel.value)
+    storefrontChannel.value = null
   }
 }
 
@@ -130,12 +147,14 @@ const startStorefrontLiveSync = (catalogId: string) => {
   }
 
   stopStorefrontLiveSync()
+  storefrontVisibilityCleanup?.()
+  storefrontVisibilityCleanup = null
 
   const refresh = () => {
     void refreshStorefront()
   }
 
-  storefrontChannel = $supabase
+  storefrontChannel.value = $supabase
     .channel(`storefront-live:${catalogId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'catalogs', filter: `id=eq.${catalogId}` }, refresh)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'categories', filter: `catalog_id=eq.${catalogId}` }, refresh)
@@ -144,11 +163,37 @@ const startStorefrontLiveSync = (catalogId: string) => {
     .on('postgres_changes', { event: '*', schema: 'public', table: 'coupons', filter: `catalog_id=eq.${catalogId}` }, refresh)
     .subscribe()
 
-  storefrontRefreshTimer = setInterval(() => {
-    if (!document.hidden) {
-      void refreshStorefront()
+  const scheduleTimer = () => {
+    if (storefrontRefreshTimer) {
+      clearInterval(storefrontRefreshTimer)
     }
-  }, 30000)
+
+    storefrontRefreshTimer = setInterval(() => {
+      if (!document.hidden) {
+        void refreshStorefront()
+      }
+    }, dataSaver.realtimeIntervalMs.value)
+  }
+
+  const visibilityHandler = () => {
+    if (document.hidden) {
+      if (storefrontRefreshTimer) {
+        clearInterval(storefrontRefreshTimer)
+        storefrontRefreshTimer = null
+      }
+      return
+    }
+
+    void refreshStorefront()
+    scheduleTimer()
+  }
+
+  document.addEventListener('visibilitychange', visibilityHandler)
+  storefrontVisibilityCleanup = () => {
+    document.removeEventListener('visibilitychange', visibilityHandler)
+  }
+
+  scheduleTimer()
 }
 
 watch(slugKey, () => {
@@ -169,8 +214,27 @@ watch(storefront, (value) => {
   }
 }, { immediate: true })
 
+watch(() => dataSaver.realtimeIntervalMs.value, () => {
+  if (storefront.value?.id) {
+    startStorefrontLiveSync(storefront.value.id)
+  }
+})
+
+if (import.meta.client) {
+  useTouchGestures(pageRoot, {
+    onPullRefresh: refreshStorefront,
+    pullThreshold: 64,
+  })
+}
+
 onUnmounted(() => {
   stopStorefrontLiveSync()
+  storefrontVisibilityCleanup?.()
+})
+
+memoryManager.registerCleanup(() => {
+  stopStorefrontLiveSync()
+  storefrontVisibilityCleanup?.()
 })
 
 // Dynamic manifest.json for PWA

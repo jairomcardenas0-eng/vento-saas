@@ -42,30 +42,8 @@ import type {
   UserProfileRow,
 } from './types'
 
-type LocalPlanLimit = {
-  maxProducts: number
-  maxTeamMembers: number
-  maxImages: number
-  maxCatalogs: number
-}
-
-const PLAN_LIMITS: Record<'free' | 'basic' | 'pro' | 'enterprise', LocalPlanLimit> = {
-  free: { maxProducts: 20, maxTeamMembers: 2, maxImages: 5, maxCatalogs: 1 },
-  basic: { maxProducts: 100, maxTeamMembers: 5, maxImages: 10, maxCatalogs: 3 },
-  pro: { maxProducts: 500, maxTeamMembers: 15, maxImages: Number.POSITIVE_INFINITY, maxCatalogs: 10 },
-  enterprise: { maxProducts: Number.POSITIVE_INFINITY, maxTeamMembers: Number.POSITIVE_INFINITY, maxImages: Number.POSITIVE_INFINITY, maxCatalogs: Number.POSITIVE_INFINITY },
-}
-
-const normalizePlanTier = (planType?: string | null): keyof typeof PLAN_LIMITS => {
-  if (planType === 'basic' || planType === 'pro' || planType === 'enterprise') {
-    return planType
-  }
-
-  return 'free'
-}
-
-const getPlanLimits = (planType?: string | null): LocalPlanLimit =>
-  PLAN_LIMITS[normalizePlanTier(planType)]
+import { PLAN_LIMITS, normalizePlanTier, getPlanLimits, type LocalPlanLimit } from './plan-limits'
+export { PLAN_LIMITS, normalizePlanTier, getPlanLimits, type LocalPlanLimit }
 
 interface CreateSupabaseCatalogBackendOptions {
   supabase: BackendSupabaseClient
@@ -216,8 +194,12 @@ export const createSupabaseCatalogBackend = ({
       supabase.from('product_variant_groups').delete().eq('catalog_id', catalogId).eq('product_id', product.id),
     ])
 
-    ensureSuccess(inventoryDeleteError, 'No se pudo limpiar el inventario previo')
-    ensureSuccess(groupsDeleteError, 'No se pudo limpiar la estructura de variantes previa')
+    if (inventoryDeleteError) {
+      throw new Error('No se pudo limpiar el inventario previo')
+    }
+    if (groupsDeleteError) {
+      throw new Error('No se pudo limpiar la estructura de variantes previa')
+    }
 
     if (variantGroups.length) {
       const { error: groupsInsertError } = await supabase.from('product_variant_groups').insert(
@@ -264,6 +246,17 @@ export const createSupabaseCatalogBackend = ({
       )
       ensureSuccess(inventoryInsertError, 'No se pudo guardar el inventario')
     }
+  }
+
+  const getCatalogPlanLocal = async (catalogId: string): Promise<CatalogPlan | null> => {
+    const { data, error } = await supabase
+      .from('catalog_plans')
+      .select('id, catalog_id, plan_type, status, activated_at, expires_at, payment_reference, notes')
+      .eq('catalog_id', catalogId)
+      .maybeSingle()
+
+    ensureSuccess(error, 'No se pudo cargar el plan del catálogo')
+    return data ? mapRowToCatalogPlan(data as CatalogPlanRow) : null
   }
 
   const getCatalogHeaderById = async (catalogId: string): Promise<CatalogHeaderRow | null> => {
@@ -506,14 +499,7 @@ export const createSupabaseCatalogBackend = ({
     assemblePublicCatalog,
     ensurePaidPlan,
     async getCatalogPlan(catalogId: string): Promise<CatalogPlan | null> {
-      const { data, error } = await supabase
-        .from('catalog_plans')
-        .select('id, catalog_id, plan_type, status, activated_at, expires_at, payment_reference, notes')
-        .eq('catalog_id', catalogId)
-        .maybeSingle()
-
-      ensureSuccess(error, 'No se pudo cargar el plan del catálogo')
-      return data ? mapRowToCatalogPlan(data as CatalogPlanRow) : null
+      return getCatalogPlanLocal(catalogId)
     },
     async getCatalogPlanHistory(catalogId: string): Promise<CatalogPlanHistoryEntry[]> {
       const { data, error } = await supabase
@@ -526,7 +512,7 @@ export const createSupabaseCatalogBackend = ({
       return ((data || []) as CatalogPlanHistoryRow[]).map(mapRowToPlanHistoryEntry)
     },
     async upsertCatalogPlan(catalogId: string, payload: Omit<CatalogPlan, 'catalogId'>, historyReason: string) {
-      const currentPlan = await this.getCatalogPlan(catalogId)
+      const currentPlan = await getCatalogPlanLocal(catalogId)
       const nextPlan: CatalogPlan = {
         ...payload,
         catalogId,

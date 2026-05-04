@@ -110,12 +110,17 @@ export const useCatalogStore = defineStore('catalogs', {
       }
     },
     async createCatalog(ownerUid: string, name: string, slug: string) {
-      const backend = useSupabaseBackend()
-      const created = await backend.createCatalog(ownerUid, name, slug)
-      this.ownerCatalogs.push(created)
-      this.accessByCatalogId[created.id] = createOwnerAccessProfile(created.id)
-      this.activeCatalogId = created.id
-      return created
+      this.loading = true
+      try {
+        const backend = useSupabaseBackend()
+        const created = await backend.createCatalog(ownerUid, name, slug)
+        this.ownerCatalogs.push(created)
+        this.accessByCatalogId[created.id] = createOwnerAccessProfile(created.id)
+        this.activeCatalogId = created.id
+        return created
+      } finally {
+        this.loading = false
+      }
     },
     async setActiveCatalog(catalogId: string) {
       this.activeCatalogId = catalogId

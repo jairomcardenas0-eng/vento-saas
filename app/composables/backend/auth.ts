@@ -79,28 +79,30 @@ export const createSupabaseAuthBackend = ({
         await callback(null)
       })
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(async (event: BackendAuthChangeEvent, session: BackendSession) => {
-      try {
-        if (event === 'SIGNED_OUT') {
-          await callback(null)
-          return
-        }
-
-        if (!session?.user) {
-          const { data } = await supabase.auth.getSession()
-          if (!data.session?.user) {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event: BackendAuthChangeEvent, session: BackendSession) => {
+      globalThis.setTimeout(async () => {
+        try {
+          if (event === 'SIGNED_OUT') {
             await callback(null)
             return
           }
 
-          await callback(await ensureUserProfile(data.session.user))
-          return
-        }
+          if (!session?.user) {
+            const { data } = await supabase.auth.getSession()
+            if (!data.session?.user) {
+              await callback(null)
+              return
+            }
 
-        await callback(await ensureUserProfile(session.user))
-      } catch {
-        await callback(null)
-      }
+            await callback(await ensureUserProfile(data.session.user))
+            return
+          }
+
+          await callback(await ensureUserProfile(session.user))
+        } catch {
+          await callback(null)
+        }
+      }, 0)
     })
 
     return () => subscription.unsubscribe()
@@ -187,7 +189,11 @@ export const createSupabaseAuthBackend = ({
     return {
       catalogs,
       accessByCatalogId,
-      activeCatalogId: typeof data?.activeCatalogId === 'string' ? data.activeCatalogId : null,
+      activeCatalogId: typeof data?.activeCatalogId === 'string'
+        ? data.activeCatalogId
+        : typeof data?.active_catalog_id === 'string'
+          ? data.active_catalog_id
+          : null,
     }
   },
   async getTeamMemberships(email: string): Promise<CatalogAccessProfile[]> {

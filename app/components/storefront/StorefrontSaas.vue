@@ -65,7 +65,15 @@
           >
             <button class="block w-full text-left" @click="openProduct(product)">
               <div class="relative h-52 overflow-hidden bg-[linear-gradient(135deg,#f5e3d8,#fef7f0)]">
-                <img v-if="product.imageUrl" :src="product.imageUrl" :alt="product.name" loading="lazy" class="h-full w-full object-cover" />
+                <img
+                  v-if="product.imageUrl"
+                  :src="optimizedProductImage(product.imageUrl)"
+                  :srcset="productImageSrcset(product.imageUrl)"
+                  :sizes="imageSizes('grid')"
+                  :alt="product.name"
+                  loading="lazy"
+                  class="h-full w-full object-cover"
+                />
                 <div v-else class="flex h-full items-center justify-center text-sm text-[color:var(--catalog-muted)]">Sin imagen</div>
                 <span v-if="product.hasPromo" class="absolute left-3 top-3 rounded-full bg-[color:var(--catalog-primary)] px-3 py-1 text-[11px] font-semibold uppercase tracking-[0.18em] text-white">
                   Promo
@@ -157,6 +165,7 @@
 
 <script setup lang="ts">
 import type { StorefrontPayload } from '~/composables/useStorefrontExperience'
+import { useImageOptimizer } from '~/composables/useImageOptimizer'
 import { useStorefrontExperience } from '~/composables/useStorefrontExperience'
 import { money } from '~/utils/catalog'
 
@@ -164,9 +173,13 @@ const props = defineProps<{
   storefront: StorefrontPayload
   slugKey: string
 }>()
+const imageOptimizer = useImageOptimizer()
 
 const storefrontRef = computed(() => props.storefront)
 const slugKey = computed(() => props.slugKey)
+const imageSizes = (context: 'thumb' | 'grid' | 'detail' | 'hero' = 'grid') => imageOptimizer.sizes(context)
+const optimizedProductImage = (url: string | null | undefined) => imageOptimizer.optimizedUrl(url, { width: 320, quality: 72 })
+const productImageSrcset = (url: string | null | undefined) => imageOptimizer.srcset(url, [200, 320, 480, 640])
 
 const {
   cartStore,

@@ -11,6 +11,7 @@
       <div
         v-if="isOpen && images.length > 0"
         class="lightbox-overlay"
+        tabindex="0"
         @click.self="close"
         @keydown.escape="close"
         @keydown.left="navigate(-1)"
@@ -59,7 +60,9 @@
               @dblclick="toggleZoom"
             >
               <img
-                :src="images[activeIndex]"
+                :src="optimizedLightboxImage(images[activeIndex], 'detail')"
+                :srcset="lightboxSrcset(images[activeIndex], 'detail')"
+                :sizes="imageSizes('detail')"
                 :alt="`Imagen ${activeIndex + 1}`"
                 class="lightbox-image"
                 draggable="false"
@@ -77,7 +80,13 @@
             :class="{ active: index === activeIndex }"
             @click="activeIndex = index"
           >
-            <img :src="image" :alt="`Miniatura ${index + 1}`" loading="lazy" />
+            <img
+              :src="optimizedLightboxImage(image, 'thumb')"
+              :srcset="lightboxSrcset(image, 'thumb')"
+              :sizes="imageSizes('thumb')"
+              :alt="`Miniatura ${index + 1}`"
+              loading="lazy"
+            />
           </button>
         </div>
       </div>
@@ -86,11 +95,14 @@
 </template>
 
 <script setup lang="ts">
+import { useImageOptimizer } from '~/composables/useImageOptimizer'
+
 const props = defineProps<{
   isOpen: boolean
   images: string[]
   initialIndex?: number
 }>()
+const imageOptimizer = useImageOptimizer()
 
 const emit = defineEmits<{
   close: []
@@ -101,6 +113,11 @@ const isZoomed = ref(false)
 const zoomStyle = ref<Record<string, string>>({})
 const transitionName = ref('lightbox-slide-right')
 const lastDirection = ref(1)
+const imageSizes = (context: 'thumb' | 'grid' | 'detail' | 'hero' = 'grid') => imageOptimizer.sizes(context)
+const optimizedLightboxImage = (url: string | null | undefined, context: 'thumb' | 'detail') =>
+  imageOptimizer.optimizedUrl(url, { width: context === 'detail' ? 1200 : 200, quality: 72 })
+const lightboxSrcset = (url: string | null | undefined, context: 'thumb' | 'detail') =>
+  imageOptimizer.srcset(url, context === 'detail' ? [320, 640, 900, 1200] : [120, 200, 320])
 
 let touchStartX = 0
 let touchCurrentX = 0

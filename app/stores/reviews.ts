@@ -12,7 +12,11 @@ const PAGE_SIZE = 25
 export type ReviewsFilterKey = 'all' | 'pending' | 'approved'
 
 const sortReviews = (items: CatalogReview[]) =>
-  [...items].sort((left, right) => Date.parse(right.createdAt || '') - Date.parse(left.createdAt || ''))
+  [...items].sort((left, right) => {
+    const a = new Date(left.createdAt || '').getTime() || 0
+    const b = new Date(right.createdAt || '').getTime() || 0
+    return b - a
+  })
 
 const reviewMatchesFilter = (review: CatalogReview, filter: ReviewsFilterKey) => {
   if (filter === 'all') {

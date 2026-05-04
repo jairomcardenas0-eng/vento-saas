@@ -64,7 +64,13 @@
         class="flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm"
         :class="loadError ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300' : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
       >
-        <span>{{ loadError || 'Actualizando miembros y permisos del catálogo...' }}</span>
+        <span class="flex items-center gap-2">
+          <svg v-if="!loadError" class="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          {{ loadError || 'Actualizando miembros y permisos del catálogo...' }}
+        </span>
         <button v-if="loadError" class="solid-btn" @click="loadMembers()">Reintentar</button>
       </div>
 
@@ -455,8 +461,14 @@ const allPermsEnabled = computed(() => Object.values(form.value.permissions).eve
 const initials = (name: string) =>
   name.split(' ').slice(0, 2).map(part => part[0]).join('').toUpperCase()
 
-const formatDate = (iso: string) =>
-  new Date(iso).toLocaleDateString('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+const teamDateFormatter = new Intl.DateTimeFormat('es-MX', { day: '2-digit', month: 'short', year: 'numeric' })
+const formatDate = (iso: string) => {
+  const date = new Date(iso)
+  if (Number.isNaN(date.getTime())) {
+    return 'Fecha inválida'
+  }
+  return teamDateFormatter.format(date)
+}
 
 const activePermissions = (permissions: TeamMemberPermissions) =>
   permDefs.filter(permission => permissions[permission.key]).map(permission => permission.label)

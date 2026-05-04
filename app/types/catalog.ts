@@ -7,6 +7,7 @@ export type DeliveryFeeType = 'flat' | 'zones'
 export type DiscountType = 'percentage' | 'fixed'
 export type OrderEventType = 'viewed' | 'preparing' | 'ready' | 'delivered' | 'cancelled' | 'payment_received' | 'note_added' | 'assigned'
 export type CatalogPlanStatus = 'trial' | 'active' | 'paused' | 'blocked' | 'expired'
+export type OrderChannel = 'whatsapp' | 'web' | 'app' | 'phone' | 'pos' | 'other'
 
 export interface UserProfile {
   uid: string
@@ -105,6 +106,7 @@ export interface CatalogOperationalSettings {
   logoUrl: string
   coverImage: string
   storefrontLayout: StorefrontLayout
+  /** NOTE: this field is rendered via v-html in storefront UI. Sanitize server-side before storage to prevent XSS. */
   storeTopBarHtml: string
   storeHeaderName: string
   storeShowPremiumBadge: boolean
@@ -148,13 +150,13 @@ export interface CatalogOperationalSettings {
   whatsappEnabled: boolean
   callEnabled: boolean
   productCarouselEnabled: boolean
-  productCarouselSeconds: number
+  productCarouselSeconds: 1 | 2 | 3 | 4 | 5
   checkoutNameEnabled: boolean
-  checkoutNameReq: 'obligatorio' | 'opcional'
+  checkoutNameReq: 'required' | 'optional'
   checkoutAddressEnabled: boolean
-  checkoutAddressReq: 'obligatorio' | 'opcional'
+  checkoutAddressReq: 'required' | 'optional'
   checkoutPaymentEnabled: boolean
-  checkoutPaymentReq: 'obligatorio' | 'opcional'
+  checkoutPaymentReq: 'required' | 'optional'
   deliveryEnabled: boolean
   deliveryPaused: boolean
   deliveryFeeType: DeliveryFeeType
@@ -246,7 +248,9 @@ export interface CatalogVariantOption {
 
 export interface CatalogVariantGroup {
   id: string
+  /** TODO: make required once all creation paths populate these FKs. */
   catalogId?: string
+  /** TODO: make required once all creation paths populate these FKs. */
   productId?: string
   groupName: string
   selectionType: 'single' | 'multiple'
@@ -288,7 +292,10 @@ export interface CatalogProduct {
   carouselEnabled?: boolean
   carouselIntervalSeconds?: 1 | 2 | 3 | 4 | 5
   tags: string[]
-  /** @deprecated Legacy JSONB variants snapshot kept for backwards compatibility. */
+  /**
+   * @deprecated Legacy JSONB variants snapshot kept for backwards compatibility.
+   * TODO: migrate all consumers to variantGroups and remove this field.
+   */
   variants: ProductVariantGroup[]
   variantGroups?: CatalogVariantGroup[]
   inventoryItems?: InventoryItem[]
@@ -301,9 +308,11 @@ export interface CatalogProduct {
 export interface CatalogReview {
   id: string
   productId: string
+  /** Snapshot of product name at time of review. Denormalized for display stability. */
   productName: string
   name: string
   comment: string
+  /** Expected range 1–5. Runtime validation required. */
   rating: number
   approved: boolean
   adminReply?: {
@@ -315,6 +324,7 @@ export interface CatalogReview {
 
 export interface CatalogOrderItem {
   productId: string
+  /** Snapshot of product name at time of order. Denormalized for display stability. */
   productName: string
   qty: number
   unitPrice: number
@@ -329,6 +339,7 @@ export interface CatalogOrderStatusHistory {
   status: OrderStatus
   previousStatus: OrderStatus | null
   changedBy: string | null
+  /** Snapshot of user name at time of event. Denormalized for display stability. */
   changedByName: string
   note: string
   createdAt: string
@@ -338,6 +349,7 @@ export interface CatalogOrderEvent {
   id: string
   orderId: string
   eventType: OrderEventType
+  /** TODO: replace with discriminated union per eventType for type safety. */
   payload: Record<string, unknown> | null
   createdBy: string | null
   createdAt: string
@@ -346,19 +358,19 @@ export interface CatalogOrderEvent {
 export interface CatalogPlan {
   id: string
   catalogId: string
-  planType: Exclude<PlanTier, 'gold'>
+  planType: PlanTier
   status: CatalogPlanStatus
   activatedAt: string
   expiresAt: string | null
-  paymentReference: string
+  paymentReference: string | null
   notes: string
 }
 
 export interface CatalogPlanHistoryEntry {
   id: string
   catalogId: string
-  previousPlan: Exclude<PlanTier, 'gold'> | null
-  newPlan: Exclude<PlanTier, 'gold'>
+  previousPlan: PlanTier | null
+  newPlan: PlanTier
   changedBy: string | null
   reason: string
   createdAt: string
@@ -367,10 +379,12 @@ export interface CatalogPlanHistoryEntry {
 export interface CatalogOrder {
   id: string
   catalogId: string
-  channel: 'whatsapp'
+  channel: OrderChannel
   status: OrderStatus
   customerName: string
+  /** TODO: refactor into structured Address object for validation and geocoding. */
   customerAddress: string
+  /** TODO: narrow to union of known payment methods (cash | card | transfer | wallet | other). */
   paymentMethod: string
   deliveryMode: DeliveryMode
   deliveryZoneId?: string
@@ -378,6 +392,7 @@ export interface CatalogOrder {
   notes: string
   internalNotes?: string
   assignedToUid?: string | null
+  /** Snapshot of assignee name at time of order. Denormalized for display stability. */
   assignedToName?: string | null
   items: CatalogOrderItem[]
   subtotal: number
@@ -413,6 +428,7 @@ export interface CatalogCoupon {
 }
 
 export interface CatalogRecord {
+  /** Always equal to slug. Kept separate to allow future migration where id becomes UUID. */
   id: string
   slug: string
   ownerUid: string
@@ -420,13 +436,14 @@ export interface CatalogRecord {
   planTier: PlanTier
   isBanned: boolean
   createdAt: string
-  ratingAverage?: number
-  ratingApprovedCount?: number
+  ratingAverage: number
+  ratingApprovedCount: number
   theme: CatalogThemeSettings
   settings: CatalogOperationalSettings
   categories: CatalogCategory[]
   products: CatalogProduct[]
   reviews: CatalogReview[]
+  /** TODO: extract orders into separate collection/table. Embedding limits scalability. */
   orders: CatalogOrder[]
 }
 
@@ -460,6 +477,7 @@ export interface MarketplaceProductCard {
   rating: number
   tags: string[]
   businessName: string
+  /** NOTE: inconsistent with MarketplaceStoreCard.businessTypes (plural array). Consider aligning. */
   businessType: string
   logoUrl: string
   city: string

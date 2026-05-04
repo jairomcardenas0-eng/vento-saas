@@ -30,12 +30,19 @@ const contentSecurityPolicy = [
 
 export default defineNuxtConfig({
   compatibilityDate: '2026-04-18',
+  srcDir: 'app/',
 
   modules: [
     '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
     '@nuxtjs/color-mode',
   ],
+
+  tailwindcss: {
+    config: {
+      darkMode: 'selector',
+    },
+  },
 
   ssr: true,
   css: ['~/assets/css/main.css'],
@@ -76,10 +83,17 @@ export default defineNuxtConfig({
         { name: 'twitter:image', content: 'https://vento.smartiadigital.com/og-image.png' },
       ],
       link: preconnectLinks,
+      htmlAttrs: {
+        lang: 'es',
+      },
     },
   },
 
   nitro: {
+    compressPublicAssets: {
+      gzip: true,
+      brotli: true,
+    },
     routeRules: {
       '/**': {
         headers: {
@@ -87,6 +101,12 @@ export default defineNuxtConfig({
           'X-Frame-Options': 'DENY',
           'X-Content-Type-Options': 'nosniff',
           'Referrer-Policy': 'strict-origin-when-cross-origin',
+        },
+      },
+      '/sw.js': {
+        headers: {
+          'Cache-Control': 'public, max-age=0, must-revalidate',
+          'Service-Worker-Allowed': '/',
         },
       },
       '/b/**': {
@@ -116,6 +136,8 @@ export default defineNuxtConfig({
       rollupOptions: {
         output: {
           manualChunks: {
+            charts: ['chart.js'],
+            maps: ['leaflet'],
             supabase: ['@supabase/supabase-js'],
           },
         },

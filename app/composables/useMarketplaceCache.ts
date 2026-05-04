@@ -90,7 +90,12 @@ export const useMarketplaceCache = () => {
       return Infinity
     }
 
-    return Date.now() - Date.parse(cache.value.fetchedAt)
+    const parsed = Date.parse(cache.value.fetchedAt)
+    if (Number.isNaN(parsed)) {
+      return Infinity
+    }
+
+    return Date.now() - parsed
   })
 
   /** Data exists but is old enough to warrant a background refresh */

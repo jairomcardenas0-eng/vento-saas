@@ -61,7 +61,11 @@ const maybeNotify = async (title: string, body: string) => {
 }
 
 const sortOrders = (items: CatalogOrder[]) =>
-  [...items].sort((left, right) => Date.parse(right.createdAt || '') - Date.parse(left.createdAt || ''))
+  [...items].sort((left, right) => {
+    const a = new Date(left.createdAt || '').getTime() || 0
+    const b = new Date(right.createdAt || '').getTime() || 0
+    return b - a
+  })
 
 const normalizeStatus = (status: OrderStatus): OrdersFilterKey => {
   if (status === 'viewed' || status === 'ready') {

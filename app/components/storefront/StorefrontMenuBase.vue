@@ -17,7 +17,7 @@
 
       <header class="topbar">
         <div class="brand-block">
-          <img v-if="settings.logoUrl" :src="settings.logoUrl" :alt="settings.businessName" class="brand-logo">
+          <img v-if="settings.logoUrl" :src="optimizedLogoUrl" :alt="settings.businessName" class="brand-logo" loading="eager">
           <div v-else class="brand-fallback">{{ initials }}</div>
           <div class="brand-copy">
             <h1>{{ settings.businessName }}</h1>
@@ -99,7 +99,10 @@
                   v-for="(image, index) in productImages(product)"
                   :key="`${product.id}-${index}`"
                   :src="image"
+                  :srcset="productImageSrcset(image, 'thumb')"
+                  :sizes="imageSizes('thumb')"
                   :alt="product.name"
+                  loading="lazy"
                   class="product-image"
                   :class="{ active: currentProductImageIndex(product) === index }"
                 />
@@ -178,7 +181,7 @@
             <strong>{{ cartStore.totalItems }} productos</strong>
             <span>{{ money(cartStore.totalPrice, settings.currency) }}</span>
           </div>
-          <button class="cart-open-btn" @click="cartOpen = true">Ver pedido</button>
+          <button class="cart-open-btn" @click="cartOpen = true; validationError = ''">Ver pedido</button>
         </div>
       </div>
     </Transition>
@@ -229,7 +232,10 @@
               v-for="(image, index) in detailImages"
               :key="`${selectedProduct.id}-detail-${index}`"
               :src="image"
+              :srcset="productImageSrcset(image, 'detail')"
+              :sizes="imageSizes('detail')"
               :alt="selectedProduct.name"
+              loading="lazy"
               class="detail-image"
               :class="{ active: detailImageIndex === index }"
             />
@@ -327,6 +333,7 @@
                 <span>Tu comentario</span>
                 <textarea v-model="reviewForm.comment" class="field-input" rows="3" maxlength="300" placeholder="Compártenos tu opinión sobre este producto" />
               </label>
+              <p v-if="validationError" class="mt-2 text-sm font-semibold text-rose-600">{{ validationError }}</p>
               <button class="primary-btn" :disabled="reviewSubmitting" @click="submitReview">
                 {{ reviewSubmitting ? 'Enviando...' : 'Enviar reseña' }}
               </button>
@@ -347,7 +354,7 @@
             </div>
           </div>
         </div>
-
+        <p v-if="validationError" class="mt-3 text-sm font-semibold text-rose-600">{{ validationError }}</p>
         <div class="sheet-actions" :class="detailActionsClass">
           <button v-if="settings.cartEnabled" class="primary-btn" @click="addSelectedToCart">Agregar al carrito</button>
           <button v-if="settings.cartEnabled && settings.whatsappEnabled && whatsappHref" class="wa-btn" @click="orderSelectedNow">Pedir ahora</button>
@@ -371,7 +378,14 @@
 
           <article v-for="item in cartStore.items" :key="item.cartItemId" class="cart-item">
             <div class="cart-thumb">
-              <img v-if="cartItemImage(item.productId)" :src="cartItemImage(item.productId)!" :alt="item.productName" />
+              <img
+                v-if="cartItemImage(item.productId)"
+                :src="cartItemImage(item.productId)!"
+                :srcset="productImageSrcset(cartItemImage(item.productId), 'thumb')"
+                :sizes="imageSizes('thumb')"
+                :alt="item.productName"
+                loading="lazy"
+              />
               <div v-else class="cart-thumb fallback">Sin imagen</div>
             </div>
 
@@ -394,7 +408,7 @@
           <div v-if="showCheckoutFields" class="checkout-form">
             <label v-if="settings.checkoutNameEnabled" class="field">
               <span>Nombre del cliente</span>
-              <input v-model="checkoutForm.name" class="field-input" type="text" maxlength="80" :placeholder="settings.checkoutNameReq === 'obligatorio' ? 'Obligatorio' : 'Opcional'">
+              <input v-model="checkoutForm.name" class="field-input" type="text" maxlength="80" :placeholder="settings.checkoutNameReq === 'required' ? 'Obligatorio' : 'Opcional'">
             </label>
 
             <label class="field">
@@ -407,7 +421,7 @@
 
             <label v-if="settings.checkoutPaymentEnabled" class="field">
               <span>Método de pago</span>
-              <input v-model="checkoutForm.paymentMethod" class="field-input" type="text" maxlength="80" :placeholder="settings.checkoutPaymentReq === 'obligatorio' ? 'Obligatorio' : 'Opcional'">
+              <input v-model="checkoutForm.paymentMethod" class="field-input" type="text" maxlength="80" :placeholder="settings.checkoutPaymentReq === 'required' ? 'Obligatorio' : 'Opcional'">
             </label>
 
             <label v-if="checkoutForm.method === 'Delivery' && settings.deliveryFeeType === 'zones'" class="field">
@@ -422,7 +436,7 @@
 
             <label v-if="checkoutForm.method === 'Delivery' && settings.checkoutAddressEnabled" class="field">
               <span>Dirección de entrega</span>
-              <textarea v-model="checkoutForm.address" class="field-input" rows="3" maxlength="180" :placeholder="settings.checkoutAddressReq === 'obligatorio' ? 'Obligatoria' : 'Opcional'" />
+              <textarea v-model="checkoutForm.address" class="field-input" rows="3" maxlength="180" :placeholder="settings.checkoutAddressReq === 'required' ? 'Obligatoria' : 'Opcional'" />
             </label>
 
             <div v-if="checkoutForm.method === 'Pickup'" class="pickup-card">
@@ -443,6 +457,7 @@
               <a :href="mapsSearchUrl" target="_blank" rel="noopener noreferrer">Ver ubicación</a>
             </div>
           </div>
+        <p v-if="validationError" class="mt-3 text-sm font-semibold text-rose-600">{{ validationError }}</p>
         </div>
 
         <div class="sheet-actions double">
@@ -464,6 +479,7 @@ import type { CartItem } from '~/stores/cart'
 import { generatePublicEntityId } from '~/utils/entityIds'
 import type { ProductItem } from '~/stores/catalog'
 import { getAllProductImages, getCurrentScheduleState, money, resolveDeliveryFee } from '~/utils/catalog'
+import { useImageOptimizer } from '~/composables/useImageOptimizer'
 
 const props = defineProps<{
   storefront: StorefrontPayload
@@ -475,6 +491,7 @@ const cartStore = useCartStore()
 const backend = useSupabaseBackend()
 const analytics = useAnalytics()
 const { encodeOrderToWhatsApp } = useCheckoutEngine()
+const imageOptimizer = useImageOptimizer()
 
 const loadingVisible = ref(true)
 const nowTick = ref(Date.now())
@@ -503,6 +520,8 @@ const reviewForm = reactive({
   comment: '',
 })
 
+const validationError = ref('')
+
 const checkoutForm = reactive({
   name: '',
   address: '',
@@ -524,6 +543,12 @@ const hexToRgba = (hex: string, alpha: number) => {
 }
 
 const activePrice = (product: ProductItem) => product.hasPromo && product.promoPrice !== null ? product.promoPrice : product.basePrice
+const optimizedLogoUrl = computed(() => imageOptimizer.optimizedUrl(settings.value.logoUrl || '', { width: 96, quality: 74 }))
+const imageSizes = (context: 'thumb' | 'detail' | 'hero') => imageOptimizer.sizes(context)
+const productImageSrcset = (image: string | null | undefined, context: 'thumb' | 'detail' | 'hero') => {
+  const widths = context === 'detail' ? [320, 480, 600, 800] : context === 'hero' ? [400, 800, 1200] : [200, 320, 480]
+  return imageOptimizer.srcset(image, widths)
+}
 
 const formatReviewDate = (dateStr: string | null) => {
   if (!dateStr) return ''
@@ -826,6 +851,7 @@ const toggleTag = (tag: string) => {
 }
 
 const openDetail = (product: ProductItem) => {
+  validationError.value = ''
   analytics.trackProductClick(props.storefront.id, product.id)
   selectedProduct.value = product
   selectedSingle.value = {}
@@ -833,6 +859,7 @@ const openDetail = (product: ProductItem) => {
 }
 
 const closeDetail = () => {
+  validationError.value = ''
   selectedProduct.value = null
 }
 
@@ -861,7 +888,7 @@ const validateDetailSelection = () => {
   })
 
   if (missing) {
-    window.alert(`Selecciona una opción para ${missing.groupName}.`)
+    validationError.value = `Selecciona una opción para ${missing.groupName}.`
     return false
   }
 
@@ -962,40 +989,41 @@ const validateCartCheckout = () => {
   }
 
   if (checkoutForm.method === 'Delivery' && !availableDelivery.value) {
-    window.alert('La entrega a domicilio no está disponible en este momento.')
+    validationError.value = 'La entrega a domicilio no está disponible en este momento.'
     return false
   }
 
   if (checkoutForm.method === 'Pickup' && !availablePickup.value) {
-    window.alert('La recogida en tienda no está disponible en este momento.')
+    validationError.value = 'La recogida en tienda no está disponible en este momento.'
     return false
   }
 
-  if (settings.value.checkoutNameEnabled && settings.value.checkoutNameReq === 'obligatorio' && checkoutForm.name.trim().length < 2) {
-    window.alert('Ingresa el nombre del cliente para continuar.')
+  if (settings.value.checkoutNameEnabled && settings.value.checkoutNameReq === 'required' && checkoutForm.name.trim().length < 2) {
+    validationError.value = 'Ingresa el nombre del cliente para continuar.'
     return false
   }
 
   if (checkoutForm.method === 'Delivery' && settings.value.deliveryFeeType === 'zones' && !checkoutForm.zoneId) {
-    window.alert('Selecciona una zona de entrega.')
+    validationError.value = 'Selecciona una zona de entrega.'
     return false
   }
 
-  if (checkoutForm.method === 'Delivery' && settings.value.checkoutAddressEnabled && settings.value.checkoutAddressReq === 'obligatorio' && checkoutForm.address.trim().length < 8) {
-    window.alert('Ingresa una dirección de entrega válida.')
+  if (checkoutForm.method === 'Delivery' && settings.value.checkoutAddressEnabled && settings.value.checkoutAddressReq === 'required' && checkoutForm.address.trim().length < 8) {
+    validationError.value = 'Ingresa una dirección de entrega válida.'
     return false
   }
 
-  if (settings.value.checkoutPaymentEnabled && settings.value.checkoutPaymentReq === 'obligatorio' && checkoutForm.paymentMethod.trim().length < 2) {
-    window.alert('Indica el método de pago.')
+  if (settings.value.checkoutPaymentEnabled && settings.value.checkoutPaymentReq === 'required' && checkoutForm.paymentMethod.trim().length < 2) {
+    validationError.value = 'Indica el método de pago.'
     return false
   }
 
   if (checkoutForm.method === 'Delivery' && cartStore.totalPrice < deliveryResolution.value.minimumOrder) {
-    window.alert(`El pedido mínimo para entrega es ${money(deliveryResolution.value.minimumOrder, settings.value.currency)}.`)
+    validationError.value = `El pedido mínimo para entrega es ${money(deliveryResolution.value.minimumOrder, settings.value.currency)}.`
     return false
   }
 
+  validationError.value = ''
   return true
 }
 
@@ -1064,10 +1092,11 @@ const submitReview = async () => {
   }
 
   if (reviewForm.name.trim().length < 2 || reviewForm.comment.trim().length < 3) {
-    window.alert('Completa nombre y comentario antes de enviar la reseña.')
+    validationError.value = 'Completa nombre y comentario antes de enviar la reseña.'
     return
   }
 
+  validationError.value = ''
   reviewSubmitting.value = true
   const review: CatalogReview = {
     id: generatePublicEntityId('review'),

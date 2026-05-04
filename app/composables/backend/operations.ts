@@ -9,21 +9,7 @@ import type {
   TeamMemberRow,
 } from './types'
 import { normalizeTeamPermissions } from '~/utils/adminAccess'
-
-const PLAN_LIMITS = {
-  free: { maxTeamMembers: 2 },
-  basic: { maxTeamMembers: 5 },
-  pro: { maxTeamMembers: 15 },
-  enterprise: { maxTeamMembers: Number.POSITIVE_INFINITY },
-} as const
-
-const normalizePlanTier = (planType?: string | null): keyof typeof PLAN_LIMITS => {
-  if (planType === 'basic' || planType === 'pro' || planType === 'enterprise') {
-    return planType
-  }
-
-  return 'free'
-}
+import { PLAN_LIMITS, normalizePlanTier } from './plan-limits'
 
 interface CreateSupabaseOperationsBackendOptions {
   supabase: BackendSupabaseClient
@@ -64,11 +50,13 @@ export const createSupabaseOperationsBackend = ({
   mapRowToCatalogRecord,
 }: CreateSupabaseOperationsBackendOptions) => {
   const ensureReferralCode = async (uid: string): Promise<string> => {
-    const { data: existing } = await supabase
+    const { data: existing, error: existingError } = await supabase
       .from('user_profiles')
       .select('referral_code')
       .eq('uid', uid)
       .maybeSingle()
+
+    ensureSuccess(existingError, 'No se pudo consultar el codigo de referido')
 
     if (existing?.referral_code) {
       return existing.referral_code
@@ -150,6 +138,21 @@ export const createSupabaseOperationsBackend = ({
       return ((data || []) as unknown as TeamMemberRow[]).map(mapTeamMemberRow)
     },
     async saveTeamMember(payload: TeamMemberPayload) {
+      const normalizedEmail = payload.email.trim().toLowerCase()
+
+      // Ensure email uniqueness within the catalog
+      const { data: existingByEmail, error: emailCheckError } = await supabase
+        .from('catalog_team_members')
+        .select('id')
+        .eq('catalog_id', payload.catalogId)
+        .eq('email', normalizedEmail)
+        .maybeSingle()
+
+      ensureSuccess(emailCheckError, 'No se pudo validar la unicidad del correo')
+      if (existingByEmail && existingByEmail.id !== payload.id) {
+        throw new Error('Ya existe un miembro con ese correo en este catálogo.')
+      }
+
       if (!payload.id) {
         const [{ data: catalogRow, error: catalogError }, { count: membersCount, error: membersError }] = await Promise.all([
           supabase.from('catalogs').select('plan_tier').eq('id', payload.catalogId).maybeSingle(),
@@ -168,7 +171,7 @@ export const createSupabaseOperationsBackend = ({
 
       const row = {
         catalog_id: payload.catalogId,
-        email: payload.email.trim().toLowerCase(),
+        email: normalizedEmail,
         name: payload.name.trim(),
         role: payload.role,
         status: payload.status,
@@ -260,7 +263,7 @@ export const createSupabaseOperationsBackend = ({
       ensureSuccess(error, 'No se pudieron cargar los referidos')
 
       const referrals = ((data || []) as ReferralRow[]).map((row) => {
-        const joinedProfile = Array.isArray(row.user_profiles) ? row.user_profiles[0] : null
+        const joinedProfile = Array.isArray(row.user_profiles) ? row.user_profiles[0] : row.user_profiles
         return {
           uid: row.referred_uid,
           displayName: joinedProfile?.display_name || 'Sin nombre',

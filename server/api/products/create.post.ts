@@ -33,6 +33,23 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Has alcanzado el limite de productos de tu plan. Actualiza para agregar mas.' })
   }
 
+  if (payload.categoryId) {
+    const { data: categoryExists, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('catalog_id', payload.catalogId)
+      .eq('id', payload.categoryId)
+      .maybeSingle()
+
+    if (categoryError) {
+      throw createError({ statusCode: 500, statusMessage: 'No se pudo validar la categoria' })
+    }
+
+    if (!categoryExists) {
+      throw createError({ statusCode: 400, statusMessage: 'La categoria no existe en este catalogo' })
+    }
+  }
+
   const { data, error } = await supabase
     .from('products')
     .insert({

@@ -46,12 +46,12 @@
           <div
             v-else
             class="mx-auto min-h-full bg-white transition-[width,max-width] duration-200 dark:bg-zinc-950"
-            :class="previewMode === 'mobile' ? 'max-w-[375px]' : 'w-full max-w-[1280px]'"
+            :class="previewMode === 'mobile' ? 'max-w-[375px] overflow-x-hidden' : 'w-full max-w-[1280px]'"
           >
-            <StorefrontClassic v-if="layout === 'classic'" :storefront="previewPayload" :slug-key="previewPayload.slug" />
-            <StorefrontList v-else-if="layout === 'list'" :storefront="previewPayload" :slug-key="previewPayload.slug" />
-            <StorefrontShop v-else-if="layout === 'store'" :storefront="previewPayload" :slug-key="previewPayload.slug" />
-            <StorefrontSaas v-else :storefront="previewPayload" :slug-key="previewPayload.slug" />
+            <StorefrontClassic v-if="layout === 'classic'" :storefront="previewPayload" :slug-key="previewPayload.slug" :preview-mode="previewMode" />
+            <StorefrontList v-else-if="layout === 'list'" :storefront="previewPayload" :slug-key="previewPayload.slug" :preview-mode="previewMode" />
+            <StorefrontShop v-else-if="layout === 'store'" :storefront="previewPayload" :slug-key="previewPayload.slug" :preview-mode="previewMode" />
+            <StorefrontSaas v-else :storefront="previewPayload" :slug-key="previewPayload.slug" :preview-mode="previewMode" />
           </div>
         </div>
       </div>

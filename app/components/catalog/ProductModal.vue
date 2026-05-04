@@ -44,6 +44,7 @@
           <span v-if="product.salePrice" class="price-old">{{ money(product.price, currency) }}</span>
         </div>
 
+        <p v-if="variantError" class="mt-2 text-sm text-rose-600 dark:text-rose-400">{{ variantError }}</p>
         <div class="card-actions">
           <button class="ghost-btn" @click="$emit('close')">Cerrar</button>
           <button class="solid-btn" @click="submit">Agregar al carrito</button>
@@ -96,10 +97,13 @@ const computedExtra = computed(() => props.product.variants.reduce((sum, group) 
 
 const computedTotal = computed(() => effectivePrice(props.product) + computedExtra.value)
 
+const variantError = ref('')
+
 const submit = () => {
+  variantError.value = ''
   const missing = props.product.variants.find(group => group.required && !(selections.value[group.groupName] || []).length)
   if (missing) {
-    window.alert(`Selecciona una opción para ${missing.groupName}`)
+    variantError.value = `Selecciona una opción para ${missing.groupName}`
     return
   }
 

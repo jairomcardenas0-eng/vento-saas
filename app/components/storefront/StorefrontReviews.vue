@@ -1,17 +1,17 @@
 <template>
-  <section v-if="enabled" class="panel-card mt-8">
+  <section v-if="enabled" class="storefront-reviews panel-card mt-8">
     <UiSectionHeader eyebrow="Prueba social" title="Reseñas visibles" description="Reseñas publicadas moderadas desde el admin." />
-    <div class="mt-4 grid gap-3">
-      <article v-for="review in reviews.slice(0, 8)" :key="review.id" class="rounded-[20px] border border-black/10 bg-white/80 p-4">
-        <div class="flex items-center justify-between gap-3">
+    <div class="review-list mt-4 grid gap-3">
+      <article v-for="review in reviews.slice(0, 8)" :key="review.id" class="review-card rounded-[20px] border border-black/10 bg-white/80 p-4">
+        <div class="review-head flex items-center justify-between gap-3">
           <strong>{{ review.name }}</strong>
           <span>{{ '★'.repeat(review.rating) }}</span>
         </div>
-        <p class="mt-2 text-sm text-[#7f5a49]">{{ review.comment }}</p>
+        <p class="review-comment mt-2 text-sm text-[#7f5a49]">{{ review.comment }}</p>
       </article>
     </div>
 
-    <form class="mt-6 space-y-4 rounded-[24px] border border-black/10 bg-white/70 p-4" @submit.prevent="$emit('submit')">
+    <form class="review-form mt-6 space-y-4 rounded-[24px] border border-black/10 bg-white/70 p-4" @submit.prevent="$emit('submit')">
       <div>
         <strong class="block text-[#24140f]">Deja tu opinión</strong>
         <p class="section-copy mt-2 text-sm">La reseña entra al cluster de auditoría antes de publicarse.</p>
@@ -54,3 +54,46 @@ defineProps<{
 
 defineEmits<{ submit: [] }>()
 </script>
+
+<style scoped>
+.storefront-reviews {
+  max-width: 100%;
+  overflow: hidden;
+  border-radius: 28px;
+  background: color-mix(in srgb, var(--catalog-card, white) 88%, white);
+}
+
+.review-card,
+.review-form {
+  max-width: 100%;
+}
+
+.review-head {
+  min-width: 0;
+}
+
+.review-head strong,
+.review-comment,
+.section-copy {
+  overflow-wrap: anywhere;
+}
+
+.review-form input,
+.review-form select,
+.review-form textarea {
+  max-width: 100%;
+}
+
+@container (max-width: 420px) {
+  .storefront-reviews {
+    margin-top: 1.25rem;
+    padding: 1rem;
+    border-radius: 24px;
+  }
+
+  .review-head {
+    align-items: flex-start;
+    flex-direction: column;
+  }
+}
+</style>

@@ -34,7 +34,7 @@
                 <span class="rounded-full px-3 py-1 text-xs font-semibold" :class="statusPill(catalog.status)">
                   {{ catalog.status }}
                 </span>
-                <button class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 dark:border-rose-500/20 dark:text-rose-300" @click="suspendDraft = catalog.id">
+                <button class="rounded-full border border-rose-200 px-3 py-1 text-xs font-semibold text-rose-600 dark:border-rose-500/20 dark:text-rose-300">
                   Suspender
                 </button>
               </div>
@@ -77,7 +77,6 @@ definePageMeta({ layout: 'admin' })
 
 const catalogStore = useCatalogStore()
 const statusFilter = ref<'all' | 'published' | 'draft' | 'suspended'>('all')
-const suspendDraft = ref<string | null>(null)
 
 const incidents = [
   { title: 'Reseñas duplicadas detectadas', priority: 'alta', status: 'abierta', assignedTo: 'Moderacion' },
@@ -101,7 +100,12 @@ const statusPill = (status: string) => {
   if (status === 'draft') {
     return 'bg-amber-100 text-amber-700 dark:bg-amber-500/15 dark:text-amber-300'
   }
-
-  return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+  if (status === 'suspended') {
+    return 'bg-rose-100 text-rose-700 dark:bg-rose-500/15 dark:text-rose-300'
+  }
+  if (status === 'published') {
+    return 'bg-emerald-100 text-emerald-700 dark:bg-emerald-500/15 dark:text-emerald-300'
+  }
+  return 'bg-zinc-100 text-zinc-700 dark:bg-zinc-800 dark:text-zinc-300'
 }
 </script>

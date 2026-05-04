@@ -452,6 +452,13 @@ const addOption = (groupIndex: number) => {
   ensureOptionInventory(option.id)
 }
 
+const generateId = () => {
+  if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+    return crypto.randomUUID()
+  }
+  return `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 11)}`
+}
+
 const duplicateOption = (groupIndex: number, optionIndex: number) => {
   const group = form.value.variants[groupIndex]
   if (!group) {
@@ -461,7 +468,7 @@ const duplicateOption = (groupIndex: number, optionIndex: number) => {
   if (!source) {
     return
   }
-  const nextId = crypto.randomUUID()
+  const nextId = generateId()
   group.options.splice(optionIndex + 1, 0, {
     ...source,
     id: nextId,
@@ -555,10 +562,18 @@ const save = async () => {
     return
   }
 
+  if (!form.value.name.trim()) {
+    return
+  }
+
+  if (!form.value.categoryId) {
+    return
+  }
+
   sortGroupsAndOptions()
   normalizeInventory()
 
-  const productId = form.value.id || `${form.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`
+  const productId = form.value.id || `${form.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
   const normalizedInventory = (form.value.inventoryItems || []).map(item => withInventoryDerivedState({
     ...item,
     id: item.id || `${productId}-${item.variantOptionId || 'base'}`,

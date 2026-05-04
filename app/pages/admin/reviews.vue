@@ -1,19 +1,25 @@
 <template>
   <AdminStatePanel
     v-if="!catalog"
-    title="No hay un catálogo activo"
-    description="Selecciona un catálogo para revisar las reseñas."
+    title="No hay un catalogo activo"
+    description="Selecciona un catalogo para revisar las resenas."
   />
 
-  <div v-else class="admin-grid">
+  <div v-else ref="pageRef" class="admin-grid">
     <section class="panel-card span-2 min-w-0">
-      <UiSectionHeader eyebrow="Moderación" title="Bandeja de reseñas" description="Moderación con filtros server-side, respuesta rápida y carga incremental." />
+      <UiSectionHeader eyebrow="Moderacion" title="Bandeja de resenas" description="Moderacion con filtros server-side, respuesta rapida y carga incremental." />
 
       <div
         v-if="reviewsStore.loading"
         class="mb-4 rounded-[18px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
       >
-        Actualizando moderación y reseñas del catálogo...
+        <span class="flex items-center gap-2">
+          <svg class="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          Actualizando moderacion y resenas del catalogo...
+        </span>
       </div>
 
       <div
@@ -27,9 +33,9 @@
         <article class="setting-card">
           <div class="setting-head">
             <div>
-              <p class="setting-title">Reseñas activas</p>
+              <p class="setting-title">Resenas activas</p>
               <p class="setting-desc">
-                Si desactivas las reseñas, ningún usuario podrá comentar en tus platos.
+                Si desactivas las resenas, ningun usuario podra comentar en tus platos.
               </p>
             </div>
             <label class="toggle-3d">
@@ -39,12 +45,12 @@
           </div>
         </article>
 
-        <article class="setting-card">
+        <article v-if="reviewsEnabled" class="setting-card">
           <div class="setting-head">
             <div>
-              <p class="setting-title">Moderación de reseñas</p>
+              <p class="setting-title">Moderacion de resenas</p>
               <p class="setting-desc">
-                Si la moderación está activa, las nuevas reseñas entran primero en pendientes.
+                Si la moderacion esta activa, las nuevas resenas entran primero en pendientes.
               </p>
             </div>
             <label class="toggle-3d">
@@ -55,103 +61,152 @@
         </article>
       </div>
 
-      <div class="mb-4 grid gap-3 lg:grid-cols-[1.2fr,0.8fr]">
-        <div class="rounded-[22px] border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
-          <label class="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Buscar en la bandeja cargada</label>
-          <div class="mt-2 flex items-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
-            <span class="text-zinc-400">⌕</span>
-            <input
-              v-model.trim="searchTerm"
-              type="search"
-              inputmode="search"
-              placeholder="Cliente, producto o comentario"
-              class="w-full bg-transparent text-sm outline-none placeholder:text-zinc-400"
-            >
+      <template v-if="reviewsEnabled">
+        <div class="mb-4 grid gap-3 lg:grid-cols-[1.2fr,0.8fr]">
+          <div class="rounded-[22px] border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
+            <label class="text-[11px] font-bold uppercase tracking-[0.18em] text-zinc-500 dark:text-zinc-400">Buscar en la bandeja cargada</label>
+            <div class="mt-2 flex items-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
+              <span class="text-zinc-400">⌕</span>
+              <input
+                v-model.trim="rawSearchTerm"
+                type="search"
+                inputmode="search"
+                placeholder="Cliente, producto o comentario"
+                class="w-full bg-transparent text-sm outline-none placeholder:text-zinc-400"
+              >
+            </div>
+          </div>
+
+          <div class="review-metrics">
+            <article class="metric-card">
+              <p class="metric-label">Pendientes</p>
+              <p class="metric-value">{{ reviewsStore.stats.pending }}</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Aprobadas</p>
+              <p class="metric-value">{{ reviewsStore.stats.approved }}</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Promedio</p>
+              <p class="metric-value">{{ reviewsStore.averageApprovedRating.toFixed(1) }}</p>
+            </article>
+            <article class="metric-card">
+              <p class="metric-label">Positividad</p>
+              <p class="metric-value">{{ reviewsStore.positivityPercent }}%</p>
+            </article>
           </div>
         </div>
 
-        <div class="review-metrics">
-          <article class="metric-card">
-            <p class="metric-label">Pendientes</p>
-            <p class="metric-value">{{ reviewsStore.stats.pending }}</p>
-          </article>
-          <article class="metric-card">
-            <p class="metric-label">Aprobadas</p>
-            <p class="metric-value">{{ reviewsStore.stats.approved }}</p>
-          </article>
-          <article class="metric-card">
-            <p class="metric-label">Promedio</p>
-            <p class="metric-value">{{ reviewsStore.averageApprovedRating.toFixed(1) }}</p>
-          </article>
-          <article class="metric-card">
-            <p class="metric-label">Positividad</p>
-            <p class="metric-value">{{ reviewsStore.positivityPercent }}%</p>
-          </article>
+        <div class="review-tabs" role="tablist" aria-label="Filtros de resenas">
+          <button
+            v-for="tab in tabs"
+            :key="tab.key"
+            class="review-tab"
+            :class="{ 'is-active': reviewsStore.currentFilter === tab.key }"
+            @click="setActiveTab(tab.key)"
+          >
+            <span>{{ tab.label }}</span>
+            <span class="text-xs opacity-70">{{ tab.count }}</span>
+          </button>
         </div>
-      </div>
 
-      <div class="review-tabs" role="tablist" aria-label="Filtros de reseñas">
-        <button
-          v-for="tab in tabs"
-          :key="tab.key"
-          class="review-tab"
-          :class="{ 'is-active': reviewsStore.currentFilter === tab.key }"
-          @click="setActiveTab(tab.key)"
-        >
-          <span>{{ tab.label }}</span>
-          <span class="text-xs opacity-70">{{ tab.count }}</span>
-        </button>
-      </div>
+        <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300">
+          <span>
+            Mostrando <strong>{{ visibleReviews.length }}</strong> de <strong>{{ reviewsStore.filteredTotal }}</strong> resenas en <strong>{{ activeTabLabel }}</strong>.
+          </span>
+          <span v-if="reviewsStore.remainingCount > 0" class="text-xs uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+            Restan {{ reviewsStore.remainingCount }}
+          </span>
+        </div>
 
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-3 rounded-[20px] border border-zinc-200 bg-zinc-50/70 px-4 py-3 text-sm text-zinc-600 dark:border-zinc-800 dark:bg-zinc-900/50 dark:text-zinc-300">
-        <span>
-          Mostrando <strong>{{ visibleReviews.length }}</strong> de <strong>{{ reviewsStore.filteredTotal }}</strong> reseñas en <strong>{{ activeTabLabel }}</strong>.
-        </span>
-        <span v-if="reviewsStore.remainingCount > 0" class="text-xs uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-          Restan {{ reviewsStore.remainingCount }}
-        </span>
-      </div>
-
-      <div v-if="!visibleReviews.length" class="rounded-[20px] border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
-        {{ emptyStateMessage }}
-      </div>
-
-      <div v-else class="table-list">
-        <article v-for="review in visibleReviews" :key="review.id" class="list-row min-w-0">
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <strong class="block break-words">{{ review.name || 'Cliente' }}</strong>
-              <span class="status-pill" :class="review.approved ? 'status-approved' : 'status-pending'">
-                {{ review.approved ? 'Aprobada' : 'Pendiente' }}
-              </span>
-            </div>
-            <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ review.productName || 'Producto sin nombre' }}</p>
-            <p class="break-words">{{ review.comment || 'Sin comentario' }}</p>
-            <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
-              <span>{{ '★'.repeat(review.rating) }}</span>
-              <span>{{ new Date(review.createdAt).toLocaleString('es-MX') }}</span>
-            </div>
-            <div v-if="review.adminReply" class="review-reply">
-              <strong>{{ review.adminReply.name }}</strong>
-              <p class="break-words">{{ review.adminReply.text }}</p>
-            </div>
+        <div v-if="replyTargetId" class="mb-4 rounded-[18px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <label class="block text-xs font-semibold uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Responder resena</label>
+          <textarea v-model.trim="replyDraft" rows="3" placeholder="Escribe tu respuesta..." class="mt-2 w-full rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950" />
+          <div class="mt-3 flex justify-end gap-2">
+            <button class="ghost-btn small" @click="replyTargetId = null; replyDraft = ''">Cancelar</button>
+            <button class="solid-btn small" :disabled="!replyDraft.trim()" @click="submitReply">Enviar respuesta</button>
           </div>
-          <div class="row-meta wrap">
-            <button v-if="!review.approved" class="solid-btn small" @click="approve(review.id)">Aprobar</button>
-            <button class="ghost-btn small" @click="reply(review.id)">{{ review.adminReply ? 'Editar respuesta' : 'Responder' }}</button>
-            <button class="ghost-btn small" @click="remove(review.id)">{{ review.approved ? 'Eliminar' : 'Borrar' }}</button>
-          </div>
-        </article>
-      </div>
+        </div>
 
-      <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
-        <p class="text-xs uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
-          {{ reviewsStore.listening ? 'Realtime activo' : 'Realtime en espera' }}
-        </p>
-        <button v-if="reviewsStore.hasMore" class="ghost-btn" :disabled="reviewsStore.loadingMore" @click="reviewsStore.loadMore()">
-          {{ reviewsStore.loadingMore ? 'Cargando más reseñas...' : `Cargar ${Math.min(reviewsStore.remainingCount || 25, 25)} más` }}
-        </button>
-      </div>
+        <div v-if="!visibleReviews.length" class="rounded-[20px] border border-dashed border-zinc-300 px-4 py-8 text-center text-sm text-zinc-500 dark:border-zinc-700 dark:text-zinc-400">
+          {{ emptyStateMessage }}
+        </div>
+
+        <div v-else class="table-list">
+          <UiVirtualList
+            v-if="shouldVirtualizeReviews"
+            :items="visibleReviews"
+            :item-height="156"
+            :max-height="820"
+            class="admin-virtual-list"
+          >
+            <template #default="{ item: review }">
+              <article class="list-row min-w-0">
+                <div class="min-w-0">
+                  <div class="flex flex-wrap items-center gap-2">
+                    <strong class="block break-words">{{ review.name || 'Cliente' }}</strong>
+                    <span class="status-pill" :class="review.approved ? 'status-approved' : 'status-pending'">
+                      {{ review.approved ? 'Aprobada' : 'Pendiente' }}
+                    </span>
+                  </div>
+                  <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ review.productName || 'Producto sin nombre' }}</p>
+                  <p class="break-words">{{ review.comment || 'Sin comentario' }}</p>
+                  <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                    <span>{{ stars(review.rating) }}</span>
+                    <span>{{ new Date(review.createdAt).toLocaleString('es-MX') }}</span>
+                  </div>
+                  <div v-if="review.adminReply" class="review-reply">
+                    <strong>{{ review.adminReply.name }}</strong>
+                    <p class="break-words">{{ review.adminReply.text }}</p>
+                  </div>
+                </div>
+                <div class="row-meta wrap">
+                  <button v-if="!review.approved" class="solid-btn small" @click="approve(review.id)">Aprobar</button>
+                  <button class="ghost-btn small" @click="reply(review.id)">{{ review.adminReply ? 'Editar respuesta' : 'Responder' }}</button>
+                  <button class="ghost-btn small" @click="remove(review.id)">{{ review.approved ? 'Eliminar' : 'Borrar' }}</button>
+                </div>
+              </article>
+            </template>
+          </UiVirtualList>
+
+          <template v-else>
+            <article v-for="review in visibleReviews" :key="review.id" class="list-row min-w-0">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <strong class="block break-words">{{ review.name || 'Cliente' }}</strong>
+                  <span class="status-pill" :class="review.approved ? 'status-approved' : 'status-pending'">
+                    {{ review.approved ? 'Aprobada' : 'Pendiente' }}
+                  </span>
+                </div>
+                <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ review.productName || 'Producto sin nombre' }}</p>
+                <p class="break-words">{{ review.comment || 'Sin comentario' }}</p>
+                <div class="mt-2 flex flex-wrap items-center gap-2 text-xs text-zinc-500 dark:text-zinc-400">
+                  <span>{{ stars(review.rating) }}</span>
+                  <span>{{ new Date(review.createdAt).toLocaleString('es-MX') }}</span>
+                </div>
+                <div v-if="review.adminReply" class="review-reply">
+                  <strong>{{ review.adminReply.name }}</strong>
+                  <p class="break-words">{{ review.adminReply.text }}</p>
+                </div>
+              </div>
+              <div class="row-meta wrap">
+                <button v-if="!review.approved" class="solid-btn small" @click="approve(review.id)">Aprobar</button>
+                <button class="ghost-btn small" @click="reply(review.id)">{{ review.adminReply ? 'Editar respuesta' : 'Responder' }}</button>
+                <button class="ghost-btn small" @click="remove(review.id)">{{ review.approved ? 'Eliminar' : 'Borrar' }}</button>
+              </div>
+            </article>
+          </template>
+        </div>
+
+        <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
+          <p class="text-xs uppercase tracking-[0.14em] text-zinc-400 dark:text-zinc-500">
+            {{ reviewsStore.listening ? 'Realtime activo' : 'Realtime en espera' }}
+          </p>
+          <button v-if="reviewsStore.hasMore" class="ghost-btn" :disabled="reviewsStore.loadingMore" @click="reviewsStore.loadMore()">
+            {{ reviewsStore.loadingMore ? 'Cargando mas resenas...' : `Cargar ${Math.min(reviewsStore.remainingCount || 25, 25)} mas` }}
+          </button>
+        </div>
+      </template>
     </section>
   </div>
 </template>
@@ -163,10 +218,16 @@ definePageMeta({ layout: 'admin' })
 
 const catalogStore = useCatalogStore()
 const reviewsStore = useReviewsStore()
+const { registerCleanup } = useMemoryManager()
 const catalog = computed(() => catalogStore.activeCatalog)
+const pageRef = ref<HTMLElement | null>(null)
 const reviewsEnabled = ref(true)
 const reviewModeration = ref(true)
+const rawSearchTerm = ref('')
 const searchTerm = ref('')
+const replyTargetId = ref<string | null>(null)
+const replyDraft = ref('')
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const tabs = computed(() => [
   {
@@ -201,12 +262,34 @@ const visibleReviews = computed(() => {
   })
 })
 
+const shouldVirtualizeReviews = computed(() => visibleReviews.value.length > 40)
+
 const emptyStateMessage = computed(() => {
   if (searchTerm.value.trim()) {
     return `No hubo coincidencias dentro de la bandeja cargada para "${searchTerm.value.trim()}".`
   }
 
-  return `No hay reseñas en ${activeTabLabel.value.toLowerCase()}.`
+  return `No hay resenas en ${activeTabLabel.value.toLowerCase()}.`
+})
+
+const stars = (value: number) => '★'.repeat(Math.max(0, value))
+
+const refreshReviewsBoard = async () => {
+  if (!catalog.value?.id) {
+    return
+  }
+
+  await reviewsStore.hydrate(catalog.value.id, { filter: reviewsStore.currentFilter })
+}
+
+watch(rawSearchTerm, (value) => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+
+  searchDebounceTimer = setTimeout(() => {
+    searchTerm.value = value
+  }, 220)
 })
 
 watch(catalog, (value) => {
@@ -227,7 +310,13 @@ watch(catalog, (value) => {
   reviewModeration.value = value.settings.reviewModeration
 }, { immediate: true })
 
-onBeforeUnmount(() => {
+registerCleanup(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+})
+registerCleanup(() => {
   reviewsStore.stopRealtime()
 })
 
@@ -236,16 +325,39 @@ const saveReviewSettings = async () => {
     return
   }
 
-  await catalogStore.updateSettings({
-    reviewsEnabled: reviewsEnabled.value,
-    reviewModeration: reviewModeration.value,
-  })
+  const previousReviewsEnabled = catalog.value.settings.reviewsEnabled
+  const previousReviewModeration = catalog.value.settings.reviewModeration
+
+  try {
+    await catalogStore.updateSettings({
+      reviewsEnabled: reviewsEnabled.value,
+      reviewModeration: reviewModeration.value,
+    })
+  } catch {
+    reviewsEnabled.value = previousReviewsEnabled
+    reviewModeration.value = previousReviewModeration
+  }
 }
 
 const setActiveTab = async (filter: ReviewsFilterKey) => {
+  rawSearchTerm.value = ''
   searchTerm.value = ''
   await reviewsStore.setFilter(filter)
 }
+
+const activeTabIndex = computed(() => tabs.value.findIndex(tab => tab.key === reviewsStore.currentFilter))
+const moveTab = (direction: 1 | -1) => {
+  const nextTab = tabs.value[activeTabIndex.value + direction]
+  if (nextTab) {
+    void setActiveTab(nextTab.key)
+  }
+}
+
+useTouchGestures(pageRef, {
+  onPullRefresh: refreshReviewsBoard,
+  onSwipeLeft: () => moveTab(1),
+  onSwipeRight: () => moveTab(-1),
+})
 
 const approve = async (reviewId: string) => {
   if (!catalog.value) {
@@ -260,16 +372,24 @@ const reply = async (reviewId: string) => {
     return
   }
 
-  const text = window.prompt('Respuesta del negocio')
-  if (!text) {
+  replyTargetId.value = reviewId
+  replyDraft.value = ''
+}
+
+const submitReply = async () => {
+  if (!catalog.value || !replyTargetId.value || !replyDraft.value.trim()) {
+    replyTargetId.value = null
+    replyDraft.value = ''
     return
   }
 
   const replyName = catalog.value.settings.adminReplyName || catalog.value.settings.businessName || 'Negocio'
-  await reviewsStore.reply(catalog.value.id, reviewId, {
+  await reviewsStore.reply(catalog.value.id, replyTargetId.value, {
     name: replyName,
-    text,
+    text: replyDraft.value.trim(),
   })
+  replyTargetId.value = null
+  replyDraft.value = ''
 }
 
 const remove = async (reviewId: string) => {
@@ -277,7 +397,7 @@ const remove = async (reviewId: string) => {
     return
   }
 
-  if (!window.confirm('¿Eliminar esta reseña de la vista pública?')) {
+  if (!window.confirm('¿Eliminar esta resena de la vista publica?')) {
     return
   }
 
@@ -286,6 +406,18 @@ const remove = async (reviewId: string) => {
 </script>
 
 <style scoped>
+.table-list {
+  content-visibility: auto;
+}
+
+.admin-virtual-list {
+  border-radius: 22px;
+}
+
+.admin-virtual-list :deep(.virtual-list-item + .virtual-list-item) {
+  margin-top: 0.75rem;
+}
+
 .review-settings {
   display: grid;
   grid-template-columns: 1fr;

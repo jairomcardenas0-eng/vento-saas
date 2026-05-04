@@ -37,18 +37,21 @@ const getTabSessionUuid = (): string => {
   return uuid
 }
 
-const isPageViewAlreadyFired = (catalogId: string): boolean =>
-  runtime.sessionStorage?.getItem(`${SESSION_FIRED_PREFIX}${catalogId}`) === '1'
+const pageViewKey = (catalogId: string, path?: string): string =>
+  `${SESSION_FIRED_PREFIX}${catalogId}@${path || currentPath()}`
 
-const markPageViewFired = (catalogId: string): void => {
-  runtime.sessionStorage?.setItem(`${SESSION_FIRED_PREFIX}${catalogId}`, '1')
+const isPageViewAlreadyFired = (catalogId: string, path?: string): boolean =>
+  runtime.sessionStorage?.getItem(pageViewKey(catalogId, path)) === '1'
+
+const markPageViewFired = (catalogId: string, path?: string): void => {
+  runtime.sessionStorage?.setItem(pageViewKey(catalogId, path), '1')
 }
 
 export const useAnalytics = () => {
   const visitorCookie = useCookie<string | null>(VISITOR_COOKIE, {
     sameSite: 'lax',
     maxAge: VISITOR_COOKIE_MAX_AGE,
-    secure: false,
+    secure: true,
     default: () => null,
   })
 
@@ -96,9 +99,9 @@ export const useAnalytics = () => {
 
   const trackPageView = (catalogId: string, path?: string): void => {
     if (!import.meta.client || !catalogId) return
-    if (isPageViewAlreadyFired(catalogId)) return
+    const normalizedPath = path ?? currentPath()
+    if (isPageViewAlreadyFired(catalogId, normalizedPath)) return
 
-    markPageViewFired(catalogId)
     const sessionUuid = getTabSessionUuid()
     ensureVisitorId()
 
@@ -106,8 +109,10 @@ export const useAnalytics = () => {
       catalogId,
       sessionUuid,
       eventType: 'page_view',
-      path: path ?? currentPath(),
+      path: normalizedPath,
     })
+
+    markPageViewFired(catalogId, normalizedPath)
   }
 
   const trackProductClick = (catalogId: string, productId: string): void => {

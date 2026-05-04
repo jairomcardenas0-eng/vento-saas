@@ -1,0 +1,13 @@
+{
+  "name": "Vento",
+  "short_name": "Vento",
+  "description": "Catalogos digitales optimizados para redes lentas y uso movil.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#f8fafc",
+  "theme_color": "#2563eb",
+  "lang": "es-MX",
+  "dir": "ltr",
+  "icons": []
+}

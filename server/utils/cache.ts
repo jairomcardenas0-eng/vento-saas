@@ -1,6 +1,8 @@
 import { randomUUID } from 'node:crypto'
 import { Redis } from '@upstash/redis'
-import { compressToBase64, decompressFromBase64 } from 'lz-string'
+import LZString from 'lz-string'
+
+const { compressToBase64, decompressFromBase64 } = LZString
 
 type CacheEntryEnvelope = {
   value: string

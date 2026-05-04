@@ -11,7 +11,7 @@
             </p>
           </div>
           <div class="rounded-[28px] border border-white/10 bg-black/20 px-5 py-4 text-sm text-white/70">
-            <strong class="block text-base text-white">{{ authStore.displayName }}</strong>
+            <strong class="block text-base text-white">{{ authStore.displayName || authStore.user?.email?.split('@')[0] || 'Owner' }}</strong>
             <span>{{ authStore.user?.email }}</span>
           </div>
         </div>
@@ -303,15 +303,19 @@ const savePlanChange = async () => {
   }
 }
 
+const dateFormatter = new Intl.DateTimeFormat('es-MX', {
+  dateStyle: 'medium',
+  timeStyle: 'short',
+})
 const formatDate = (value: string) => {
   if (!value) {
     return 'Fecha no disponible'
   }
-
-  return new Intl.DateTimeFormat('es-MX', {
-    dateStyle: 'medium',
-    timeStyle: 'short',
-  }).format(new Date(value))
+  const date = new Date(value)
+  if (Number.isNaN(date.getTime())) {
+    return 'Fecha inválida'
+  }
+  return dateFormatter.format(date)
 }
 
 onMounted(async () => {

@@ -11,6 +11,12 @@ import type {
   UserProfile,
 } from '~/types/catalog'
 
+const generateId = (prefix: string): string => {
+  const time = Date.now().toString(36)
+  const rand = Math.random().toString(36).substring(2, 8)
+  return `${prefix}-${time}-${rand}`
+}
+
 const defaultScheduleRanges = () => ([{ start: '09:00', end: '18:00' }])
 
 export const defaultWeeklySchedule = (): BusinessDaySchedule[] => ([
@@ -23,16 +29,16 @@ export const defaultWeeklySchedule = (): BusinessDaySchedule[] => ([
   { dayKey: 'sunday', label: 'Domingo', enabled: false, ranges: defaultScheduleRanges() },
 ])
 
-export const createDeliveryZone = (seed = Date.now()): DeliveryZone => ({
-  id: `zone-${seed}`,
+export const createDeliveryZone = (): DeliveryZone => ({
+  id: generateId('zone'),
   name: '',
   price: 0,
   minOrder: 0,
   estimatedMinutes: 45,
 })
 
-export const createCouponDraft = (seed = Date.now()): CatalogCoupon => ({
-  id: `coupon-${seed}`,
+export const createCouponDraft = (): CatalogCoupon => ({
+  id: generateId('coupon'),
   name: '',
   code: '',
   discountType: 'percentage',
@@ -88,6 +94,9 @@ export const defaultTheme = (): CatalogThemeSettings => ({
   bannerTextColor: '#ffffff',
 })
 
+// NOTE: defaultTheme() and defaultSettings() both define color palettes.
+// This is intentional while two UI layers (catalog theme vs storefront) coexist.
+// TODO: unify both color systems into a single source of truth to avoid divergence.
 export const defaultSettings = (name = 'Nueva Tienda', slug = 'nueva-tienda'): CatalogOperationalSettings => ({
   businessName: name,
   businessType: ['Restaurante'],
@@ -95,12 +104,12 @@ export const defaultSettings = (name = 'Nueva Tienda', slug = 'nueva-tienda'): C
   logoUrl: '',
   coverImage: '',
   storefrontLayout: 'classic',
-  storeTopBarHtml: 'Envios rapidos, ofertas activas y pedidos directos por WhatsApp.',
+  storeTopBarHtml: '<span>Envíos rápidos, ofertas activas y pedidos directos por WhatsApp.</span>',
   storeHeaderName: name,
   storeShowPremiumBadge: true,
   storeHeroTag: 'Tienda destacada',
   storeHeroTitle: `Compra en ${name}`,
-  storeHeroDescription: `Explora productos, guarda favoritos y envia tu pedido en segundos desde ${name}.`,
+  storeHeroDescription: `Explora productos, guarda favoritos y envía tu pedido en segundos desde ${name}.`,
   storeHeroButtonText: 'Ver productos',
   storeHeroBackgroundImage: '',
   storeFooterText: `Gracias por comprar en ${name}.`,
@@ -114,14 +123,14 @@ export const defaultSettings = (name = 'Nueva Tienda', slug = 'nueva-tienda'): C
   storeCartTextColor: '#ffffff',
   storeToastFrom: '#3b82f6',
   storeToastTo: '#2563eb',
-  timezone: 'America/Mexico_City',
+  timezone: 'UTC',
   address: {
     countryCode: '',
     stateCode: '',
     city: '',
     details: '',
-    lat: 23.6345,
-    lng: -102.5528,
+    lat: 0,
+    lng: 0,
   },
   instagram: '',
   facebook: '',
@@ -140,11 +149,11 @@ export const defaultSettings = (name = 'Nueva Tienda', slug = 'nueva-tienda'): C
   productCarouselEnabled: true,
   productCarouselSeconds: 4,
   checkoutNameEnabled: true,
-  checkoutNameReq: 'obligatorio',
+  checkoutNameReq: 'required',
   checkoutAddressEnabled: true,
-  checkoutAddressReq: 'opcional',
+  checkoutAddressReq: 'optional',
   checkoutPaymentEnabled: true,
-  checkoutPaymentReq: 'opcional',
+  checkoutPaymentReq: 'optional',
   deliveryEnabled: true,
   deliveryPaused: false,
   deliveryFeeType: 'flat',
@@ -157,7 +166,7 @@ export const defaultSettings = (name = 'Nueva Tienda', slug = 'nueva-tienda'): C
   pickupInstructions: 'Presenta tu nombre en caja para retirar tu pedido.',
   pickupEtaMinutes: 20,
   closed: false,
-  closedMessage: 'Ahora mismo no estamos recibiendo pedidos.\nVuelve pronto.',
+  closedMessage: 'Ahora mismo no estamos recibiendo pedidos.<br>Vuelve pronto.',
   closedTextSizeLarge: 32,
   closedTextSizeSmall: 17,
   closedTextColor: '#ffffff',
@@ -219,7 +228,7 @@ export const demoUser = (): UserProfile => ({
 
 export const demoCatalog = (): CatalogRecord => {
   const catalog = createCatalogRecord('demo-owner', 'brasa-house', 'Brasa House')
-  catalog.settings.phone = '5512345678'
+  catalog.settings.phone = '525512345678'
   catalog.settings.whatsapp = '525512345678'
   catalog.settings.businessType = ['Hamburguesería']
   catalog.settings.tagline = 'Menú visual para delivery, pickup y ventas directas.'

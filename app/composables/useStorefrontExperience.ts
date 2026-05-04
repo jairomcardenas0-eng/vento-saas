@@ -1,5 +1,5 @@
 import { useSeoMeta } from 'nuxt/app'
-import { computed, reactive, ref, watch } from 'vue'
+import { computed, onUnmounted, reactive, ref, watch } from 'vue'
 import type { Ref } from 'vue'
 import type { CatalogCoupon, CatalogOperationalSettings, CatalogReview, CatalogThemeSettings } from '~/types/catalog'
 import type { CartModifier } from '~/stores/cart'
@@ -37,6 +37,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   const analytics = useAnalytics()
 
   const search = ref('')
+  const debouncedSearch = ref('')
   const selectedCategoryId = ref('')
   const selectedProduct = ref<ProductItem | null>(null)
   const singleSelections = ref<Record<string, string>>({})
@@ -75,6 +76,17 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     }
 
     cartStore.hydrateCart(slug)
+  }, { immediate: true })
+
+  let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
+  watch(search, (value) => {
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer)
+    }
+
+    searchDebounceTimer = setTimeout(() => {
+      debouncedSearch.value = value
+    }, 220)
   }, { immediate: true })
 
   watch(storefront, (value: StorefrontPayload | null) => {
@@ -158,7 +170,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
   })
 
   const productsByCategory = (categoryId: string) => {
-    const needle = search.value.trim().toLowerCase()
+    const needle = debouncedSearch.value.trim().toLowerCase()
     return (storefront.value?.products || []).filter((product) => {
       const matchesCategory = product.categoryId === categoryId
       const matchesSearch = !needle || [product.name, product.description].join(' ').toLowerCase().includes(needle)
@@ -325,7 +337,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       return
     }
 
-    if (checkoutForm.name.trim().length < 2 && storefront.value.settings.checkoutNameReq === 'obligatorio') {
+    if (checkoutForm.name.trim().length < 2) {
       notify('Ingresa tu nombre antes de continuar.')
       return
     }
@@ -361,6 +373,19 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
         notify(validation.reason)
         return
       }
+    }
+
+    // Re-verify stock at checkout to reduce race-condition impact
+    const outOfStockItem = cartStore.items.find(item => {
+      const product = storefront.value?.products.find(p => p.id === item.productId)
+      if (!product) return false
+      const tracked = (product.inventoryItems || []).filter((i: { trackStock?: boolean }) => i.trackStock)
+      if (!tracked.length) return false
+      return tracked.some((inv: { available?: number }) => Number(inv.available ?? 0) <= 0)
+    })
+    if (outOfStockItem) {
+      notify('Algunos productos en tu carrito ya no tienen stock disponible.')
+      return
     }
 
     checkoutSubmitting.value = true
@@ -401,12 +426,19 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       createdAt: new Date().toISOString(),
     }
 
+    let orderPersisted = false
     try {
       await backend.appendOrder(storefront.value.id, order)
+      orderPersisted = true
     } catch (error) {
       console.warn('Order ledger persistence failed before WhatsApp redirect', error)
-    } finally {
+      notify('No se pudo guardar el pedido en el sistema. Intentalo de nuevo.')
       checkoutSubmitting.value = false
+      return
+    } finally {
+      if (!orderPersisted) {
+        checkoutSubmitting.value = false
+      }
     }
 
     const checkoutUrl = encodeOrderToWhatsApp(
@@ -425,16 +457,45 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       finalTotal.value,
     )
 
-    runtime.window?.open?.(checkoutUrl, '_blank')
+    const popup = runtime.window?.open?.(checkoutUrl, '_blank')
+    if (!popup) {
+      notify('El navegador bloqueo la ventana de WhatsApp. Habilita popups para este sitio.')
+      checkoutSubmitting.value = false
+      return
+    }
+
     cartStore.clearCart(slugKey.value)
     cartStore.isOpen = false
     checkoutForm.zoneId = ''
     checkoutForm.address = ''
     checkoutForm.paymentMethod = ''
     removeCoupon()
+    checkoutSubmitting.value = false
   }
 
-  const reviewThrottleKey = computed(() => `saas_review_guard_${slugKey.value}`)
+  const REVIEW_THROTTLE_PREFIX = 'saas_review_guard_'
+  const reviewThrottleKey = computed(() => `${REVIEW_THROTTLE_PREFIX}${slugKey.value}`)
+
+  const cleanupOldReviewThrottleKeys = () => {
+    if (import.meta.server || !runtime.localStorage) return
+    const now = Date.now()
+    const maxAge = 24 * 60 * 60 * 1000
+    for (let i = runtime.localStorage.length - 1; i >= 0; i--) {
+      const key = runtime.localStorage.key(i)
+      if (key?.startsWith(REVIEW_THROTTLE_PREFIX)) {
+        try {
+          const raw = runtime.localStorage.getItem(key)
+          const timestamps: number[] = raw ? JSON.parse(raw) : []
+          const hasRecent = timestamps.some(ts => now - ts < maxAge)
+          if (!hasRecent) {
+            runtime.localStorage.removeItem(key)
+          }
+        } catch {
+          runtime.localStorage.removeItem(key)
+        }
+      }
+    }
+  }
 
   const readRecentReviewAttempts = () => {
     if (import.meta.server) {
@@ -455,6 +516,7 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
     const recent = readRecentReviewAttempts()
     recent.push(Date.now())
     runtime.localStorage?.setItem(reviewThrottleKey.value, JSON.stringify(recent))
+    cleanupOldReviewThrottleKeys()
   }
 
   const submitReview = async () => {
@@ -502,6 +564,12 @@ export const useStorefrontExperience = (storefront: Ref<StorefrontPayload | null
       reviewSubmitting.value = false
     }
   }
+
+  onUnmounted(() => {
+    if (searchDebounceTimer) {
+      clearTimeout(searchDebounceTimer)
+    }
+  })
 
   return {
     cartStore,

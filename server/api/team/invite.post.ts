@@ -33,6 +33,21 @@ export default defineEventHandler(async (event) => {
     throw createError({ statusCode: 403, statusMessage: 'Has alcanzado el limite de miembros de tu plan. Actualiza para invitar mas.' })
   }
 
+  const { data: existingMember, error: existingError } = await supabase
+    .from('catalog_team_members')
+    .select('id')
+    .eq('catalog_id', payload.catalogId)
+    .eq('email', payload.email.trim().toLowerCase())
+    .maybeSingle()
+
+  if (existingError) {
+    throw createError({ statusCode: 500, statusMessage: 'No se pudo validar la duplicidad del miembro' })
+  }
+
+  if (existingMember) {
+    throw createError({ statusCode: 409, statusMessage: 'Ya existe un miembro con ese email en este catalogo' })
+  }
+
   const { data, error } = await supabase
     .from('catalog_team_members')
     .insert({

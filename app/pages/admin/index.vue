@@ -84,7 +84,12 @@
                 </div>
               </div>
 
-              <AnalyticsLineChart :labels="chartLabels" :values="visitsDataset" color="#2563eb" />
+              <ClientOnly>
+                <AnalyticsLineChart :labels="chartLabels" :values="visitsDataset" color="#2563eb" />
+                <template #fallback>
+                  <div class="h-[240px] animate-pulse rounded-[18px] bg-slate-100 dark:bg-slate-900" />
+                </template>
+              </ClientOnly>
 
               <div>
                 <h2 class="text-base font-semibold text-slate-950 dark:text-slate-50">Resumen de visitas</h2>
@@ -118,7 +123,12 @@
                 </div>
               </div>
 
-              <AnalyticsLineChart :labels="chartLabels" :values="usersDataset" color="#0f172a" />
+              <ClientOnly>
+                <AnalyticsLineChart :labels="chartLabels" :values="usersDataset" color="#0f172a" />
+                <template #fallback>
+                  <div class="h-[240px] animate-pulse rounded-[18px] bg-slate-100 dark:bg-slate-900" />
+                </template>
+              </ClientOnly>
 
               <div>
                 <h2 class="text-base font-semibold text-slate-950 dark:text-slate-50">Resumen de usuarios activos</h2>
@@ -152,13 +162,13 @@
 </template>
 
 <script setup lang="ts">
-import AnalyticsLineChart from '~/components/admin/AnalyticsLineChart.vue'
 import type { CatalogAnalyticsOverview } from '~/types/analytics'
 
 definePageMeta({ layout: 'admin' })
 
 const RANGE_DAYS = 7
 const PULSE_DURATION_MS = 2500
+const AnalyticsLineChart = defineAsyncComponent(() => import('~/components/admin/AnalyticsLineChart.vue'))
 
 const catalogStore = useCatalogStore()
 const backend = useSupabaseBackend()

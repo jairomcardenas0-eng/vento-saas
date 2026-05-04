@@ -1,3 +1,5 @@
+import { readonly } from 'vue'
+
 type TrackerEventType = 'search' | 'store_view' | 'product_view' | 'hub_view'
 
 interface TrackerEvent {
@@ -57,7 +59,11 @@ export const useAlgorithmicTracker = () => {
     rebuildPreferredTags()
 
     if (import.meta.client) {
-      localStorage.setItem(TRACKER_KEY, JSON.stringify(tracker.value))
+      try {
+        localStorage.setItem(TRACKER_KEY, JSON.stringify(tracker.value))
+      } catch {
+        // Storage quota exceeded — silently drop persistence for this event
+      }
     }
   }
 

@@ -80,7 +80,13 @@ const mapProduct = (row: StorefrontRow): ProductItem => ({
   timerShowSeconds: Boolean(((row.timer || {}) as TimerRow).showSeconds ?? false),
   timerLinkSale: Boolean(((row.timer || {}) as TimerRow).linkSale ?? false),
   carouselEnabled: Boolean(((row.timer || {}) as TimerRow).carouselEnabled ?? false),
-  carouselIntervalSeconds: Number(((row.timer || {}) as TimerRow).carouselIntervalSeconds || 3) as 1 | 2 | 3 | 4 | 5,
+  carouselIntervalSeconds: (() => {
+    const raw = ((row.timer || {}) as TimerRow).carouselIntervalSeconds
+    const num = raw === null || raw === undefined ? 3 : Number(raw)
+    if (!Number.isFinite(num) || num < 1) return 3 as 1 | 2 | 3 | 4 | 5
+    if (num > 5) return 5 as 1 | 2 | 3 | 4 | 5
+    return Math.round(num) as 1 | 2 | 3 | 4 | 5
+  })(),
   tags: Array.isArray(row.tags) ? row.tags : [],
   productRating: Number(row.product_rating || 0),
   productRatingCount: Number(row.product_rating_count || 0),
@@ -111,7 +117,7 @@ const mapCoupon = (row: StorefrontRow): CatalogCoupon => ({
   id: String(row.id || ''),
   name: String(row.name || ''),
   code: String(row.code || ''),
-  discountType: row.discount_type as CatalogCoupon['discountType'],
+  discountType: row.discount_type === 'percentage' ? 'percentage' : 'fixed',
   discountValue: Number(row.discount_value || 0),
   minimumOrder: Number(row.minimum_order || 0),
   usageLimit: row.usage_limit === null || row.usage_limit === undefined ? null : Number(row.usage_limit),

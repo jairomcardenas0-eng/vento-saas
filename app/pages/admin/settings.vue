@@ -225,6 +225,7 @@
 <script setup lang="ts">
 import { createDeliveryZone, defaultSettings } from '~/data/defaults'
 import type { BusinessDaySchedule, CatalogOperationalSettings, CatalogPlan } from '~/types/catalog'
+import { compressImage } from '~/utils/imageCompression'
 import { getCurrentScheduleState } from '~/utils/catalog'
 
 definePageMeta({ layout: 'admin' })
@@ -241,7 +242,10 @@ const catalogStore = useCatalogStore()
 const previewStore = usePreviewStore()
 const backend = useSupabaseBackend()
 const catalog = computed(() => catalogStore.activeCatalog)
-const isPaywalled = computed(() => false)
+const isPaywalled = computed(() => {
+  const tier = currentPlan.value?.planType || catalog.value?.planTier || 'free'
+  return tier === 'free'
+})
 const draft = ref<CatalogOperationalSettings>(defaultSettings())
 const saving = ref(false)
 const saveError = ref('')
@@ -595,32 +599,6 @@ const storageEngine = useStorageEngine()
 const uploadingLogo = ref(false)
 const uploadLogoProgress = ref(0)
 
-// Compress image before upload using canvas
-function compressImage(file: File, maxWidth = 512, maxHeight = 512, quality = 0.85): Promise<Blob> {
-  return new Promise((resolve, reject) => {
-    const img = new Image()
-    img.onload = () => {
-      let { width, height } = img
-      if (width > maxWidth || height > maxHeight) {
-        const ratio = Math.min(maxWidth / width, maxHeight / height)
-        width = Math.round(width * ratio)
-        height = Math.round(height * ratio)
-      }
-      const canvas = document.createElement('canvas')
-      canvas.width = width
-      canvas.height = height
-      const ctx = canvas.getContext('2d')!
-      ctx.drawImage(img, 0, 0, width, height)
-      canvas.toBlob((blob) => {
-        if (blob) resolve(blob)
-        else reject(new Error('Compression failed'))
-      }, file.type || 'image/jpeg', quality)
-    }
-    img.onerror = () => reject(new Error('Failed to load image'))
-    img.src = URL.createObjectURL(file)
-  })
-}
-
 const onLogoSelected = async (event: Event) => {
   if (!catalog.value) return
 
@@ -631,9 +609,16 @@ const onLogoSelected = async (event: Event) => {
   uploadingLogo.value = true
   uploadLogoProgress.value = 30
   try {
-    const compressed = await compressImage(file)
+    const compressed = await compressImage(file, {
+      maxWidth: 512,
+      quality: 0.8,
+      mimeType: 'image/webp',
+    })
     uploadLogoProgress.value = 70
-    draft.value.logoUrl = await storageEngine.uploadProductImage(catalog.value.id, new File([compressed], file.name, { type: compressed.type }))
+    draft.value.logoUrl = await storageEngine.uploadProductImage(
+      catalog.value.id,
+      new File([compressed.blob], file.name.replace(/\.[^.]+$/, '.webp'), { type: compressed.mimeType }),
+    )
     uploadLogoProgress.value = 100
   } catch (error) {
     console.error('Error al subir logo:', error)
@@ -762,7 +747,7 @@ const changePassword = async () => {
 
   credSaving.value = true
   try {
-    const { $supabase: supabase } = useNuxtApp()
+    const { $supabase: supabase } = useNuxtApp() as any
     const { error } = await supabase.auth.updateUser({ password: credForm.newPassword })
     if (error) {
       credError.value = error.message

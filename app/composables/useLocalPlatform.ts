@@ -10,18 +10,29 @@ interface PlatformState {
   users: UserProfile[]
   catalogs: CatalogRecord[]
   sessions: Record<string, string>
+  _schemaVersion?: number
 }
 
-const STORAGE_KEY = 'saas-core-platform-v1'
+const STORAGE_KEY = 'saas-core-platform-v2'
+const SCHEMA_VERSION = 2
 
 const clone = <T>(value: T): T => JSON.parse(JSON.stringify(value))
+
+const hashPassword = (password: string): string => {
+  try {
+    return btoa(password.split('').reverse().join('') + 'local-salt')
+  } catch {
+    return password
+  }
+}
 
 const getDefaultState = (): PlatformState => ({
   users: [demoUser()],
   catalogs: [demoCatalog()],
   sessions: {
-    'demo@catalogo.com': 'demo12345',
+    'demo@catalogo.com': hashPassword('demo12345'),
   },
+  _schemaVersion: SCHEMA_VERSION,
 })
 
 const readState = (): PlatformState => {
@@ -38,7 +49,15 @@ const readState = (): PlatformState => {
   }
 
   try {
-    return JSON.parse(raw) as PlatformState
+    const parsed = JSON.parse(raw) as Partial<PlatformState>
+    if ((parsed._schemaVersion || 0) < SCHEMA_VERSION) {
+      const migrated = getDefaultState()
+      if (parsed.users) migrated.users = parsed.users
+      if (parsed.catalogs) migrated.catalogs = parsed.catalogs
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(migrated))
+      return migrated
+    }
+    return parsed as PlatformState
   } catch {
     const state = getDefaultState()
     localStorage.setItem(STORAGE_KEY, JSON.stringify(state))
@@ -58,8 +77,9 @@ export const useLocalPlatform = () => {
   const login = (email: string, password: string) => {
     const state = readState()
     const stored = state.sessions[email.toLowerCase()]
+    const passwordHash = hashPassword(password)
 
-    if (!stored || stored !== password) {
+    if (!stored || stored !== passwordHash) {
       throw new Error('Credenciales inválidas')
     }
 
@@ -89,7 +109,7 @@ export const useLocalPlatform = () => {
     }
 
     state.users.push(user)
-    state.sessions[normalized] = password
+    state.sessions[normalized] = hashPassword(password)
     writeState(state)
     return clone(user)
   }
@@ -102,10 +122,8 @@ export const useLocalPlatform = () => {
   }
 
   const createCatalog = (ownerUid: string, name: string, slug: string) => {
+    ensureUniqueSlug(slug)
     const state = readState()
-    if (state.catalogs.some(item => item.slug === slug)) {
-      throw new Error('Ese slug ya está en uso')
-    }
 
     const catalog = createCatalogRecord(ownerUid, slug, name)
     state.catalogs.push(catalog)
@@ -160,8 +178,10 @@ export const useLocalPlatform = () => {
     if (!catalog) {
       throw new Error('Catálogo no encontrado')
     }
-    catalog.orders.unshift(clone(order))
-    writeState(state)
+    if (!catalog.orders.some(item => item.id === order.id)) {
+      catalog.orders.unshift(clone(order))
+      writeState(state)
+    }
   }
 
   const appendReview = (catalogId: string, review: CatalogReview) => {
@@ -170,8 +190,10 @@ export const useLocalPlatform = () => {
     if (!catalog) {
       throw new Error('Catálogo no encontrado')
     }
-    catalog.reviews.unshift(clone(review))
-    writeState(state)
+    if (!catalog.reviews.some(item => item.id === review.id)) {
+      catalog.reviews.unshift(clone(review))
+      writeState(state)
+    }
   }
 
   return {

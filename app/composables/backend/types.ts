@@ -95,13 +95,14 @@ export type EnsureSuccess = (error: BackendErrorLike, fallbackMessage: string) =
 export type JsonRecord = Record<string, unknown>
 export type CatalogHeaderSnapshot = Omit<CatalogRecord, 'categories' | 'products' | 'reviews' | 'orders'>
 
-export interface CategoryRow extends JsonRecord {
+export interface CategoryRow {
   catalog_id?: string
   id: string
   name: string
   description?: string | null
   sort_order?: number | null
   is_active?: boolean | null
+  [key: string]: unknown
 }
 
 export interface ProductPromoTagRow extends JsonRecord {
@@ -119,7 +120,39 @@ export interface ProductTimerRow extends JsonRecord {
   carouselIntervalSeconds?: number | null
 }
 
-export interface ProductRow extends JsonRecord {
+export interface ProductVariantOptionRow {
+  id: string
+  group_id?: string | null
+  name?: string | null
+  price_delta?: number | string | null
+  is_required?: boolean | null
+  sort_order?: number | null
+}
+
+export interface ProductVariantGroupRow {
+  id: string
+  catalog_id?: string | null
+  product_id?: string | null
+  group_name?: string | null
+  selection_type?: 'single' | 'multiple' | null
+  required?: boolean | null
+  sort_order?: number | null
+  product_variant_options?: ProductVariantOptionRow[] | null
+}
+
+export interface InventoryItemRow {
+  id: string
+  catalog_id?: string | null
+  product_id?: string | null
+  variant_option_id?: string | null
+  sku?: string | null
+  quantity?: number | string | null
+  reserved?: number | string | null
+  low_stock_threshold?: number | string | null
+  track_stock?: boolean | null
+}
+
+export interface ProductRow {
   catalog_id?: string
   id: string
   category_id?: string | null
@@ -137,14 +170,16 @@ export interface ProductRow extends JsonRecord {
   tags?: string[] | null
   variants?: CatalogProduct['variants'] | null
   variant_groups?: CatalogVariantGroup[] | null
+  product_variant_groups?: ProductVariantGroupRow[] | null
   inventory_items?: InventoryItem[] | null
   product_rating?: number | null
   product_rating_count?: number | null
   reviews_approved_count?: number | null
   free_ship?: boolean | null
+  [key: string]: unknown
 }
 
-export interface ReviewRow extends JsonRecord {
+export interface ReviewRow {
   catalog_id?: string
   id: string
   product_id?: string | null
@@ -155,9 +190,10 @@ export interface ReviewRow extends JsonRecord {
   approved?: boolean | null
   admin_reply?: CatalogReview['adminReply'] | null
   created_at: string
+  [key: string]: unknown
 }
 
-export interface OrderRow extends JsonRecord {
+export interface OrderRow {
   catalog_id: string
   id: string
   channel?: CatalogOrder['channel'] | null
@@ -181,6 +217,7 @@ export interface OrderRow extends JsonRecord {
   status_history?: CatalogOrderStatusHistory[] | null
   events?: CatalogOrderEvent[] | null
   created_at: string
+  [key: string]: unknown
 }
 
 export interface CatalogPlanRow extends JsonRecord {
@@ -326,7 +363,9 @@ export interface MarketplaceFeedEntryRow extends JsonRecord {
 
 export interface CatalogAccessRow extends JsonRecord {
   catalogId?: string
+  catalog_id?: string
   isOwner?: boolean | null
+  is_owner?: boolean | null
   role?: TeamMemberRole | null
   permissions?: Partial<TeamMemberPermissions> | null
 }
@@ -353,7 +392,7 @@ export interface ReferralRow extends JsonRecord {
   referred_uid: string
   status: string
   created_at: string
-  user_profiles?: ReferralJoinedProfileRow[] | null
+  user_profiles?: ReferralJoinedProfileRow | ReferralJoinedProfileRow[] | null
 }
 
 export interface OrdersStatsRow extends JsonRecord {

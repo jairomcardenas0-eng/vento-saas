@@ -96,8 +96,8 @@
                       <label class="block">
                         <span>Requisito</span>
                         <select v-model="draft.checkoutNameReq">
-                          <option value="obligatorio">Obligatorio</option>
-                          <option value="opcional">Opcional</option>
+                          <option value="required">Obligatorio</option>
+                          <option value="optional">Opcional</option>
                         </select>
                       </label>
                     </div>
@@ -121,8 +121,8 @@
                       <label class="block">
                         <span>Requisito</span>
                         <select v-model="draft.checkoutAddressReq">
-                          <option value="obligatorio">Obligatorio</option>
-                          <option value="opcional">Opcional</option>
+                          <option value="required">Obligatorio</option>
+                          <option value="optional">Opcional</option>
                         </select>
                       </label>
                     </div>
@@ -146,8 +146,8 @@
                       <label class="block">
                         <span>Requisito</span>
                         <select v-model="draft.checkoutPaymentReq">
-                          <option value="obligatorio">Obligatorio</option>
-                          <option value="opcional">Opcional</option>
+                          <option value="required">Obligatorio</option>
+                          <option value="optional">Opcional</option>
                         </select>
                       </label>
                     </div>

@@ -1,233 +1,193 @@
 <template>
-  <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(253,224,71,0.2),_transparent_34%),linear-gradient(180deg,_#fffaf2_0%,_#fff_42%,_#fff7ed_100%)] text-stone-950 dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.16),_transparent_28%),linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#111827_100%)] dark:text-white">
+  <div class="min-h-screen bg-[radial-gradient(circle_at_top,_rgba(253,224,71,0.16),_transparent_30%),linear-gradient(180deg,_#fffaf2_0%,_#fff 44%,_#fff7ed_100%)] text-stone-950 dark:bg-[radial-gradient(circle_at_top,_rgba(14,165,233,0.12),_transparent_26%),linear-gradient(180deg,_#020617_0%,_#0f172a_55%,_#111827_100%)] dark:text-white">
     <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-10 pt-4">
-      <header class="sticky top-0 z-40 -mx-1 mb-4 px-1 pt-safe" style="will-change: transform;">
-        <div class="rounded-[28px] border border-white/65 bg-white/95 p-3 shadow-[0_20px_60px_-28px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-stone-950/95">
-          <div class="mb-4 flex items-center justify-between gap-3">
+      <header class="sticky top-0 z-40 -mx-1 mb-5 px-1 pt-safe">
+        <div class="header-card">
+          <div class="flex items-start justify-between gap-4">
             <div class="min-w-0">
-              <p class="truncate text-[10px] font-bold uppercase tracking-[0.4em] text-amber-600 dark:text-cyan-300">Vento SaaS</p>
-              <h1 class="truncate font-serif text-[1.75rem] leading-none">Negocios encendidos</h1>
+              <h1 class="text-[1.9rem] font-serif leading-none text-stone-950 dark:text-white">Pide facil en tu ciudad</h1>
+              <p class="mt-2 text-sm text-stone-500 dark:text-slate-400">{{ coverageLabel }}</p>
             </div>
             <button
-              class="flex h-11 w-11 shrink-0 items-center justify-center rounded-full border border-stone-200 bg-white text-lg active:scale-95 dark:border-white/10 dark:bg-white/10"
               type="button"
+              class="flex h-9 w-9 shrink-0 items-center justify-center rounded-full border border-stone-200 text-stone-600 transition active:scale-95 dark:border-white/10 dark:text-slate-300"
+              :title="colorMode.preference === 'dark' ? 'Cambiar a modo claro' : 'Cambiar a modo oscuro'"
               @click="toggleColorMode"
             >
-              {{ colorMode.preference === 'dark' ? '☀' : '☾' }}
+              <svg v-if="colorMode.preference === 'dark'" class="h-[18px] w-[18px] text-amber-500" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <circle cx="12" cy="12" r="5" />
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 1v2m0 18v2M4.22 4.22l1.42 1.42m12.72 12.72l1.42 1.42M1 12h2m18 0h2M4.22 19.78l1.42-1.42m12.72-12.72l1.42-1.42" />
+              </svg>
+              <svg v-else class="h-[18px] w-[18px] text-slate-600" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M21 12.79A9 9 0 1111.21 3 7 7 0 0021 12.79z" />
+              </svg>
             </button>
           </div>
 
-          <div class="flex items-center gap-2">
-            <button
-              type="button"
-              aria-label="Abrir destinos"
-              class="flex h-[46px] w-[46px] shrink-0 items-center justify-center rounded-full border border-stone-200/80 bg-stone-950 text-xl text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
-              @click="isGeoMenuOpen = true"
-            >
-              ≡
-            </button>
-            <button
-              type="button"
-              class="flex h-[46px] flex-1 min-w-0 items-center gap-3 rounded-full border border-stone-200/80 bg-stone-950 px-4 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] transition active:scale-95 dark:border-white/10 dark:bg-white dark:text-stone-950"
-              @click="openSearch"
-            >
-              <span class="shrink-0 text-base text-white/50 dark:text-stone-950/50">⌕</span>
-              <span class="block min-w-0 flex-1 truncate text-sm font-medium">
-                {{ searchQuery || 'Busca tu restaurante o plato preferido' }}
-              </span>
-            </button>
-          </div>
+          <button
+            type="button"
+            class="mt-4 flex h-[52px] w-full items-center gap-3 rounded-full bg-stone-950 px-4 text-left text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.08)] active:scale-[0.99] dark:bg-white dark:text-stone-950"
+            @click="openSearch"
+          >
+            <span class="text-base opacity-55">Search</span>
+            <span class="min-w-0 flex-1 truncate text-sm font-medium">
+              {{ activeQuery || 'Busca restaurantes, platos o categorias' }}
+            </span>
+          </button>
         </div>
       </header>
 
-      <section class="mb-5">
-        <div class="flex items-center justify-between">
+      <section class="mb-6">
+        <div class="flex items-end justify-between gap-4">
           <div>
-            <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Pulso del día</p>
-            <h2 class="text-2xl font-semibold leading-tight">{{ heroHeadline }}</h2>
+            <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Categorias</p>
+            <h2 class="mt-1 text-2xl font-semibold leading-tight">{{ activeQuery ? `Resultados para ${activeQuery}` : 'Explora lo que mas se vende' }}</h2>
           </div>
           <button
+            v-if="activeQuery"
             type="button"
-            class="rounded-full border border-stone-300 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.2em] active:scale-95 dark:border-white/15"
-            :class="{ 'animate-spin-slow opacity-60 pointer-events-none': isFetching }"
-            @click="forceRefresh"
+            class="rounded-full border border-stone-300 px-3 py-2 text-[11px] font-semibold uppercase tracking-[0.18em] text-stone-600 active:scale-95 dark:border-white/10 dark:text-slate-300"
+            @click="clearFilters"
           >
-            {{ isFetching ? '⟳' : 'Reset' }}
+            Limpiar
           </button>
         </div>
-        <p class="mt-2 max-w-[24rem] text-sm leading-6 text-stone-600 dark:text-slate-300">
-          Feed curado por ventas, visitas recientes y el rastro local de este teléfono.
+        <p class="mt-2 text-sm leading-6 text-stone-600 dark:text-slate-300">
+          Tiendas activas, productos con movimiento y categorias reales tomadas del marketplace.
         </p>
-        <div class="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
-          <span
-            v-for="tag in chips"
-            :key="tag"
-            class="shrink-0 rounded-full border border-stone-300/80 bg-white/80 px-3 py-2 text-xs font-medium text-stone-700 active:scale-95 dark:border-white/10 dark:bg-white/10 dark:text-slate-200"
-          >
-            {{ tag }}
-          </span>
-        </div>
 
-        <!-- Subtle refresh indicator — doesn't block the UI -->
-        <div
-          v-if="isFetching && hasContent"
-          class="mt-3 flex items-center gap-2 text-[11px] text-stone-400 dark:text-slate-500"
-        >
-          <span class="inline-block h-2 w-2 animate-ping rounded-full bg-amber-400 dark:bg-cyan-400" />
-          Actualizando feed…
+        <div class="mt-4 flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none]">
+          <button
+            v-for="chip in categoryChips"
+            :key="chip"
+            type="button"
+            class="shrink-0 rounded-full border px-4 py-2 text-xs font-semibold capitalize transition active:scale-95"
+            :class="chip === activeQuery
+              ? 'border-stone-950 bg-stone-950 text-white dark:border-white dark:bg-white dark:text-stone-950'
+              : 'border-stone-300 bg-white/90 text-stone-700 dark:border-white/10 dark:bg-white/5 dark:text-slate-200'"
+            @click="selectChip(chip)"
+          >
+            {{ chip }}
+          </button>
         </div>
       </section>
 
-      <!-- SKELETON: only shown when there is absolutely nothing cached -->
-      <section v-if="showSkeleton" class="space-y-6">
-        <div class="grid grid-cols-4 gap-3">
-          <div v-for="item in 4" :key="`orbit-skeleton-${item}`" class="animate-pulse">
-            <div class="aspect-square rounded-full bg-stone-200 dark:bg-slate-800" />
-            <div class="mx-auto mt-2 h-3 w-16 rounded-full bg-stone-200 dark:bg-slate-800" />
-          </div>
-        </div>
-        <div class="grid grid-cols-2 gap-3">
-          <div v-for="item in 4" :key="`viral-skeleton-${item}`" class="animate-pulse overflow-hidden rounded-[26px] border border-stone-200/80 dark:border-white/10">
-            <div class="aspect-square bg-stone-200 dark:bg-slate-800" />
-            <div class="space-y-2 p-3">
-              <div class="h-4 rounded-full bg-stone-200 dark:bg-slate-800" />
-              <div class="h-3 w-2/3 rounded-full bg-stone-200 dark:bg-slate-800" />
-            </div>
-          </div>
-        </div>
-        <div v-for="item in 3" :key="`feed-skeleton-${item}`" class="animate-pulse overflow-hidden rounded-[30px] border border-stone-200/80 dark:border-white/10">
-          <div class="aspect-[1.12] bg-stone-200 dark:bg-slate-800" />
+      <section v-if="errorMessage" class="mb-5 rounded-[24px] border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-700 dark:border-amber-900/40 dark:bg-amber-950/20 dark:text-amber-300">
+        {{ errorMessage }}
+      </section>
+
+      <section v-if="pending && !hasAnyContent" class="space-y-4">
+        <div v-for="item in 4" :key="`home-skeleton-${item}`" class="animate-pulse overflow-hidden rounded-[28px] border border-stone-200/80 bg-white/80 dark:border-white/10 dark:bg-white/5">
+          <div class="aspect-[1.18] bg-stone-200 dark:bg-slate-800" />
           <div class="space-y-3 p-4">
-            <div class="h-4 rounded-full bg-stone-200 dark:bg-slate-800" />
-            <div class="h-4 w-3/4 rounded-full bg-stone-200 dark:bg-slate-800" />
+            <div class="h-4 w-2/3 rounded-full bg-stone-200 dark:bg-slate-800" />
             <div class="h-3 w-1/2 rounded-full bg-stone-200 dark:bg-slate-800" />
           </div>
         </div>
       </section>
 
       <template v-else>
-        <section v-if="filteredTopStores.length" class="mb-7">
+        <section v-if="topStores.length" class="mb-7">
           <div class="mb-3 flex items-end justify-between">
             <div>
-              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Órbitas</p>
-              <h2 class="text-xl font-semibold">Tiendas encendidas</h2>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Tiendas</p>
+              <h2 class="text-xl font-semibold">Tiendas destacadas</h2>
             </div>
-            <span class="text-xs text-stone-500 dark:text-slate-400">{{ filteredTopStores.length }} activas</span>
+            <span class="text-xs text-stone-500 dark:text-slate-400">{{ topStores.length }} activas</span>
           </div>
-          <div class="flex snap-x gap-3 overflow-x-auto pb-2 pr-4 [-ms-overflow-style:none] [scrollbar-width:none]">
+
+          <div class="flex gap-3 overflow-x-auto pb-2 [-ms-overflow-style:none] [scrollbar-width:none]">
             <NuxtLink
-              v-for="store in filteredTopStores"
+              v-for="store in topStores"
               :key="store.id"
               :to="`/b/${store.slug}`"
-              class="group w-[92px] shrink-0 snap-start active:scale-95"
-              @click="trackStoreTap(store)"
+              class="w-[146px] shrink-0 overflow-hidden rounded-[24px] border border-white/70 bg-white/92 p-2.5 shadow-[0_18px_40px_-26px_rgba(15,23,42,0.32)] transition-transform active:scale-[0.99] dark:border-white/10 dark:bg-slate-900/75"
             >
-              <div class="relative aspect-square overflow-hidden rounded-full border border-white/70 shadow-[0_18px_44px_-24px_rgba(15,23,42,0.65)] dark:border-white/10">
-                <img :src="store.logoUrl || store.coverImage" :alt="store.businessName" class="h-full w-full object-cover transition duration-300 group-active:scale-95" loading="lazy" decoding="async">
-                <span class="absolute bottom-1 right-1 flex h-6 w-6 items-center justify-center rounded-full bg-sky-500 text-[11px] text-white shadow-lg">✓</span>
+              <div class="flex flex-col text-center">
+                <div class="relative mb-2 flex aspect-square w-full items-center justify-center overflow-hidden rounded-[18px] border border-white/70 bg-stone-100 shadow-[0_12px_22px_-18px_rgba(15,23,42,0.42)] dark:border-white/10 dark:bg-slate-900">
+                  <img :src="store.logoUrl || store.coverImage" :alt="store.businessName" class="h-full w-full object-cover" loading="lazy" decoding="async">
+                </div>
+
+                <p class="line-clamp-1 w-full text-[12px] font-semibold leading-tight text-stone-900 dark:text-slate-100">{{ store.businessName }}</p>
+                <p class="mt-0.5 line-clamp-1 w-full text-[10px] leading-4 text-stone-500 dark:text-slate-400">
+                  {{ store.city || 'Disponible en marketplace' }}
+                </p>
               </div>
-              <p class="mt-2 truncate text-center text-[12px] font-semibold">{{ store.businessName }}</p>
-              <p class="truncate text-center text-[10px] text-stone-500 dark:text-slate-400">{{ store.city || store.businessTypes[0] }}</p>
+
+              <div class="mt-2 flex items-center justify-between gap-2 border-t border-stone-100 pt-2.5 dark:border-white/10">
+                <div class="min-w-0">
+                  <p class="truncate text-[10px] font-medium text-stone-800 dark:text-slate-100">{{ store.businessTypes.join(' · ') || 'Tienda local' }}</p>
+                  <p class="mt-0.5 text-[10px] text-stone-500 dark:text-slate-400">{{ store.activeProducts }} productos</p>
+                </div>
+                <span class="shrink-0 rounded-full bg-stone-950 px-2.5 py-1.5 text-[10px] font-semibold text-white dark:bg-white dark:text-slate-950">Ver</span>
+              </div>
             </NuxtLink>
           </div>
         </section>
 
-        <section v-if="filteredViralProducts.length" class="mb-7">
+        <section v-if="featuredProducts.length" class="mb-7">
           <div class="mb-3 flex items-end justify-between">
             <div>
-              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Mosaicos</p>
-              <h2 class="text-xl font-semibold">Virales ahora</h2>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Productos</p>
+              <h2 class="text-xl font-semibold">Populares hoy</h2>
             </div>
-            <span class="rounded-full bg-stone-950 px-3 py-1 text-[11px] font-semibold text-white dark:bg-orange-500">🔥 Hot</span>
+            <span class="text-xs text-stone-500 dark:text-slate-400">{{ featuredProducts.length }} visibles</span>
           </div>
+
           <div class="grid grid-cols-2 gap-3">
             <NuxtLink
-              v-for="product in filteredViralProducts"
-              :key="`${product.catalogId}-${product.productId}`"
+              v-for="product in featuredProducts"
+              :key="`${product.catalogSlug}-${product.productId}`"
               :to="`/b/${product.catalogSlug}`"
-              class="overflow-hidden rounded-[28px] border border-white/70 bg-stone-950 text-white shadow-[0_20px_60px_-32px_rgba(15,23,42,0.9)] active:scale-95 dark:border-white/10 dark:bg-slate-900"
-              @click="trackProductTap(product)"
+              class="overflow-hidden rounded-[26px] border border-white/70 bg-white/92 shadow-[0_20px_48px_-30px_rgba(15,23,42,0.34)] active:scale-[0.99] dark:border-white/10 dark:bg-slate-900/75"
             >
-              <div class="relative aspect-square">
+              <div class="aspect-square overflow-hidden bg-stone-100 dark:bg-slate-900">
                 <img :src="product.imageUrl" :alt="product.productName" class="h-full w-full object-cover" loading="lazy" decoding="async">
-                <div class="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black via-black/60 to-transparent px-3 pb-3 pt-8">
-                  <p class="line-clamp-2 text-sm font-semibold">{{ product.productName }}</p>
-                  <p class="mt-1 text-[11px] text-white/70">{{ product.businessName }}</p>
-                </div>
-                <span class="absolute left-3 top-3 rounded-full bg-orange-500 px-2.5 py-1 text-[10px] font-semibold text-white">🔥 {{ product.orderCount }}</span>
               </div>
-            </NuxtLink>
-          </div>
-        </section>
-
-        <section v-if="filteredHubs.length" class="mb-7">
-          <div class="mb-3">
-            <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Destinos</p>
-            <h2 class="text-xl font-semibold">Zonas con tracción</h2>
-          </div>
-          <div class="space-y-3">
-            <NuxtLink
-              v-for="(hub, index) in filteredHubs"
-              :key="hub.regionKey"
-              :to="hub.sampleStoreSlug ? `/b/${hub.sampleStoreSlug}` : '/catalogos'"
-              class="relative block overflow-hidden rounded-[30px] active:scale-95"
-              @click="trackHubTap(hub)"
-            >
-              <div class="absolute inset-0">
-                <img
-                  :src="hub.sampleImageUrl"
-                  :alt="hub.regionLabel"
-                  class="h-full w-full scale-110 object-cover"
-                  :loading="index === 0 ? 'eager' : 'lazy'"
-                  decoding="async"
-                >
-              </div>
-              <div class="relative overflow-hidden rounded-[30px] border border-white/70 bg-gradient-to-r from-stone-950/85 via-stone-950/50 to-stone-950/20 px-4 py-5 text-white dark:border-white/10 dark:from-slate-950/90 dark:via-slate-900/55">
-                <p class="text-[11px] uppercase tracking-[0.3em] text-cyan-200">{{ hub.city }}</p>
-                <h3 class="mt-2 text-2xl font-semibold leading-none">{{ hub.regionLabel }}</h3>
-                <div class="mt-4 flex items-center gap-2 text-[11px] text-white/80">
-                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.storeCount }} tiendas</span>
-                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.activeProducts }} productos</span>
-                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.recentVisits }} vistas</span>
+              <div class="space-y-2 p-3">
+                <p class="line-clamp-2 text-sm font-semibold text-stone-900 dark:text-slate-100">{{ product.productName }}</p>
+                <p class="truncate text-xs text-stone-500 dark:text-slate-400">{{ product.businessName }}</p>
+                <div class="flex items-end justify-between gap-2">
+                  <strong class="text-base text-stone-950 dark:text-white">{{ money(product.promoPrice ?? product.price) }}</strong>
+                  <span class="text-[11px] text-stone-500 dark:text-slate-400">{{ product.orderCount }} ventas</span>
                 </div>
               </div>
             </NuxtLink>
           </div>
         </section>
 
-        <section>
+        <section v-if="feedItems.length" class="mb-7">
           <div class="mb-3 flex items-end justify-between">
             <div>
-              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Feed For You</p>
-              <h2 class="text-xl font-semibold">Recomendado para este teléfono</h2>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Recomendados</p>
+              <h2 class="text-xl font-semibold">Para ti</h2>
             </div>
-            <span class="text-xs text-stone-500 dark:text-slate-400">{{ filteredFeed.length }} hallazgos</span>
+            <span class="text-xs text-stone-500 dark:text-slate-400">{{ feedItems.length }} hallazgos</span>
           </div>
 
-          <div v-if="filteredFeed.length" class="space-y-4">
+          <div class="space-y-4">
             <NuxtLink
-              v-for="item in filteredFeed"
-              :key="`${item.catalogId}-${item.productId}`"
+              v-for="item in feedItems"
+              :key="`${item.slug}-${item.productId}`"
               :to="`/b/${item.slug}`"
-              class="block overflow-hidden rounded-[32px] border border-white/70 bg-white/90 shadow-[0_24px_80px_-36px_rgba(15,23,42,0.65)] backdrop-blur active:scale-95 dark:border-white/10 dark:bg-slate-900/80"
-              @click="trackFeedTap(item)"
+              class="block overflow-hidden rounded-[30px] border border-white/70 bg-white/92 shadow-[0_22px_60px_-34px_rgba(15,23,42,0.42)] active:scale-[0.995] dark:border-white/10 dark:bg-slate-900/78"
             >
-              <div class="relative aspect-[1.1] overflow-hidden">
-                <img :src="item.coverImage || item.productImageUrl" :alt="item.businessName" class="h-full w-full object-cover" loading="lazy" decoding="async">
-                <div class="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+              <div class="relative aspect-[1.16] overflow-hidden bg-stone-100 dark:bg-slate-950">
+                <img :src="item.productImageUrl || item.coverImage" :alt="item.productName" class="h-full w-full object-cover" loading="lazy" decoding="async">
+                <div class="absolute inset-0 bg-gradient-to-t from-black/75 via-black/25 to-transparent" />
                 <div class="absolute inset-x-0 bottom-0 p-4 text-white">
-                  <div class="mb-2 flex items-center gap-2">
-                    <img :src="item.logoUrl" :alt="item.businessName" class="h-10 w-10 rounded-full border border-white/40 object-cover" loading="lazy" decoding="async">
-                    <div>
-                      <p class="text-sm font-semibold">{{ item.businessName }}</p>
-                      <p class="text-[11px] text-white/70">{{ item.city }}{{ item.stateCode ? `, ${item.stateCode}` : '' }}</p>
+                  <div class="mb-2 flex items-center gap-3">
+                    <img :src="item.logoUrl || item.coverImage" :alt="item.businessName" class="h-10 w-10 rounded-full border border-white/35 object-cover" loading="lazy" decoding="async">
+                    <div class="min-w-0">
+                      <p class="truncate text-sm font-semibold">{{ item.businessName }}</p>
+                      <p class="truncate text-[11px] text-white/75">{{ item.businessTypes.join(' · ') || 'Negocio local' }}</p>
                     </div>
                   </div>
                   <p class="max-w-[85%] text-2xl font-semibold leading-tight">{{ item.productName }}</p>
                 </div>
               </div>
               <div class="space-y-3 p-4">
-                <p class="line-clamp-2 text-sm leading-6 text-stone-600 dark:text-slate-300">{{ item.productDescription || item.tagline }}</p>
+                <p class="line-clamp-2 text-sm leading-6 text-stone-600 dark:text-slate-300">{{ item.productDescription || item.tagline || 'Disponible para pedir ahora mismo.' }}</p>
                 <div class="flex flex-wrap gap-2">
                   <span
                     v-for="tag in item.matchedTags.slice(0, 3)"
@@ -239,7 +199,7 @@
                 </div>
                 <div class="flex items-end justify-between gap-3">
                   <div>
-                    <p class="text-[11px] uppercase tracking-[0.24em] text-stone-400 dark:text-slate-500">Desde</p>
+                    <p class="text-[11px] uppercase tracking-[0.22em] text-stone-400 dark:text-slate-500">Desde</p>
                     <p class="text-2xl font-semibold">{{ money(item.promoPrice ?? item.price) }}</p>
                   </div>
                   <div class="text-right text-[11px] text-stone-500 dark:text-slate-400">
@@ -250,18 +210,46 @@
               </div>
             </NuxtLink>
           </div>
+        </section>
 
-          <div v-else class="rounded-[30px] border border-dashed border-stone-300 bg-white/70 px-5 py-10 text-center text-sm text-stone-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
-            No hubo coincidencias para "{{ searchQuery }}". Borra el término o toca una búsqueda reciente.
+        <section v-if="hubs.length" class="mb-8">
+          <div class="mb-3">
+            <p class="text-[11px] uppercase tracking-[0.28em] text-stone-500 dark:text-slate-400">Zonas</p>
+            <h2 class="text-xl font-semibold">Cerca de ti</h2>
+          </div>
+
+          <div class="space-y-3">
+            <NuxtLink
+              v-for="hub in hubs"
+              :key="hub.regionKey"
+              :to="hub.sampleStoreSlug ? `/b/${hub.sampleStoreSlug}` : '/catalogos'"
+              class="relative block overflow-hidden rounded-[28px] border border-white/70 bg-stone-950 text-white shadow-[0_20px_60px_-34px_rgba(15,23,42,0.68)] active:scale-[0.99] dark:border-white/10"
+            >
+              <div class="absolute inset-0">
+                <img :src="hub.sampleImageUrl" :alt="hub.regionLabel" class="h-full w-full object-cover opacity-40" loading="lazy" decoding="async">
+              </div>
+              <div class="relative px-4 py-5">
+                <p class="text-[11px] uppercase tracking-[0.3em] text-cyan-200">{{ hub.city || 'Zona activa' }}</p>
+                <h3 class="mt-2 text-2xl font-semibold">{{ hub.regionLabel }}</h3>
+                <div class="mt-4 flex flex-wrap gap-2 text-[11px] text-white/80">
+                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.storeCount }} tiendas</span>
+                  <span class="rounded-full bg-white/12 px-3 py-1">{{ hub.activeProducts }} productos</span>
+                </div>
+              </div>
+            </NuxtLink>
           </div>
         </section>
 
-        <footer class="mt-8 overflow-hidden rounded-[36px] border border-stone-900/10 bg-[linear-gradient(180deg,_#1c1917_0%,_#0f172a_100%)] text-white shadow-[0_32px_90px_-40px_rgba(2,6,23,0.95)]">
-          <div class="border-b border-white/10 px-5 py-6">
-            <p class="text-[11px] uppercase tracking-[0.34em] text-cyan-300">Lanza tu propio Vento</p>
-            <h2 class="mt-3 text-3xl font-semibold leading-tight">Digitaliza tu negocio y comienza a vender en minutos.</h2>
-            <p class="mt-3 max-w-[28rem] text-sm leading-6 text-white/70">
-              Activa tu escaparate móvil, publica productos con imagen y convierte visitas del marketplace en pedidos reales.
+        <section v-if="!hasAnyContent" class="rounded-[28px] border border-dashed border-stone-300 bg-white/70 px-5 py-10 text-center text-sm text-stone-500 dark:border-white/10 dark:bg-white/5 dark:text-slate-400">
+          No encontramos resultados con los filtros actuales.
+        </section>
+
+        <footer class="mt-auto overflow-hidden rounded-[34px] border border-stone-900/10 bg-[linear-gradient(180deg,_#1c1917_0%,_#0f172a_100%)] text-white shadow-[0_32px_90px_-40px_rgba(2,6,23,0.95)]">
+          <div class="px-5 py-6">
+            <p class="text-[11px] uppercase tracking-[0.34em] text-cyan-300">Para comercios</p>
+            <h2 class="mt-3 text-3xl font-semibold leading-tight">Digitaliza tu negocio y empieza a vender desde una sola app.</h2>
+            <p class="mt-3 text-sm leading-6 text-white/70">
+              Crea tu catalogo, publica productos con imagen y recibe pedidos en tiempo real.
             </p>
             <div class="mt-5 flex gap-3">
               <NuxtLink to="/register" class="flex-1 rounded-full bg-white px-4 py-3 text-center text-sm font-semibold text-stone-950 active:scale-95">
@@ -272,37 +260,10 @@
               </NuxtLink>
             </div>
           </div>
-
-          <div class="grid grid-cols-2 gap-6 px-5 py-6">
-            <div>
-              <p class="text-[11px] uppercase tracking-[0.28em] text-white/45">Comunidad</p>
-              <div class="mt-4 space-y-3">
-                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Necesitas Ayuda')">¿Necesitas Ayuda?</button>
-                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('FAQ')">FAQ</button>
-                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Blog')">Blog</button>
-              </div>
-            </div>
-            <div>
-              <p class="text-[11px] uppercase tracking-[0.28em] text-white/45">Legal</p>
-              <div class="mt-4 space-y-3">
-                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Términos')">Términos</button>
-                <button type="button" class="block text-left text-sm text-white/78 active:scale-95" @click="showComingSoon('Privacidad')">Privacidad</button>
-              </div>
-            </div>
-          </div>
-
-          <div class="flex items-center justify-between border-t border-white/10 px-5 py-4 text-[11px] text-white/40">
-            <div class="flex items-center gap-2">
-              <p>© {{ currentYear }} Vento Platform</p>
-              <span class="rounded-full bg-white/10 px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider text-white/60">v1.3</span>
-            </div>
-            <p>Smart commerce ecosystem</p>
-          </div>
         </footer>
       </template>
     </div>
 
-    <!-- Search overlay -->
     <Transition
       enter-active-class="duration-300 ease-out"
       enter-from-class="opacity-0"
@@ -315,33 +276,33 @@
         <div class="mx-auto flex min-h-screen w-full max-w-[430px] flex-col px-4 pb-6 pt-6">
           <div class="rounded-[32px] border border-white/10 bg-stone-950 p-4 text-white shadow-[0_28px_90px_-30px_rgba(0,0,0,0.75)]">
             <div class="mb-4 flex items-center gap-3">
-              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-lg">⌕</div>
+              <div class="flex h-12 w-12 items-center justify-center rounded-full bg-white/10 text-xs font-semibold uppercase tracking-[0.18em]">Buscar</div>
               <input
                 ref="searchInput"
                 v-model="searchDraft"
                 type="search"
                 inputmode="search"
-                placeholder="Busca tu restaurante o plato preferido"
+                placeholder="Escribe una tienda, plato o categoria"
                 class="h-12 w-full rounded-full border border-white/10 bg-white/10 px-4 text-sm outline-none placeholder:text-white/40"
                 @keydown.enter.prevent="commitSearch(searchDraft)"
               >
             </div>
 
             <div class="mb-4 flex items-center justify-between">
-              <p class="text-[11px] uppercase tracking-[0.28em] text-white/50">Top 5 recientes</p>
+              <p class="text-[11px] uppercase tracking-[0.28em] text-white/50">Sugerencias</p>
               <button type="button" class="text-xs text-white/70 active:scale-95" @click="closeSearch">Cerrar</button>
             </div>
 
             <div class="space-y-2">
               <button
-                v-for="term in recentSearches"
-                :key="term"
+                v-for="chip in categoryChips.slice(0, 6)"
+                :key="`search-${chip}`"
                 type="button"
                 class="flex w-full items-center justify-between rounded-[22px] border border-white/10 bg-white/5 px-4 py-3 text-left active:scale-95"
-                @click="commitSearch(term)"
+                @click="commitSearch(chip)"
               >
-                <span class="truncate text-sm">{{ term }}</span>
-                <span class="text-white/40">↗</span>
+                <span class="truncate text-sm capitalize">{{ chip }}</span>
+                <span class="text-white/40">Ir</span>
               </button>
               <button
                 v-if="searchDraft.trim()"
@@ -356,395 +317,149 @@
         </div>
       </div>
     </Transition>
-
-    <!-- Geo menu -->
-    <Transition
-      enter-active-class="duration-300 ease-out"
-      enter-from-class="opacity-0"
-      enter-to-class="opacity-100"
-      leave-active-class="duration-200 ease-in"
-      leave-from-class="opacity-100"
-      leave-to-class="opacity-0"
-    >
-      <div v-if="isGeoMenuOpen" class="fixed inset-0 z-[60] bg-stone-950/55 backdrop-blur-sm" @click.self="isGeoMenuOpen = false">
-        <div class="h-full w-full max-w-[430px]">
-          <aside
-            class="h-full w-[88%] max-w-[360px] border-r border-white/10 bg-white/80 px-4 pb-6 pt-5 shadow-[0_24px_90px_-28px_rgba(15,23,42,0.75)] backdrop-blur-xl transition-transform duration-300 dark:bg-stone-950/90"
-            :class="isGeoMenuOpen ? 'translate-x-0' : '-translate-x-full'"
-          >
-            <div class="mb-4 flex items-center justify-between">
-              <div>
-                <p class="text-[11px] uppercase tracking-[0.3em] text-stone-500 dark:text-slate-400">Geo Menu</p>
-                <h2 class="mt-1 text-2xl font-semibold">Explora por región</h2>
-              </div>
-              <button
-                type="button"
-                class="flex h-11 w-11 items-center justify-center rounded-full border border-stone-300 bg-white active:scale-95 dark:border-white/10 dark:bg-white/10"
-                @click="isGeoMenuOpen = false"
-              >
-                ×
-              </button>
-            </div>
-
-            <div class="rounded-[26px] border border-stone-200/80 bg-white/70 p-3 text-sm text-stone-600 dark:border-white/10 dark:bg-white/5 dark:text-slate-300">
-              Toca un municipio para disparar la búsqueda y filtrar todo el feed al instante.
-            </div>
-
-            <div class="mt-4 space-y-3 overflow-y-auto pb-6">
-              <details
-                v-for="country in geoMenuTree"
-                :key="country.countryCode"
-                class="group rounded-[24px] border border-stone-200/80 bg-white/65 p-2 dark:border-white/10 dark:bg-white/5"
-              >
-                <summary class="flex cursor-pointer list-none items-center justify-between rounded-[18px] px-3 py-3 text-sm font-semibold marker:content-none">
-                  <div>
-                    <p>{{ country.countryLabel }}</p>
-                    <p class="mt-1 text-[11px] font-medium text-stone-500 dark:text-slate-400">{{ country.storeCount }} tiendas activas</p>
-                  </div>
-                  <span class="text-stone-400 transition group-open:rotate-90 dark:text-slate-500">›</span>
-                </summary>
-
-                <div class="mt-2 space-y-2 px-1 pb-1">
-                  <details
-                    v-for="state in country.states"
-                    :key="`${country.countryCode}-${state.stateCode}`"
-                    class="group/state rounded-[20px] border border-stone-200/80 bg-stone-50/80 p-2 dark:border-white/10 dark:bg-stone-900/40"
-                  >
-                    <summary class="flex cursor-pointer list-none items-center justify-between rounded-[16px] px-3 py-3 text-sm font-semibold marker:content-none">
-                      <div>
-                        <p>{{ state.stateLabel }}</p>
-                        <p class="mt-1 text-[11px] font-medium text-stone-500 dark:text-slate-400">{{ state.storeCount }} tiendas</p>
-                      </div>
-                      <span class="text-stone-400 transition group-open/state:rotate-90 dark:text-slate-500">›</span>
-                    </summary>
-
-                    <div class="mt-2 flex flex-col gap-2 px-1 pb-1">
-                      <button
-                        v-for="city in state.cities"
-                        :key="city.regionKey"
-                        type="button"
-                        class="flex items-center justify-between rounded-[16px] border border-stone-200/80 bg-white px-3 py-3 text-left text-sm font-medium active:scale-95 dark:border-white/10 dark:bg-white/5"
-                        @click="selectGeoCity(city.city)"
-                      >
-                        <span>{{ city.city }}</span>
-                        <span class="rounded-full bg-stone-950 px-2 py-1 text-[10px] font-semibold text-white dark:bg-cyan-400 dark:text-stone-950">
-                          {{ city.storeCount }}
-                        </span>
-                      </button>
-                    </div>
-                  </details>
-                </div>
-              </details>
-            </div>
-          </aside>
-        </div>
-      </div>
-    </Transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import type { MarketplaceFeedEntry, MarketplaceHub, MarketplaceLandingPayload, MarketplaceProductCard, MarketplaceStoreCard } from '~/types/catalog'
+import type {
+  MarketplaceFeedEntry,
+  MarketplaceHub,
+  MarketplaceLandingPayload,
+  MarketplaceProductCard,
+  MarketplaceStoreCard,
+} from '~/types/catalog'
 
 definePageMeta({
   pageTransition: false,
 })
 
-type GeoStateNode = {
-  stateCode: string
-  stateLabel: string
-  storeCount: number
-  cities: MarketplaceHub[]
-}
-
-type GeoCountryNode = {
-  countryCode: string
-  countryLabel: string
-  storeCount: number
-  states: GeoStateNode[]
-}
-
-const trackerEngine = useAlgorithmicTracker()
+const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
+const isSearchOpen = ref(false)
+const searchDraft = ref('')
+const searchQuery = ref('')
 const colorMode = useColorMode()
-const marketplaceCache = useMarketplaceCache()
 
-const emptyLandingPayload = (): MarketplaceLandingPayload => ({
+const toggleColorMode = () => {
+  colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
+}
+
+const emptyPayload = (): MarketplaceLandingPayload => ({
   topStores: [],
   viralProducts: [],
   hubs: [],
   forYou: [],
 })
 
-// --- STATE ---
-/**
- * isFetching = a network request is in-flight RIGHT NOW.
- * Different from "pending": the UI stays visible with old data while fetching.
- */
-const isFetching = ref(false)
-const fetchError = ref('')
-const isSearchOpen = ref(false)
-const isGeoMenuOpen = ref(false)
-const searchQuery = ref('')
-const searchDraft = ref('')
-const searchResults = ref<MarketplaceLandingPayload | null>(null)
-const searchInput = useTemplateRef<HTMLInputElement>('searchInput')
+const activeQuery = computed(() => searchQuery.value.trim().toLowerCase())
 
-// NOTE: hydrateFromStorage is called in onMounted (below) so it only runs
-// on the client. Running it synchronously during setup caused hydration
-// mismatches because the server rendered empty lists while the client
-// immediately painted cached data — the two DOMs didn't match.
-
-// Convenient aliases for the template
-const activePayload = computed<MarketplaceLandingPayload>(() => {
-  if (searchQuery.value.trim()) {
-    return searchResults.value || emptyLandingPayload()
-  }
-
-  return {
-    topStores: marketplaceCache.cache.value.topStores,
-    viralProducts: marketplaceCache.cache.value.viralProducts,
-    hubs: marketplaceCache.cache.value.hubs,
-    forYou: marketplaceCache.cache.value.forYou,
-  }
-})
-
-const topStores = computed(() => activePayload.value.topStores)
-const viralProducts = computed(() => activePayload.value.viralProducts)
-const hubs = computed(() => activePayload.value.hubs)
-const forYou = computed(() => activePayload.value.forYou)
-const hasContent = computed(() =>
-  topStores.value.length > 0
-  || viralProducts.value.length > 0
-  || hubs.value.length > 0
-  || forYou.value.length > 0,
+const {
+  data: landing,
+  pending,
+  error,
+  refresh,
+} = await useAsyncData(
+  'marketplace-home',
+  () => $fetch<MarketplaceLandingPayload>('/api/marketplace/landing', {
+    query: activeQuery.value ? { q: activeQuery.value } : undefined,
+  }),
+  {
+    default: emptyPayload,
+    watch: [activeQuery],
+  },
 )
 
-// Only show the full skeleton when there is literally nothing to display
-const showSkeleton = computed(() => isFetching.value && !hasContent.value)
+const reloadLanding = () => refresh()
 
-const preferredTags = trackerEngine.preferredTags
-const recentSearches = trackerEngine.recentSearches
-// Use a ref so the server always renders the same value as the client.
-// Initializing with new Date() during SSR can mismatch the client's value
-// if the year rolls over between server render and client hydration.
-const currentYear = ref<number | null>(null)
-
-const chips = computed(() => {
-  const base = preferredTags.value.length ? preferredTags.value : ['delivery', 'viral', 'nuevo', 'cerca']
-  return base.slice(0, 6)
-})
-
-// --- SEARCH FILTERS ---
-const searchNeedle = computed(() => searchQuery.value.trim().toLowerCase())
-
-const matchText = (fields: Array<string | number | null | undefined>) => {
-  if (!searchNeedle.value) {
-    return true
+const payload = computed(() => landing.value || emptyPayload())
+const topStores = computed<MarketplaceStoreCard[]>(() => payload.value.topStores || [])
+const viralProducts = computed<MarketplaceProductCard[]>(() => payload.value.viralProducts || [])
+const hubs = computed<MarketplaceHub[]>(() => payload.value.hubs || [])
+const feedItems = computed<MarketplaceFeedEntry[]>(() => payload.value.forYou || [])
+const featuredProducts = computed(() => {
+  if (viralProducts.value.length) {
+    return viralProducts.value.slice(0, 6)
   }
 
-  return fields
-    .map(value => String(value || '').toLowerCase())
-    .some(value => value.includes(searchNeedle.value))
-}
+  return feedItems.value.slice(0, 6).map(item => ({
+    catalogId: item.catalogId,
+    catalogSlug: item.slug,
+    productId: item.productId,
+    productName: item.productName,
+    description: item.productDescription,
+    imageUrl: item.productImageUrl || item.coverImage,
+    price: item.price,
+    promoPrice: item.promoPrice,
+    orderCount: item.orderCount,
+    rating: item.productRating,
+    tags: item.matchedTags,
+    businessName: item.businessName,
+    businessType: item.businessTypes[0] || '',
+    logoUrl: item.logoUrl,
+    city: item.city,
+    score: item.relevanceScore,
+  }))
+})
 
-const filteredTopStores = computed(() => topStores.value.filter(store => matchText([
-  store.businessName,
-  store.tagline,
-  store.city,
-  store.stateCode,
-  ...store.businessTypes,
-])))
+const hasAnyContent = computed(() =>
+  topStores.value.length > 0
+  || featuredProducts.value.length > 0
+  || feedItems.value.length > 0
+  || hubs.value.length > 0,
+)
 
-const filteredViralProducts = computed(() => viralProducts.value.filter(product => matchText([
-  product.productName,
-  product.description,
-  product.businessName,
-  product.businessType,
-  product.city,
-  ...product.tags,
-])))
+const coverageLabel = computed(() => {
+  const firstHub = hubs.value[0]
+  if (!firstHub) {
+    return 'Marketplace activo con tiendas disponibles'
+  }
 
-const filteredHubs = computed(() => hubs.value.filter(hub => matchText([
-  hub.regionLabel,
-  hub.city,
-  hub.stateCode,
-  hub.countryCode,
-])))
+  return `${firstHub.storeCount} tiendas activas en ${firstHub.city || firstHub.regionLabel}`
+})
 
-const filteredFeed = computed(() => forYou.value.filter(item => matchText([
-  item.businessName,
-  item.tagline,
-  item.city,
-  item.stateCode,
-  item.productName,
-  item.productDescription,
-  ...item.businessTypes,
-  ...item.matchedTags,
-])))
+const categoryChips = computed(() => {
+  const values = new Set<string>()
 
-// --- GEO MENU TREE ---
-const geoMenuTree = computed<GeoCountryNode[]>(() => {
-  const countryMap = new Map<string, {
-    countryCode: string
-    countryLabel: string
-    storeCount: number
-    statesMap: Map<string, {
-      stateCode: string
-      stateLabel: string
-      storeCount: number
-      cities: MarketplaceHub[]
-    }>
-  }>()
-
-  hubs.value.forEach((hub) => {
-    if (!hub.city || hub.storeCount <= 0) {
-      return
-    }
-
-    const countryCode = (hub.countryCode || 'XX').trim().toUpperCase()
-    const stateCode = (hub.stateCode || 'NA').trim().toUpperCase()
-
-    if (!countryMap.has(countryCode)) {
-      countryMap.set(countryCode, {
-        countryCode,
-        countryLabel: countryCode,
-        storeCount: 0,
-        statesMap: new Map(),
-      })
-    }
-
-    const country = countryMap.get(countryCode)!
-    country.storeCount += hub.storeCount
-
-    if (!country.statesMap.has(stateCode)) {
-      country.statesMap.set(stateCode, {
-        stateCode,
-        stateLabel: stateCode,
-        storeCount: 0,
-        cities: [],
-      })
-    }
-
-    const state = country.statesMap.get(stateCode)!
-    state.storeCount += hub.storeCount
-    state.cities.push(hub)
+  topStores.value.forEach(store => {
+    store.businessTypes.forEach(type => {
+      const cleaned = String(type || '').trim().toLowerCase()
+      if (cleaned) values.add(cleaned)
+    })
   })
 
-  return [...countryMap.values()]
-    .map(country => ({
-      countryCode: country.countryCode,
-      countryLabel: country.countryLabel,
-      storeCount: country.storeCount,
-      states: [...country.statesMap.values()]
-        .map(state => ({
-          stateCode: state.stateCode,
-          stateLabel: state.stateLabel,
-          storeCount: state.storeCount,
-          cities: [...state.cities].sort((left, right) => right.storeCount - left.storeCount || left.city.localeCompare(right.city)),
-        }))
-        .sort((left, right) => right.storeCount - left.storeCount || left.stateLabel.localeCompare(right.stateLabel)),
-    }))
-    .sort((left, right) => right.storeCount - left.storeCount || left.countryLabel.localeCompare(right.countryLabel))
-})
-
-// --- HEADLINE ---
-const heroHeadline = computed(() => {
-  if (fetchError.value) {
-    return 'Carga parcial disponible'
-  }
-
-  if (searchQuery.value) {
-    return `Explorando "${searchQuery.value.trim()}"`
-  }
-
-  if (preferredTags.value[0]) {
-    return `Afinado para ${preferredTags.value[0]}`
-  }
-
-  return 'Elige desde el feed premium'
-})
-
-const money = (value: number) => new Intl.NumberFormat('es-MX', {
-  style: 'currency',
-  currency: 'MXN',
-  maximumFractionDigits: 0,
-}).format(value || 0)
-
-// --- DATA FETCHING (stale-while-revalidate) ---
-const trackerSignature = computed(() => preferredTags.value.join('|'))
-
-/**
- * Core fetch function.
- *
- * Strategy: stale-while-revalidate
- *  1. If cache exists → paint it immediately (0 wait).
- *  2. If cache is stale OR signature changed → fetch in background, update when done.
- *  3. If cache expired OR forced → show spinner overlay (not full skeleton).
- *  4. Never blocks the UI unnecessarily.
- */
-const refreshLanding = async (force = false) => {
-  const activeSearch = searchQuery.value.trim()
-  const nextSignature = trackerSignature.value
-  const signatureChanged = marketplaceCache.cache.value.signature !== nextSignature
-
-  if (activeSearch) {
-    isFetching.value = true
-    fetchError.value = ''
-
-    try {
-      searchResults.value = await $fetch<MarketplaceLandingPayload>('/api/marketplace/landing', {
-        query: {
-          q: activeSearch,
-          tags: preferredTags.value.join(','),
-        },
-      })
-    } catch (error: unknown) {
-      fetchError.value = error instanceof Error ? error.message : 'No se pudo buscar en el marketplace'
-      searchResults.value = emptyLandingPayload()
-    } finally {
-      isFetching.value = false
-    }
-
-    return
-  }
-
-  searchResults.value = null
-
-  // Nothing to do: cache is fresh and signature matches
-  if (!force && !signatureChanged && !marketplaceCache.isStale.value && marketplaceCache.hasContent.value) {
-    return
-  }
-
-  // If we have NO content at all, flag as fetching so skeleton shows
-  if (!marketplaceCache.hasContent.value || marketplaceCache.isExpired.value) {
-    isFetching.value = true
-  }
-
-  fetchError.value = ''
-
-  try {
-    const payload = await $fetch<MarketplaceLandingPayload>('/api/marketplace/landing', {
-      query: {
-        tags: preferredTags.value.join(','),
-      },
+  featuredProducts.value.forEach(product => {
+    product.tags.forEach(tag => {
+      const cleaned = String(tag || '').trim().toLowerCase()
+      if (cleaned) values.add(cleaned)
     })
-    marketplaceCache.write(payload, nextSignature)
-  } catch (error: unknown) {
-    fetchError.value = error instanceof Error ? error.message : 'No se pudo refrescar el feed'
+    const businessType = String(product.businessType || '').trim().toLowerCase()
+    if (businessType) values.add(businessType)
+  })
 
-    // If we still have stale data, keep showing it — just stop the spinner
-    if (!marketplaceCache.hasContent.value) {
-      // No data at all — nothing useful to show
-      console.error('[marketplace] fetch failed, no cache available:', fetchError.value)
-    }
-  } finally {
-    isFetching.value = false
+  const result = [...values].filter(value => value.length >= 3).slice(0, 8)
+  return result.length ? result : ['restaurantes', 'bebidas', 'combos', 'postres']
+})
+
+const errorMessage = computed(() => {
+  if (!error.value) {
+    return ''
   }
+
+  return 'No se pudo cargar el marketplace completo. Mostramos lo disponible.'
+})
+
+const currencyFormatterCache = new Map<string, Intl.NumberFormat>()
+const money = (value: number, currency = 'MXN') => {
+  if (!currencyFormatterCache.has(currency)) {
+    currencyFormatterCache.set(currency, new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 0,
+    }))
+  }
+
+  return currencyFormatterCache.get(currency)!.format(value || 0)
 }
 
-const forceRefresh = () => refreshLanding(true)
-
-// --- SEARCH ---
 const openSearch = async () => {
   isSearchOpen.value = true
   searchDraft.value = searchQuery.value
@@ -756,93 +471,23 @@ const closeSearch = () => {
   isSearchOpen.value = false
 }
 
-const commitSearch = async (term: string) => {
-  const normalized = term.trim()
-  if (!normalized) {
-    searchQuery.value = ''
-    searchResults.value = null
-    closeSearch()
-    await refreshLanding(true)
+const commitSearch = async (value: string) => {
+  searchQuery.value = value.trim()
+  closeSearch()
+}
+
+const clearFilters = async () => {
+  searchQuery.value = ''
+  searchDraft.value = ''
+  await refresh()
+}
+
+const selectChip = async (chip: string) => {
+  if (activeQuery.value === chip) {
+    await clearFilters()
     return
   }
 
-  searchQuery.value = normalized
-  trackerEngine.rememberSearch(normalized)
-  closeSearch()
-  await refreshLanding(true)
+  searchQuery.value = chip
 }
-
-const selectGeoCity = async (city: string) => {
-  isGeoMenuOpen.value = false
-  await commitSearch(city)
-}
-
-// --- MISC ---
-const toggleColorMode = () => {
-  colorMode.preference = colorMode.preference === 'dark' ? 'light' : 'dark'
-}
-
-const showComingSoon = (label: string) => {
-  if (import.meta.client) {
-    window.alert(`${label}: Próximamente`)
-  }
-}
-
-// --- TRACKING ---
-const trackStoreTap = (store: MarketplaceStoreCard) => {
-  trackerEngine.trackStoreView({
-    store: store.businessName,
-    businessTypes: store.businessTypes,
-    city: store.city,
-    tagline: store.tagline,
-  })
-}
-
-const trackProductTap = (product: MarketplaceProductCard) => {
-  trackerEngine.trackProductView({
-    product: product.productName,
-    tags: product.tags,
-    businessName: product.businessName,
-    city: product.city,
-  })
-}
-
-const trackHubTap = (hub: MarketplaceHub) => {
-  trackerEngine.trackHubView({
-    region: hub.regionLabel,
-    city: hub.city,
-    stateCode: hub.stateCode,
-  })
-}
-
-const trackFeedTap = (item: MarketplaceFeedEntry) => {
-  trackerEngine.trackProductView({
-    product: item.productName,
-    tags: item.matchedTags,
-    businessName: item.businessName,
-    city: item.city,
-  })
-}
-
-// Re-fetch when user behavior shifts the personalization signature
-watch(trackerSignature, async () => {
-  await refreshLanding()
-})
-
-onMounted(async () => {
-  // 0. Set client-only values that must not be rendered by the server
-  //    to avoid hydration mismatches.
-  currentYear.value = new Date().getFullYear()
-
-  // 1. Hydrate cache from localStorage BEFORE fetching so the first paint
-  //    is instant when the user has visited before.
-  marketplaceCache.hydrateFromStorage()
-
-  // 2. Hydrate tracker (reads localStorage with user's history)
-  trackerEngine.hydrate()
-
-  // 3. Trigger fetch — if cache is warm from localStorage this is a silent
-  //    background refresh; if cold it starts the skeleton spinner.
-  await refreshLanding()
-})
 </script>

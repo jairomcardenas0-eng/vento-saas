@@ -227,13 +227,14 @@ function confirmCrop() {
   const scaleY = naturalH.value / imgH
   const srcX = (0 - imgX.value) * scaleX
   const srcY = (0 - imgY.value) * scaleY
-  const srcSize = frameX * scaleX
+  const srcW = frameX * scaleX
+  const srcH = frameY * scaleY
 
   const canvas = document.createElement('canvas')
   canvas.width = 512
   canvas.height = 512
   const ctx = canvas.getContext('2d')!
-  ctx.drawImage(img, srcX, srcY, srcSize, srcSize * (scaleX / scaleY), 0, 0, 512, 512)
+  ctx.drawImage(img, srcX, srcY, srcW, srcH, 0, 0, 512, 512)
 
   canvas.toBlob((blob) => {
     if (blob) {

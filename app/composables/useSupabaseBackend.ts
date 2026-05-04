@@ -25,6 +25,7 @@ import { createSupabaseAnalyticsBackend } from '~/composables/backend/analytics'
 import { createSupabaseAuthBackend } from '~/composables/backend/auth'
 import { createSupabaseCatalogBackend } from '~/composables/backend/catalog'
 import { createSupabaseCommerceBackend } from '~/composables/backend/commerce'
+import { createSupabaseNotificationsBackend } from '~/composables/backend/notifications'
 import { createSupabaseOperationsBackend } from '~/composables/backend/operations'
 import type {
   CatalogAccessRow,
@@ -41,6 +42,9 @@ import type {
   MarketplaceStoreRow,
   OrderRow,
   ProductRow,
+  ProductVariantGroupRow,
+  ProductVariantOptionRow,
+  InventoryItemRow,
   ReviewRow,
   UserProfileRow,
   BackendSupabaseClient,
@@ -88,38 +92,6 @@ const mapCategoryToRow = (catalogId: string, category: CatalogCategory) => ({
   sort_order: category.order,
   is_active: category.active,
 })
-
-type ProductVariantOptionRow = {
-  id: string
-  group_id?: string | null
-  name?: string | null
-  price_delta?: number | string | null
-  is_required?: boolean | null
-  sort_order?: number | null
-}
-
-type ProductVariantGroupRow = {
-  id: string
-  catalog_id?: string | null
-  product_id?: string | null
-  group_name?: string | null
-  selection_type?: 'single' | 'multiple' | null
-  required?: boolean | null
-  sort_order?: number | null
-  product_variant_options?: ProductVariantOptionRow[] | null
-}
-
-type InventoryItemRow = {
-  id: string
-  catalog_id?: string | null
-  product_id?: string | null
-  variant_option_id?: string | null
-  sku?: string | null
-  quantity?: number | string | null
-  reserved?: number | string | null
-  low_stock_threshold?: number | string | null
-  track_stock?: boolean | null
-}
 
 const mapVariantOptionRow = (row: ProductVariantOptionRow): CatalogVariantOption => ({
   id: row.id,
@@ -175,11 +147,13 @@ const mapRowToProduct = (row: ProductRow): CatalogProduct => ({
   carouselIntervalSeconds: normalizeCarouselIntervalSeconds(row.timer?.carouselIntervalSeconds),
   tags: Array.isArray(row.tags) ? row.tags : [],
   variants: Array.isArray(row.variants) ? row.variants : [],
-  variantGroups: Array.isArray((row as ProductRow & { product_variant_groups?: ProductVariantGroupRow[] }).product_variant_groups)
-    ? (((row as ProductRow & { product_variant_groups?: ProductVariantGroupRow[] }).product_variant_groups) || []).map(mapVariantGroupRow)
-    : Array.isArray(row.variant_groups) ? row.variant_groups : [],
+  variantGroups: Array.isArray(row.product_variant_groups)
+    ? row.product_variant_groups.map(mapVariantGroupRow)
+    : Array.isArray(row.variant_groups)
+      ? row.variant_groups
+      : [],
   inventoryItems: Array.isArray(row.inventory_items)
-    ? (row.inventory_items as unknown as InventoryItemRow[]).map(mapInventoryItemRow)
+    ? row.inventory_items.map(mapInventoryItemRow)
     : [],
   reviewsApprovedCount: Number(row.reviews_approved_count || 0),
   productRating: Number(row.product_rating || 0),
@@ -569,8 +543,8 @@ const mapCatalogProductToItem = (product: CatalogProduct): ProductItem => ({
             : 'ok',
     }
   }),
-  createdAt: null,
-  updatedAt: null,
+  createdAt: new Date().toISOString(),
+  updatedAt: new Date().toISOString(),
 })
 
 export const useSupabaseBackend = () => {
@@ -584,12 +558,15 @@ export const useSupabaseBackend = () => {
   }
 
   const mapAccessRowToProfile = (row: CatalogAccessRow): CatalogAccessProfile => {
-    if (row?.isOwner === true) {
-      return createOwnerAccessProfile(String(row.catalogId))
+    const catalogId = String(row?.catalogId || row?.catalog_id || '')
+    const isOwner = row?.isOwner === true || row?.is_owner === true
+
+    if (isOwner) {
+      return createOwnerAccessProfile(catalogId)
     }
 
     return {
-      catalogId: String(row?.catalogId || ''),
+      catalogId,
       isOwner: false,
       role: row?.role || null,
       permissions: normalizeTeamPermissions(row?.permissions || {}),
@@ -670,11 +647,17 @@ export const useSupabaseBackend = () => {
     mapRowToCatalogRecord,
   })
 
+  const notificationsBackend = createSupabaseNotificationsBackend({
+    supabase: $supabase,
+    ensureSuccess,
+  })
+
   return {
     ...authBackend,
     ...catalogBackend,
     ...commerceBackend,
     ...analyticsBackend,
     ...operationsBackend,
+    ...notificationsBackend,
   }
 }

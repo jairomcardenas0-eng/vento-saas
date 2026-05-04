@@ -31,7 +31,13 @@
         class="mb-5 flex flex-wrap items-center justify-between gap-3 rounded-[18px] border px-4 py-3 text-sm"
         :class="loadError ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300' : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
       >
-        <span>{{ loadError || 'Actualizando descuentos y cupones del catálogo...' }}</span>
+        <span class="flex items-center gap-2">
+          <svg v-if="!loadError" class="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          {{ loadError || 'Actualizando descuentos y cupones del catálogo...' }}
+        </span>
         <button v-if="loadError && catalog" class="solid-btn" @click="loadCoupons(catalog.id)">Reintentar</button>
       </div>
 
@@ -249,9 +255,21 @@ const saveCoupon = async () => {
   try {
     draft.value.code = draft.value.code.trim().toUpperCase()
     draft.value.name = draft.value.name.trim()
-    draft.value.startsAt = startsAtProxy.value ? new Date(startsAtProxy.value).toISOString() : null
-    draft.value.expiresAt = expiresAtProxy.value ? new Date(expiresAtProxy.value).toISOString() : null
-    draft.value.usageLimit = usageLimitProxy.value || null
+    const startsDate = startsAtProxy.value ? new Date(startsAtProxy.value) : null
+    const endsDate = expiresAtProxy.value ? new Date(expiresAtProxy.value) : null
+    if (startsDate && Number.isNaN(startsDate.getTime())) {
+      errorMessage.value = 'La fecha de inicio no es válida.'
+      saving.value = false
+      return
+    }
+    if (endsDate && Number.isNaN(endsDate.getTime())) {
+      errorMessage.value = 'La fecha de fin no es válida.'
+      saving.value = false
+      return
+    }
+    draft.value.startsAt = startsDate ? startsDate.toISOString() : null
+    draft.value.expiresAt = endsDate ? endsDate.toISOString() : null
+    draft.value.usageLimit = usageLimitProxy.value !== null && usageLimitProxy.value !== undefined ? usageLimitProxy.value : null
     draft.value.updatedAt = new Date().toISOString()
     if (!draft.value.createdAt) {
       draft.value.createdAt = draft.value.updatedAt
@@ -286,12 +304,14 @@ const removeCoupon = async (coupon: CatalogCoupon) => {
   await backend.deleteCoupon(catalog.value.id, coupon.id)
 }
 
+const windowFormatter = new Intl.DateTimeFormat('es-MX', { dateStyle: 'short', timeStyle: 'short' })
 const formatWindow = (startsAt: string | null, expiresAt: string | null) => {
   if (!startsAt && !expiresAt) {
     return 'Siempre disponible'
   }
 
-  const formatter = new Intl.DateTimeFormat('es-MX', { dateStyle: 'short', timeStyle: 'short' })
-  return `${startsAt ? formatter.format(new Date(startsAt)) : 'Ahora'} - ${expiresAt ? formatter.format(new Date(expiresAt)) : 'Sin fin'}`
+  const s = startsAt ? new Date(startsAt) : null
+  const e = expiresAt ? new Date(expiresAt) : null
+  return `${s && !Number.isNaN(s.getTime()) ? windowFormatter.format(s) : 'Ahora'} - ${e && !Number.isNaN(e.getTime()) ? windowFormatter.format(e) : 'Sin fin'}`
 }
 </script>

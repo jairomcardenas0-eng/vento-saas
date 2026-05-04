@@ -71,11 +71,11 @@
               <span class="mb-2 block text-sm opacity-70">Metodo de pago</span>
               <input v-model="checkoutForm.paymentMethod" maxlength="80" class="w-full rounded-[18px] border px-4 py-3 focus-visible:outline-none focus-visible:ring-2" :style="{ background: inputBg, borderColor: cardItemBorder, color: drawerTextColor }" placeholder="Efectivo, transferencia, etc." />
             </label>
-            <label v-if="checkoutForm.method === 'Delivery' && storefront.settings.deliveryFeeType === 'zones'" class="block">
+            <label v-if="checkoutForm.method === 'Delivery' && storefront.settings?.deliveryFeeType === 'zones'" class="block">
               <span class="mb-2 block text-sm opacity-70">Zona de entrega</span>
               <select v-model="checkoutForm.zoneId" class="w-full rounded-[18px] border px-4 py-3 focus-visible:outline-none focus-visible:ring-2" :style="{ background: inputBg, borderColor: cardItemBorder, color: drawerTextColor }">
                 <option value="">Selecciona una zona</option>
-                <option v-for="zone in storefront.settings.deliveryZones" :key="zone.id" :value="zone.id">
+                <option v-for="zone in (storefront.settings?.deliveryZones || [])" :key="zone.id" :value="zone.id">
                   {{ zone.name }} · {{ money(zone.price, currency) }} · {{ zone.estimatedMinutes }} min
                 </option>
               </select>
@@ -85,9 +85,9 @@
               <textarea v-model="checkoutForm.address" maxlength="180" class="min-h-[90px] w-full rounded-[18px] border px-4 py-3 focus-visible:outline-none focus-visible:ring-2" :style="{ background: inputBg, borderColor: cardItemBorder, color: drawerTextColor }"></textarea>
             </label>
             <div v-if="checkoutForm.method === 'Pickup'" class="rounded-[18px] border p-4 text-sm opacity-80" :style="{ background: inputBg, borderColor: cardItemBorder }">
-              <strong class="block" :style="{ color: drawerTextColor }">{{ storefront.settings.pickupPoint }}</strong>
-              <p class="mt-2">{{ storefront.settings.pickupInstructions }}</p>
-              <p class="mt-2">Tiempo estimado: {{ storefront.settings.pickupEtaMinutes }} min.</p>
+              <strong class="block" :style="{ color: drawerTextColor }">{{ storefront.settings?.pickupPoint || 'Punto de recogida' }}</strong>
+              <p class="mt-2">{{ storefront.settings?.pickupInstructions || '' }}</p>
+              <p class="mt-2">Tiempo estimado: {{ storefront.settings?.pickupEtaMinutes || '-' }} min.</p>
             </div>
 
             <!-- Cupones -->

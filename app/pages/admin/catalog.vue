@@ -46,7 +46,13 @@
         ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
         : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
     >
-      <span>{{ loadError || 'Actualizando catálogo desde la base de datos...' }}</span>
+      <span class="flex items-center gap-2">
+        <svg v-if="!loadError" class="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+          <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+          <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+        </svg>
+        {{ loadError || 'Actualizando catálogo desde la base de datos...' }}
+      </span>
       <button v-if="loadError" class="solid-btn" @click="refreshCatalog">Reintentar</button>
     </div>
 
@@ -448,9 +454,9 @@ const refreshCatalog = async () => {
 
   loadError.value = ''
 
-  // Timeout de seguridad: si Supabase no responde en 15s, mostrar error
+  // Timeout de seguridad: evita dejar la pantalla esperando indefinidamente.
   const timeout = new Promise<never>((_, reject) =>
-    setTimeout(() => reject(new Error('La conexión tardó demasiado. Revisa tu internet e intenta de nuevo.')), 15000),
+    setTimeout(() => reject(new Error('La conexión tardó demasiado. Revisa tu internet e intenta de nuevo.')), 20000),
   )
 
   try {

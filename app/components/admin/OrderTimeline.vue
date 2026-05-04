@@ -170,7 +170,8 @@ const formatDate = (value: string) =>
   })
 
 const fetchTimeline = async () => {
-  if (!props.catalogId || !props.orderId) {
+  const client = $supabase as any
+  if (!props.catalogId || !props.orderId || !client) {
     entries.value = []
     return
   }
@@ -180,13 +181,13 @@ const fetchTimeline = async () => {
 
   try {
     const [historyRes, eventsRes] = await Promise.all([
-      $supabase
+      client
         .from('order_status_history')
         .select('id, order_id, status, previous_status, changed_by, changed_by_name, note, created_at')
         .eq('catalog_id', props.catalogId)
         .eq('order_id', props.orderId)
         .order('created_at', { ascending: false }),
-      $supabase
+      client
         .from('order_events')
         .select('id, order_id, event_type, payload, created_by, created_at')
         .eq('catalog_id', props.catalogId)
@@ -223,7 +224,11 @@ const fetchTimeline = async () => {
     }))
 
     entries.value = [...historyEntries, ...eventEntries]
-      .sort((left, right) => Date.parse(right.createdAt) - Date.parse(left.createdAt))
+      .sort((left, right) => {
+        const a = new Date(left.createdAt).getTime() || 0
+        const b = new Date(right.createdAt).getTime() || 0
+        return b - a
+      })
   } catch (error) {
     console.error('OrderTimeline Error:', error)
     errorMessage.value = 'No fue posible cargar el timeline de este pedido.'
@@ -234,11 +239,12 @@ const fetchTimeline = async () => {
 
 const bindRealtime = () => {
   channelCleanup?.()
-  if (!props.catalogId || !props.orderId) {
+  const client = $supabase as any
+  if (!props.catalogId || !props.orderId || !client) {
     return
   }
 
-  const channel = $supabase
+  const channel = client
     .channel(`order-timeline:${props.catalogId}:${props.orderId}`)
     .on('postgres_changes', { event: '*', schema: 'public', table: 'order_status_history', filter: `order_id=eq.${props.orderId}` }, () => {
       void fetchTimeline()
@@ -249,7 +255,7 @@ const bindRealtime = () => {
     .subscribe()
 
   channelCleanup = () => {
-    void $supabase.removeChannel(channel)
+    void client.removeChannel(channel)
   }
 }
 

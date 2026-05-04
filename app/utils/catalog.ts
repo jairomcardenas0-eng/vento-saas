@@ -8,24 +8,40 @@ import type {
   ProductVariantGroup,
 } from '~/types/catalog'
 
-export const slugify = (value: string) =>
-  value
+export const slugify = (value: string) => {
+  const normalized = value
+    .normalize('NFD')
+    .replace(/\p{Diacritic}/gu, '')
     .toLowerCase()
     .trim()
     .replace(/[^a-z0-9]+/g, '-')
     .replace(/^-|-$/g, '')
+  return normalized || 'untitled'
+}
 
-export const money = (value: number, currency = 'MXN') =>
-  new Intl.NumberFormat('es-MX', {
-    style: 'currency',
-    currency,
-    maximumFractionDigits: 2,
-  }).format(value || 0)
+export const money = (value: number, currency = 'MXN') => {
+  const num = Number(value)
+  if (!Number.isFinite(num)) {
+    console.warn(`[money] Invalid value: ${value}`)
+    return '—'
+  }
+  try {
+    return new Intl.NumberFormat('es-MX', {
+      style: 'currency',
+      currency,
+      maximumFractionDigits: 2,
+    }).format(num)
+  } catch {
+    console.warn(`[money] Invalid currency: ${currency}`)
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN', maximumFractionDigits: 2 }).format(num)
+  }
+}
 
 export const effectivePrice = (product: CatalogProduct) => product.salePrice ?? product.price
 
 export const getAllProductImages = (product: CatalogProduct) => {
-  const images = [product.image, ...product.images].map(item => item?.trim()).filter(Boolean) as string[]
+  const extra = Array.isArray(product.images) ? product.images : []
+  const images = [product.image, ...extra].map(item => item?.trim()).filter(Boolean) as string[]
   return [...new Set(images)]
 }
 
@@ -74,8 +90,10 @@ const dayIndexMap: Record<BusinessDaySchedule['dayKey'], number> = {
 }
 
 const timeToMinutes = (value: string) => {
+  if (!/^\d{1,2}:\d{2}$/.test(value)) return NaN
   const [hours, minutes] = value.split(':').map(Number)
-  return (hours || 0) * 60 + (minutes || 0)
+  if (hours === undefined || minutes === undefined || hours < 0 || hours > 23 || minutes < 0 || minutes > 59) return NaN
+  return hours * 60 + minutes
 }
 
 export const getCurrentScheduleState = (settings: CatalogOperationalSettings) => {
@@ -94,12 +112,20 @@ export const getCurrentScheduleState = (settings: CatalogOperationalSettings) =>
   }
 
   const currentMinutes = now.getHours() * 60 + now.getMinutes()
-  const currentRange = currentDay.ranges.find(range => currentMinutes >= timeToMinutes(range.start) && currentMinutes <= timeToMinutes(range.end))
+  const currentRange = currentDay.ranges.find(range => {
+    const startMin = timeToMinutes(range.start)
+    const endMin = timeToMinutes(range.end)
+    if (Number.isNaN(startMin) || Number.isNaN(endMin)) return false
+    return currentMinutes >= startMin && currentMinutes < endMin
+  })
   if (currentRange) {
     return { isOpen: true, label: `Abierto ahora · cierra ${currentRange.end}` }
   }
 
-  const upcoming = currentDay.ranges.find(range => currentMinutes < timeToMinutes(range.start))
+  const upcoming = currentDay.ranges.find(range => {
+    const startMin = timeToMinutes(range.start)
+    return !Number.isNaN(startMin) && currentMinutes < startMin
+  })
   if (upcoming) {
     return { isOpen: false, label: `Abre hoy a las ${upcoming.start}` }
   }
@@ -132,17 +158,32 @@ export const validateCoupon = (coupon: CatalogCoupon, subtotal: number, now = ne
   if (!coupon.active) {
     return { valid: false, reason: 'Este cupón está desactivado.' }
   }
-  if (coupon.startsAt && now < new Date(coupon.startsAt)) {
-    return { valid: false, reason: 'Este cupón todavía no está activo.' }
+  if (coupon.startsAt) {
+    const start = new Date(coupon.startsAt)
+    if (Number.isNaN(start.getTime())) {
+      return { valid: false, reason: 'Cupón con fecha de inicio inválida.' }
+    }
+    if (now < start) {
+      return { valid: false, reason: 'Este cupón todavía no está activo.' }
+    }
   }
-  if (coupon.expiresAt && now > new Date(coupon.expiresAt)) {
-    return { valid: false, reason: 'Este cupón ya expiró.' }
+  if (coupon.expiresAt) {
+    const end = new Date(coupon.expiresAt)
+    if (Number.isNaN(end.getTime())) {
+      return { valid: false, reason: 'Cupón con fecha de expiración inválida.' }
+    }
+    if (now > end) {
+      return { valid: false, reason: 'Este cupón ya expiró.' }
+    }
   }
-  if (coupon.usageLimit !== null && coupon.usedCount >= coupon.usageLimit) {
+  if (coupon.usageLimit !== null && coupon.usageLimit !== undefined && coupon.usedCount >= coupon.usageLimit) {
     return { valid: false, reason: 'Este cupón ya agotó sus usos.' }
   }
   if (subtotal < coupon.minimumOrder) {
     return { valid: false, reason: `Necesitas ${money(coupon.minimumOrder)} para usar este cupón.` }
+  }
+  if (coupon.discountType === 'percentage' && coupon.discountValue > 100) {
+    return { valid: false, reason: 'Descuento de cupón inválido.' }
   }
 
   const discount = coupon.discountType === 'percentage'

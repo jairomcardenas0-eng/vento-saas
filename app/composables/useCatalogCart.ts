@@ -9,8 +9,29 @@ export interface CartEntry {
   totalUnit: number
 }
 
+const CART_STORAGE_KEY = 'catalog-cart-items-v1'
+
+const loadPersistedCart = (): CartEntry[] => {
+  if (import.meta.server) return []
+  try {
+    const raw = localStorage.getItem(CART_STORAGE_KEY)
+    return raw ? (JSON.parse(raw) as CartEntry[]) : []
+  } catch {
+    return []
+  }
+}
+
+const persistCart = (entries: CartEntry[]) => {
+  if (import.meta.server) return
+  try {
+    localStorage.setItem(CART_STORAGE_KEY, JSON.stringify(entries))
+  } catch {
+    // Storage quota exceeded — cart lives only in memory for this session
+  }
+}
+
 export const useCatalogCart = () => {
-  const items = useState<CartEntry[]>('catalog-cart-items', () => [])
+  const items = useState<CartEntry[]>('catalog-cart-items', loadPersistedCart)
 
   const addItem = (product: CatalogProduct, variantSummary: string[] = [], extra = 0) => {
     const id = `${product.id}::${variantSummary.join('|')}`
@@ -18,6 +39,7 @@ export const useCatalogCart = () => {
 
     if (existing) {
       existing.qty += 1
+      persistCart(items.value)
       return
     }
 
@@ -28,6 +50,7 @@ export const useCatalogCart = () => {
       variantSummary,
       totalUnit: effectivePrice(product) + extra,
     })
+    persistCart(items.value)
   }
 
   const updateQty = (id: string, delta: number) => {
@@ -39,10 +62,12 @@ export const useCatalogCart = () => {
     if (target.qty <= 0) {
       items.value = items.value.filter(item => item.id !== id)
     }
+    persistCart(items.value)
   }
 
   const clear = () => {
     items.value = []
+    persistCart(items.value)
   }
 
   const count = computed(() => items.value.reduce((sum, item) => sum + item.qty, 0))

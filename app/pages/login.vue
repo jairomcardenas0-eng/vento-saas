@@ -1,6 +1,11 @@
 <template>
   <section class="auth-shell">
     <form class="auth-card" @submit.prevent="submit">
+      <div class="flex justify-end mb-2">
+        <button type="button" class="ghost-btn small" @click="cancel">
+          Cancelar
+        </button>
+      </div>
       <p class="eyebrow">Centro de control</p>
       <h1>Inicia sesión</h1>
       <p>Entra a tu panel para gestionar pedidos, catálogo, horarios y operación diaria desde una experiencia clara y profesional.</p>
@@ -81,15 +86,44 @@
 
 <script setup lang="ts">
 const authStore = useAuthStore()
+const route = useRoute()
 const email = ref('')
 const password = ref('')
 const showPassword = ref(false)
 const error = ref('')
 
+const router = useRouter()
+
+const cancel = () => {
+  if (window.history.length > 1) {
+    router.back()
+  } else {
+    navigateTo('/')
+  }
+}
+
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
 const submit = async () => {
   error.value = ''
+
+  if (!emailRegex.test(email.value.trim())) {
+    error.value = 'Ingresa un correo válido.'
+    return
+  }
+
+  if (password.value.length < 6) {
+    error.value = 'La contraseña debe tener al menos 6 caracteres.'
+    return
+  }
+
   try {
     const user = await authStore.login(email.value, password.value)
+    const redirectPath = typeof route.query.redirect === 'string' ? route.query.redirect : ''
+    if (redirectPath && redirectPath.startsWith('/')) {
+      await navigateTo(redirectPath)
+      return
+    }
     await navigateTo(user.systemRole === 'owner' ? '/master' : (user.defaultCatalogId ? '/admin' : '/onboarding/create-catalog'))
   } catch (err) {
     error.value = err instanceof Error ? err.message : 'No se pudo iniciar sesión'

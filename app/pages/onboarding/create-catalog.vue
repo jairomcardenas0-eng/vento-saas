@@ -44,6 +44,7 @@
           <strong>/b/{{ normalizedSlug }}</strong>
         </div>
         <p class="catalog-confirm-warning">⚠️ La URL del catálogo (slug) no se puede cambiar después de crearlo. El nombre sí se puede modificar más tarde.</p>
+        <p v-if="confirmError" class="catalog-confirm-error">{{ confirmError }}</p>
         <div class="catalog-confirm-actions">
           <button type="button" class="ghost-btn" @click="showConfirm = false">Seguir editando</button>
           <button type="button" class="solid-btn" :disabled="catalogStore.loading" @click="confirm">
@@ -62,8 +63,17 @@ const name = ref('')
 const slug = ref('')
 const error = ref('')
 const showConfirm = ref(false)
+const confirmError = ref('')
 const slugCheckStatus = ref<'checking' | 'available' | 'taken' | null>(null)
 let slugCheckTimer: ReturnType<typeof setTimeout> | null = null
+
+const slugify = (value: string) =>
+  String(value || '')
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
 
 const normalizedSlug = computed(() => slugify(slug.value))
 
@@ -96,6 +106,7 @@ watch(normalizedSlug, (value) => {
 
 const submit = () => {
   error.value = ''
+  confirmError.value = ''
   if (!authStore.user) {
     return navigateTo('/login')
   }
@@ -111,13 +122,17 @@ const submit = () => {
 }
 
 const confirm = async () => {
+  confirmError.value = ''
+  if (!authStore.user?.uid) {
+    confirmError.value = 'Sesión no válida. Vuelve a iniciar sesión.'
+    return
+  }
   try {
-    const created = await catalogStore.createCatalog(authStore.user!.uid, name.value, normalizedSlug.value)
+    const created = await catalogStore.createCatalog(authStore.user.uid, name.value, normalizedSlug.value)
     await authStore.setDefaultCatalog(created.id)
     await navigateTo('/admin')
   } catch (err) {
-    showConfirm.value = false
-    error.value = err instanceof Error ? err.message : 'No se pudo crear el catálogo'
+    confirmError.value = err instanceof Error ? err.message : 'No se pudo crear el catálogo'
   }
 }
 
@@ -195,7 +210,8 @@ const goBack = async () => {
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   border-radius: 12px;
-  background: #f4f4f5;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
 }
 
 .catalog-confirm-label {
@@ -205,12 +221,25 @@ const goBack = async () => {
 
 .catalog-confirm-detail strong {
   font-size: 0.95rem;
+  color: #18181b;
 }
 
 .catalog-confirm-warning {
   padding: 0.65rem 0.9rem;
   border-radius: 10px;
   font-size: 0.85rem;
+  line-height: 1.5;
+  background: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  text-align: center;
+}
+
+.catalog-confirm-error {
+  margin: 0;
+  padding: 0.65rem 0.9rem;
+  border-radius: 10px;
+  font-size: 0.88rem;
   line-height: 1.5;
   background: #fef2f2;
   color: #b91c1c;

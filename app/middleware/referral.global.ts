@@ -4,8 +4,14 @@
 export default defineNuxtRouteMiddleware((to) => {
   if (import.meta.server) return
 
-  const refCode = to.query.ref as string | undefined
-  if (!refCode || typeof refCode !== 'string' || !refCode.trim()) return
+  const rawRef = to.query.ref
+  if (!rawRef || typeof rawRef !== 'string') return
+
+  const refCode = rawRef.trim()
+  if (!refCode) return
+
+  // Validar formato: alfanumérico, guiones, guiones bajos; máximo 20 caracteres
+  if (!/^[A-Z0-9_-]{1,20}$/i.test(refCode)) return
 
   const refCookie = useCookie('_ref_code', {
     maxAge: 60 * 60 * 24 * 30, // 30 días
@@ -15,6 +21,6 @@ export default defineNuxtRouteMiddleware((to) => {
 
   // Solo lo guarda si todavía no había uno (el primer link gana)
   if (!refCookie.value) {
-    refCookie.value = refCode.trim().toUpperCase()
+    refCookie.value = refCode.toUpperCase()
   }
 })

@@ -1,13 +1,13 @@
 <template>
   <AdminStatePanel
     v-if="!catalog"
-    title="No hay un catálogo activo"
-    description="Selecciona un catálogo para revisar los pedidos."
+    title="No hay un catalogo activo"
+    description="Selecciona un catalogo para revisar los pedidos."
   />
 
-  <div v-else class="admin-grid">
+  <div v-else ref="pageRef" class="admin-grid">
     <section class="panel-card span-2 min-w-0">
-      <UiSectionHeader eyebrow="Operación" title="Pedidos en tiempo real" description="Bandeja operativa con SLA, timeline, asignación y seguimiento interno." />
+      <UiSectionHeader eyebrow="Operacion" title="Pedidos en tiempo real" description="Bandeja operativa con SLA, timeline, asignacion y seguimiento interno." />
 
       <div class="mb-4 grid gap-3 lg:grid-cols-[1.2fr,0.8fr]">
         <div class="rounded-[22px] border border-zinc-200 bg-zinc-50/80 p-4 dark:border-zinc-800 dark:bg-zinc-900/60">
@@ -15,7 +15,7 @@
           <div class="mt-2 flex items-center gap-2 rounded-[18px] border border-zinc-200 bg-white px-3 py-2 dark:border-zinc-800 dark:bg-zinc-950">
             <span class="text-zinc-400">⌕</span>
             <input
-              v-model.trim="searchTerm"
+              v-model.trim="rawSearchTerm"
               type="search"
               inputmode="search"
               placeholder="Cliente, ID o producto"
@@ -41,7 +41,13 @@
           v-if="ordersStore.loading"
           class="rounded-[18px] border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300"
         >
-          Actualizando caja y pedidos en tiempo real...
+          <span class="flex items-center gap-2">
+            <svg class="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+              <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+              <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+            </svg>
+            Actualizando caja y pedidos en tiempo real...
+          </span>
         </div>
         <div
           v-if="ordersStore.realtimeError"
@@ -78,26 +84,59 @@
       </div>
 
       <div v-else class="table-list">
-        <article v-for="order in visibleOrders" :key="order.id" class="list-row min-w-0">
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-center gap-2">
-              <strong class="block break-words">#{{ order.id }}</strong>
-              <span class="status-pill" :class="`status-${normalizeStatus(order.status)}`">{{ statusLabel(order.status) }}</span>
-              <span class="sla-pill" :class="`sla-${slaState(order.createdAt)}`">{{ elapsedLabel(order.createdAt) }}</span>
-              <span v-if="order.internalNotes?.trim()" class="note-pill" title="Este pedido tiene notas internas">Nota</span>
+        <UiVirtualList
+          v-if="shouldVirtualizeOrders"
+          :items="visibleOrders"
+          :item-height="148"
+          :max-height="840"
+          class="admin-virtual-list"
+        >
+          <template #default="{ item: order }">
+            <article class="list-row min-w-0">
+              <div class="min-w-0">
+                <div class="flex flex-wrap items-center gap-2">
+                  <strong class="block break-words">#{{ order.id }}</strong>
+                  <span class="status-pill" :class="`status-${normalizeStatus(order.status)}`">{{ statusLabel(order.status) }}</span>
+                  <span class="sla-pill" :class="`sla-${slaState(order.createdAt)}`">{{ elapsedLabel(order.createdAt) }}</span>
+                  <span v-if="order.internalNotes?.trim()" class="note-pill" title="Este pedido tiene notas internas">Nota</span>
+                </div>
+                <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ order.customerName || 'Cliente sin nombre' }}</p>
+                <p class="break-words">{{ order.items.map(item => `${item.qty}x ${item.productName}`).join(', ') }}</p>
+                <small class="inline-muted block break-words">
+                  {{ new Date(order.createdAt).toLocaleString('es-MX') }} · {{ deliveryModeLabel(order.deliveryMode) }} · {{ order.deliveryZoneName || 'Sin zona' }}
+                </small>
+              </div>
+              <div class="row-meta wrap min-w-0">
+                <span>{{ money(order.total, catalog.settings.currency) }}</span>
+                <button class="ghost-btn small" @click="openStatusModal(order)">Cambiar estado</button>
+                <button class="ghost-btn small" @click="openOrderDetail(order)">Ver detalle</button>
+              </div>
+            </article>
+          </template>
+        </UiVirtualList>
+
+        <template v-else>
+          <article v-for="order in visibleOrders" :key="order.id" class="list-row min-w-0">
+            <div class="min-w-0">
+              <div class="flex flex-wrap items-center gap-2">
+                <strong class="block break-words">#{{ order.id }}</strong>
+                <span class="status-pill" :class="`status-${normalizeStatus(order.status)}`">{{ statusLabel(order.status) }}</span>
+                <span class="sla-pill" :class="`sla-${slaState(order.createdAt)}`">{{ elapsedLabel(order.createdAt) }}</span>
+                <span v-if="order.internalNotes?.trim()" class="note-pill" title="Este pedido tiene notas internas">Nota</span>
+              </div>
+              <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ order.customerName || 'Cliente sin nombre' }}</p>
+              <p class="break-words">{{ order.items.map(item => `${item.qty}x ${item.productName}`).join(', ') }}</p>
+              <small class="inline-muted block break-words">
+                {{ new Date(order.createdAt).toLocaleString('es-MX') }} · {{ deliveryModeLabel(order.deliveryMode) }} · {{ order.deliveryZoneName || 'Sin zona' }}
+              </small>
             </div>
-            <p class="mt-1 break-words text-sm font-medium text-zinc-800 dark:text-zinc-100">{{ order.customerName || 'Cliente sin nombre' }}</p>
-            <p class="break-words">{{ order.items.map(item => `${item.qty}x ${item.productName}`).join(', ') }}</p>
-            <small class="inline-muted block break-words">
-              {{ new Date(order.createdAt).toLocaleString('es-MX') }} · {{ deliveryModeLabel(order.deliveryMode) }} · {{ order.deliveryZoneName || 'Sin zona' }}
-            </small>
-          </div>
-          <div class="row-meta wrap min-w-0">
-            <span>{{ money(order.total, catalog.settings.currency) }}</span>
-            <button class="ghost-btn small" @click="openStatusModal(order)">Cambiar estado</button>
-            <button class="ghost-btn small" @click="openOrderDetail(order)">Ver detalle</button>
-          </div>
-        </article>
+            <div class="row-meta wrap min-w-0">
+              <span>{{ money(order.total, catalog.settings.currency) }}</span>
+              <button class="ghost-btn small" @click="openStatusModal(order)">Cambiar estado</button>
+              <button class="ghost-btn small" @click="openOrderDetail(order)">Ver detalle</button>
+            </div>
+          </article>
+        </template>
       </div>
 
       <div class="mt-5 flex flex-wrap items-center justify-between gap-3">
@@ -105,7 +144,7 @@
           {{ ordersStore.listening ? 'Realtime activo' : 'Realtime en espera' }}
         </p>
         <button v-if="ordersStore.hasMore" class="ghost-btn" :disabled="ordersStore.loadingMore" @click="ordersStore.loadMore()">
-          {{ ordersStore.loadingMore ? 'Cargando más pedidos...' : `Cargar ${Math.min(ordersStore.remainingCount || 25, 25)} más` }}
+          {{ ordersStore.loadingMore ? 'Cargando mas pedidos...' : `Cargar ${Math.min(ordersStore.remainingCount || 25, 25)} mas` }}
         </button>
       </div>
     </section>
@@ -137,11 +176,11 @@
             <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <strong class="block text-zinc-900 dark:text-zinc-100">Cliente</strong>
               <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerName || 'Sin nombre' }}</p>
-              <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerAddress || 'Sin dirección' }}</p>
+              <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">{{ selectedOrder.customerAddress || 'Sin direccion' }}</p>
               <p class="mt-2 break-words text-sm text-zinc-600 dark:text-zinc-300">Pago: {{ selectedOrder.paymentMethod || 'Pendiente' }}</p>
             </div>
             <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-              <strong class="block text-zinc-900 dark:text-zinc-100">Operación</strong>
+              <strong class="block text-zinc-900 dark:text-zinc-100">Operacion</strong>
               <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Modalidad: {{ deliveryModeLabel(selectedOrder.deliveryMode) }}</p>
               <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Zona: {{ selectedOrder.deliveryZoneName || 'No aplica' }}</p>
               <p class="mt-2 text-sm text-zinc-600 dark:text-zinc-300">Estado: {{ statusLabel(selectedOrder.status) }}</p>
@@ -160,7 +199,7 @@
           </div>
 
           <div class="mt-5 rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
-            <strong class="block text-zinc-900 dark:text-zinc-100">Líneas del pedido</strong>
+            <strong class="block text-zinc-900 dark:text-zinc-100">Lineas del pedido</strong>
             <div class="mt-4 space-y-3">
               <article v-for="item in selectedOrder.items" :key="`${selectedOrder.id}-${item.productId}-${item.productName}`" class="rounded-[18px] border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-950">
                 <div class="flex flex-wrap items-start justify-between gap-4">
@@ -179,9 +218,9 @@
             <div class="mt-3 space-y-2 text-sm text-zinc-600 dark:text-zinc-300">
               <div class="flex items-center justify-between"><span>Subtotal</span><strong>{{ money(selectedOrder.subtotal || selectedOrder.total, catalog.settings.currency) }}</strong></div>
               <div class="flex items-center justify-between"><span>Descuento</span><strong>-{{ money(selectedOrder.discountTotal || 0, catalog.settings.currency) }}</strong></div>
-              <div class="flex items-center justify-between"><span>Envío</span><strong>{{ money(selectedOrder.deliveryFee || 0, catalog.settings.currency) }}</strong></div>
+              <div class="flex items-center justify-between"><span>Envio</span><strong>{{ money(selectedOrder.deliveryFee || 0, catalog.settings.currency) }}</strong></div>
               <div class="flex items-center justify-between border-t border-zinc-200 pt-2 dark:border-zinc-800"><span>Total</span><strong class="text-lg text-zinc-900 dark:text-zinc-100">{{ money(selectedOrder.total, catalog.settings.currency) }}</strong></div>
-              <div v-if="selectedOrder.appliedCoupon?.code" class="pt-2 text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Cupón aplicado: {{ selectedOrder.appliedCoupon.code }}</div>
+              <div v-if="selectedOrder.appliedCoupon?.code" class="pt-2 text-xs uppercase tracking-[0.16em] text-zinc-500 dark:text-zinc-400">Cupon aplicado: {{ selectedOrder.appliedCoupon.code }}</div>
             </div>
           </div>
 
@@ -222,7 +261,12 @@
             <div class="rounded-[24px] border border-zinc-200 bg-zinc-50 p-4 dark:border-zinc-800 dark:bg-zinc-900">
               <strong class="block text-zinc-900 dark:text-zinc-100">Timeline</strong>
               <div class="mt-4">
-                <AdminOrderTimeline :order-id="selectedOrder.id" :catalog-id="selectedOrder.catalogId" />
+                <ClientOnly>
+                  <AdminOrderTimeline :order-id="selectedOrder.id" :catalog-id="selectedOrder.catalogId" />
+                  <template #fallback>
+                    <div class="h-40 animate-pulse rounded-[18px] bg-zinc-100 dark:bg-zinc-950" />
+                  </template>
+                </ClientOnly>
               </div>
             </div>
           </div>
@@ -260,7 +304,7 @@
           <textarea
             v-model.trim="statusModal.note"
             rows="4"
-            placeholder="Motivo, contexto o instrucción para el equipo."
+            placeholder="Motivo, contexto o instruccion para el equipo."
             class="mt-2 w-full rounded-[16px] border border-zinc-200 bg-white px-4 py-3 text-sm dark:border-zinc-800 dark:bg-zinc-950"
           />
 
@@ -286,9 +330,14 @@ definePageMeta({ layout: 'admin' })
 const catalogStore = useCatalogStore()
 const ordersStore = useOrdersStore()
 const backend = useSupabaseBackend()
-const { $supabase } = useNuxtApp()
+const nuxtApp = useNuxtApp()
+const $supabase = nuxtApp.$supabase as any
+const AdminOrderTimeline = defineAsyncComponent(() => import('~/components/admin/OrderTimeline.vue'))
+const { registerCleanup } = useMemoryManager()
 const catalog = computed(() => catalogStore.activeCatalog)
+const pageRef = ref<HTMLElement | null>(null)
 const selectedOrder = ref<CatalogOrder | null>(null)
+const rawSearchTerm = ref('')
 const searchTerm = ref('')
 const savingWorkflow = ref(false)
 const savingStatusModal = ref(false)
@@ -300,6 +349,7 @@ const statusCounts = ref({
   ready: 0,
   cancelled: 0,
 })
+let searchDebounceTimer: ReturnType<typeof setTimeout> | null = null
 
 const workflowDraft = ref({
   assignedToUid: '',
@@ -351,7 +401,7 @@ const deliveryModeLabel = (mode: CatalogOrder['deliveryMode']) =>
 const tabs = computed(() => [
   { key: 'all' as const, label: 'Todos', count: ordersStore.stats.total },
   { key: 'new' as const, label: 'Nuevos', count: statusCounts.value.new },
-  { key: 'preparing' as const, label: 'En preparación', count: statusCounts.value.preparing + statusCounts.value.ready },
+  { key: 'preparing' as const, label: 'En preparacion', count: statusCounts.value.preparing + statusCounts.value.ready },
   { key: 'completed' as const, label: 'Entregados', count: ordersStore.stats.completed },
   { key: 'cancelled' as const, label: 'Cancelados', count: statusCounts.value.cancelled },
 ])
@@ -381,6 +431,8 @@ const visibleOrders = computed(() => {
   })
 })
 
+const shouldVirtualizeOrders = computed(() => visibleOrders.value.length > 40)
+
 const emptyStateMessage = computed(() => {
   if (searchTerm.value.trim()) {
     return `No hubo coincidencias dentro de la bandeja cargada para "${searchTerm.value.trim()}".`
@@ -399,15 +451,18 @@ const getAllowedTransitions = (status: OrderStatus): OrderStatus[] => {
 
 const transitionButtonLabel = (status: OrderStatus) => {
   if (status === 'viewed') return 'Marcar visto'
-  if (status === 'preparing') return 'Pasar a preparación'
+  if (status === 'preparing') return 'Pasar a preparacion'
   if (status === 'ready') return 'Marcar listo'
   if (status === 'delivered') return 'Marcar entregado'
   if (status === 'cancelled') return 'Cancelar pedido'
   return statusLabel(status)
 }
 
-const elapsedMinutes = (createdAt: string) =>
-  Math.max(0, Math.floor((Date.now() - Date.parse(createdAt)) / 60000))
+const elapsedMinutes = (createdAt: string) => {
+  const parsed = Date.parse(createdAt)
+  if (Number.isNaN(parsed)) return 0
+  return Math.max(0, Math.floor((Date.now() - parsed) / 60000))
+}
 
 const elapsedLabel = (createdAt: string) => {
   const minutes = elapsedMinutes(createdAt)
@@ -446,6 +501,18 @@ const refreshStatusCounts = async (catalogId: string) => {
   }
 }
 
+const refreshOrdersBoard = async () => {
+  if (!catalog.value?.id) {
+    return
+  }
+
+  await Promise.all([
+    ordersStore.hydrate(catalog.value.id, { filter: ordersStore.currentFilter }),
+    loadTeamMembers(catalog.value.id),
+    refreshStatusCounts(catalog.value.id),
+  ])
+}
+
 watch(selectedOrder, (value) => {
   workflowSavedMessage.value = ''
   workflowDraft.value = {
@@ -453,6 +520,16 @@ watch(selectedOrder, (value) => {
     assignedToName: value?.assignedToName || '',
     internalNotes: value?.internalNotes || '',
   }
+})
+
+watch(rawSearchTerm, (value) => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+  }
+
+  searchDebounceTimer = setTimeout(() => {
+    searchTerm.value = value
+  }, 220)
 })
 
 watch(catalog, (value) => {
@@ -472,15 +549,36 @@ watch(() => ordersStore.items.map(order => `${order.id}:${order.status}`).join('
   }
 })
 
-onBeforeUnmount(() => {
+registerCleanup(() => {
+  if (searchDebounceTimer) {
+    clearTimeout(searchDebounceTimer)
+    searchDebounceTimer = null
+  }
+})
+registerCleanup(() => {
   ordersStore.stopRealtime()
 })
 
 const setActiveTab = async (filter: OrdersFilterKey) => {
+  rawSearchTerm.value = ''
   searchTerm.value = ''
   selectedOrder.value = null
   await ordersStore.setFilter(filter)
 }
+
+const activeTabIndex = computed(() => tabs.value.findIndex(tab => tab.key === ordersStore.currentFilter))
+const moveTab = (direction: 1 | -1) => {
+  const nextTab = tabs.value[activeTabIndex.value + direction]
+  if (nextTab) {
+    void setActiveTab(nextTab.key)
+  }
+}
+
+useTouchGestures(pageRef, {
+  onPullRefresh: refreshOrdersBoard,
+  onSwipeLeft: () => moveTab(1),
+  onSwipeRight: () => moveTab(-1),
+})
 
 const openOrderDetail = async (order: CatalogOrder) => {
   selectedOrder.value = order
@@ -582,6 +680,18 @@ const saveWorkflow = async () => {
 </script>
 
 <style scoped>
+.table-list {
+  content-visibility: auto;
+}
+
+.admin-virtual-list {
+  border-radius: 22px;
+}
+
+.admin-virtual-list :deep(.virtual-list-item + .virtual-list-item) {
+  margin-top: 0.75rem;
+}
+
 .order-filters {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));

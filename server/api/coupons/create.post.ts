@@ -12,6 +12,21 @@ export default defineEventHandler(async (event) => {
   const supabase = createSupabaseServiceRoleClient(event)
   const payload = parsed.data
 
+  const { data: existingCoupon, error: duplicateError } = await supabase
+    .from('coupons')
+    .select('id')
+    .eq('catalog_id', payload.catalogId)
+    .eq('code', payload.code.toUpperCase())
+    .maybeSingle()
+
+  if (duplicateError) {
+    throw createError({ statusCode: 500, statusMessage: 'No se pudo validar la unicidad del cupon' })
+  }
+
+  if (existingCoupon) {
+    throw createError({ statusCode: 409, statusMessage: 'Ya existe un cupon con ese codigo en este catalogo' })
+  }
+
   const { data, error } = await supabase
     .from('coupons')
     .insert({

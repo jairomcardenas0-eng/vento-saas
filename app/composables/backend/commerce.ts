@@ -1,4 +1,5 @@
 import type { CatalogOrder, CatalogReview } from '~/types/catalog'
+import { useOfflineQueue } from '~/composables/useOfflineQueue'
 import type { OrdersStatsSnapshot, ReviewsStatsSnapshot } from './types'
 import type {
   BackendRealtimePayload,
@@ -18,6 +19,9 @@ type RealtimeDocChange<T> = {
     data: () => T
   }
 }
+
+let ordersChannelCounter = 0
+let reviewsChannelCounter = 0
 
 interface CreateSupabaseCommerceBackendOptions {
   supabase: BackendSupabaseClient
@@ -65,6 +69,35 @@ export const createSupabaseCommerceBackend = ({
       data: () => data,
     },
   })
+
+  const isRetryableClientError = (error: unknown) => {
+    if (!import.meta.client) {
+      return false
+    }
+
+    if (navigator.onLine === false) {
+      return true
+    }
+
+    const status = Number((error as { statusCode?: number, status?: number })?.statusCode || (error as { status?: number })?.status || 0)
+    return !status || status >= 500
+  }
+
+  const queueOfflineOperation = async (payload: {
+    type: 'order:create' | 'review:create'
+    url: string
+    body: unknown
+    priority: 1 | 2
+  }) => {
+    const offlineQueue = useOfflineQueue()
+    await offlineQueue.enqueue({
+      type: payload.type,
+      url: payload.url,
+      method: 'POST',
+      body: payload.body,
+      priority: payload.priority,
+    })
+  }
 
   return {
     async getOrdersPage(catalogId: string, options?: {
@@ -267,8 +300,9 @@ export const createSupabaseCommerceBackend = ({
       callback: (change: RealtimeDocChange<CatalogOrder>) => void,
       onError?: (error: Error) => void,
     ) {
+      const channelName = `orders-live:${catalogId}:${++ordersChannelCounter}`
       const channel = supabase
-        .channel(`orders-live:${catalogId}`)
+        .channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'orders', filter: `catalog_id=eq.${catalogId}` }, (payload: BackendRealtimePayload<OrderRow>) => {
           try {
             if (payload.eventType === 'INSERT' && payload.new) {
@@ -293,8 +327,9 @@ export const createSupabaseCommerceBackend = ({
       callback: (change: RealtimeDocChange<CatalogReview>) => void,
       onError?: (error: Error) => void,
     ) {
+      const channelName = `reviews-live:${catalogId}:${++reviewsChannelCounter}`
       const channel = supabase
-        .channel(`reviews-live:${catalogId}`)
+        .channel(channelName)
         .on('postgres_changes', { event: '*', schema: 'public', table: 'reviews', filter: `catalog_id=eq.${catalogId}` }, (payload: BackendRealtimePayload<ReviewRow>) => {
           try {
             if (payload.eventType === 'INSERT' && payload.new) {
@@ -334,13 +369,39 @@ export const createSupabaseCommerceBackend = ({
     },
     async appendReview(catalogId: string, review: CatalogReview) {
       if (import.meta.client) {
-        await $fetch('/api/reviews/create', {
-          method: 'POST',
-          body: {
-            catalogId,
-            review,
-          },
-        })
+        const body = {
+          catalogId,
+          review,
+        }
+
+        if (navigator.onLine === false) {
+          await queueOfflineOperation({
+            type: 'review:create',
+            url: '/api/reviews/create',
+            body,
+            priority: 2,
+          })
+          return
+        }
+
+        try {
+          await $fetch('/api/reviews/create', {
+            method: 'POST',
+            body,
+          })
+        } catch (error) {
+          if (isRetryableClientError(error)) {
+            await queueOfflineOperation({
+              type: 'review:create',
+              url: '/api/reviews/create',
+              body,
+              priority: 2,
+            })
+            return
+          }
+
+          throw new Error(`No se pudo enviar la reseña: ${error instanceof Error ? error.message : String(error)}`)
+        }
         return
       }
 
@@ -390,7 +451,14 @@ export const createSupabaseCommerceBackend = ({
             onError?.(error as Error)
           }
         })
-        .subscribe()
+        .subscribe((status: string) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            onError?.(new Error(`Realtime reviews channel error: ${status}`))
+          } else if (status === 'CLOSED') {
+            // Re-sync on reconnect after unexpected close
+            fetchReviews().catch((error) => onError?.(error as Error))
+          }
+        })
 
       return () => {
         void supabase.removeChannel(channel)
@@ -457,13 +525,39 @@ export const createSupabaseCommerceBackend = ({
     },
     async appendOrder(catalogId: string, order: CatalogOrder) {
       if (import.meta.client) {
-        await $fetch('/api/orders/create', {
-          method: 'POST',
-          body: {
-            catalogId,
-            order,
-          },
-        })
+        const body = {
+          catalogId,
+          order,
+        }
+
+        if (navigator.onLine === false) {
+          await queueOfflineOperation({
+            type: 'order:create',
+            url: '/api/orders/create',
+            body,
+            priority: 1,
+          })
+          return
+        }
+
+        try {
+          await $fetch('/api/orders/create', {
+            method: 'POST',
+            body,
+          })
+        } catch (error) {
+          if (isRetryableClientError(error)) {
+            await queueOfflineOperation({
+              type: 'order:create',
+              url: '/api/orders/create',
+              body,
+              priority: 1,
+            })
+            return
+          }
+
+          throw new Error(`No se pudo enviar el pedido: ${error instanceof Error ? error.message : String(error)}`)
+        }
         return
       }
 
@@ -556,7 +650,13 @@ export const createSupabaseCommerceBackend = ({
             onError?.(error as Error)
           }
         })
-        .subscribe()
+        .subscribe((status: string) => {
+          if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+            onError?.(new Error(`Realtime orders channel error: ${status}`))
+          } else if (status === 'CLOSED') {
+            fetchOrders().catch((error) => onError?.(error as Error))
+          }
+        })
 
       return () => {
         void supabase.removeChannel(channel)

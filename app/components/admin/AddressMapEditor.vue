@@ -60,7 +60,7 @@
     </div>
 
     <!-- Map -->
-    <client-only>
+    <ClientOnly>
       <div v-if="mapReady && LMap && LTileLayer && LMarker">
         <h4 class="mb-3 text-[15px] font-bold text-zinc-900 dark:text-zinc-100">Fija la posición exacta</h4>
         <div class="overflow-hidden rounded-xl border border-zinc-200 shadow-md dark:border-zinc-800 relative z-0">
@@ -91,7 +91,7 @@
           Coordenadas: {{ markerPosition[0].toFixed(6) }}, {{ markerPosition[1].toFixed(6) }}
         </p>
       </div>
-    </client-only>
+    </ClientOnly>
   </div>
 </template>
 

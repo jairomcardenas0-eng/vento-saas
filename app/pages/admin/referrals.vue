@@ -31,7 +31,13 @@
           ? 'border-rose-200 bg-rose-50 text-rose-700 dark:border-rose-900/60 dark:bg-rose-950/30 dark:text-rose-300'
           : 'border-blue-200 bg-blue-50 text-blue-700 dark:border-blue-900/60 dark:bg-blue-950/30 dark:text-blue-300'"
       >
-        <span>{{ loadError || 'Actualizando tu código y la actividad de tu red...' }}</span>
+        <span class="flex items-center gap-2">
+          <svg v-if="!loadError" class="h-4 w-4 animate-spin text-blue-600 dark:text-blue-400" fill="none" viewBox="0 0 24 24">
+            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4" />
+            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z" />
+          </svg>
+          {{ loadError || 'Actualizando tu código y la actividad de tu red...' }}
+        </span>
         <button v-if="loadError" class="solid-btn" @click="loadReferrals()">Reintentar</button>
       </div>
 
@@ -134,7 +140,7 @@
                 </span>
               </div>
               <p class="mt-2 text-[11px] text-zinc-400 dark:text-zinc-500">
-                {{ new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' }).format(new Date(referral.createdAt)) }}
+                {{ referralDateFormatter.format(new Date(referral.createdAt)) }}
               </p>
             </article>
           </div>
@@ -195,6 +201,9 @@ const statusLabel = (status: string) => {
   return 'Pendiente'
 }
 
+const REFERRALS_TIMEOUT_MS = 20000
+const referralDateFormatter = new Intl.DateTimeFormat('es-MX', { day: 'numeric', month: 'short', year: 'numeric' })
+
 const loadReferrals = async () => {
   const uid = authStore.user?.uid
   if (!uid) {
@@ -206,7 +215,12 @@ const loadReferrals = async () => {
   loading.value = true
   loadError.value = ''
   try {
-    const data = await backend.getReferralData(uid)
+    const data = await Promise.race([
+      backend.getReferralData(uid),
+      new Promise<never>((_, reject) =>
+        setTimeout(() => reject(new Error('La carga tardó demasiado. Revisa tu conexión e intenta de nuevo.')), REFERRALS_TIMEOUT_MS),
+      ),
+    ])
     referralCode.value = data.code
     referrals.value = data.referrals
   } catch (error) {

@@ -36,12 +36,14 @@ export const useCheckoutEngine = () => {
     orderText += '\n*🛒 DETALLE DE LA ORDEN:*\n'
 
     items.forEach((item) => {
-      orderText += `\n🔹 ${item.quantity}x *${item.productName}* ($${item.finalUnitPrice.toFixed(2)})`
-      if (item.modifiers.length > 0) {
+      const unitPrice = Number(item.finalUnitPrice ?? 0)
+      orderText += `\n🔹 ${item.quantity}x *${item.productName}* ($${unitPrice.toFixed(2)})`
+      if (Array.isArray(item.modifiers) && item.modifiers.length > 0) {
         orderText += `\n    ${item.modifiers.map(modifier => modifier.optionName).join(', ')}`
       }
-      if (item.instructions.trim()) {
-        orderText += `\n   _Nota: ${item.instructions.trim()}_`
+      const note = item.instructions ? String(item.instructions).trim() : ''
+      if (note) {
+        orderText += `\n   _Nota: ${note}_`
       }
     })
 
@@ -57,7 +59,7 @@ export const useCheckoutEngine = () => {
 
     orderText += `\n\n*💰 TOTAL A PAGAR:* $${totalAmountSum.toFixed(2)}`
 
-    const phone = (storeSettings.whatsappNumber || storeSettings.whatsapp || '').replace(/[^0-9]/g, '')
+    const phone = (storeSettings.whatsappNumber || '').replace(/[^0-9]/g, '')
     return `https://wa.me/${phone}?text=${encodeURIComponent(orderText)}`
   }
 

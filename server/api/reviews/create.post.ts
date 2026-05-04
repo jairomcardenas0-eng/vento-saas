@@ -111,6 +111,25 @@ export default defineEventHandler(async (event) => {
     return { ok: true, duplicate: true, approved: false, reviewId: existingReview.id, requestId }
   }
 
+  const { data: spamReview, error: spamReviewError } = await supabase
+    .from('reviews')
+    .select('id')
+    .eq('catalog_id', catalogId)
+    .eq('product_id', productId)
+    .eq('customer_name', customerName)
+    .eq('rating', rating)
+    .eq('comment', comment)
+    .maybeSingle()
+
+  if (spamReviewError) {
+    logApiWarn('reviews:create', 'spam check failed', { requestId, catalogId, reviewId: normalizedReviewId, error: spamReviewError.message })
+    throw createError({ statusCode: 500, statusMessage: 'No se pudo validar la resena' })
+  }
+
+  if (spamReview) {
+    return { ok: true, duplicate: true, approved: false, reviewId: spamReview.id, requestId }
+  }
+
   const payload = {
     catalog_id: catalogId,
     id: normalizedReviewId,

@@ -52,7 +52,8 @@
             </label>
             <label class="space-y-2">
               <span class="text-sm font-medium text-slate-700 dark:text-slate-300">WhatsApp</span>
-              <input v-model="draft.whatsapp" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900" />
+              <input v-model="draft.whatsapp" class="w-full rounded-2xl border border-slate-200 px-4 py-3 text-sm dark:border-slate-800 dark:bg-slate-900" placeholder="Ej: 5512345678" />
+              <p v-if="draft.whatsapp && !/^\d{10,}$/.test(draft.whatsapp.replace(/\D/g, ''))" class="text-xs text-amber-600 dark:text-amber-400">Ingresa al menos 10 dígitos numéricos.</p>
             </label>
             <label class="space-y-2 md:col-span-2">
               <span class="text-sm font-medium text-slate-700 dark:text-slate-300">Slug publico</span>
@@ -101,7 +102,7 @@
         <div class="mt-8 flex items-center justify-between gap-3">
           <button type="button" class="rounded-full border border-slate-200 px-4 py-2 text-sm dark:border-slate-800" :disabled="currentStep === 1" @click="currentStep -= 1">Anterior</button>
           <button type="button" class="rounded-full bg-slate-900 px-4 py-2 text-sm font-medium text-white dark:bg-slate-100 dark:text-slate-900" :disabled="currentStep === 4 && !canPublish" @click="handleNext">
-            {{ currentStep === 4 ? 'Finalizar' : 'Siguiente' }}
+            {{ currentStep === 4 ? (canPublish ? 'Publicar catálogo' : 'Completa el checklist') : 'Siguiente' }}
           </button>
         </div>
       </article>
@@ -197,9 +198,10 @@ const slugStateClass = computed(() => ({
   'text-rose-600 dark:text-rose-300': slugState.value === 'taken',
 }))
 const checklist = computed(() => [
-  { label: 'Logo subido', description: 'Sube un logo cuadrado desde Apariencia.', done: false },
-  { label: 'Minimo 3 productos', description: 'Agrega al menos tres productos para publicar.', done: false },
-  { label: 'Horarios configurados', description: 'Define dias y horas de apertura.', done: false },
+  { label: 'Tipo de negocio seleccionado', description: 'Elige tu tipo de negocio en el paso 1.', done: !!draft.value.businessType && draft.value.businessType !== 'tienda' },
+  { label: 'Nombre y contacto', description: 'Ingresa nombre del negocio y WhatsApp válido.', done: !!draft.value.businessName.trim() && /^\d{10,}$/.test(draft.value.whatsapp.replace(/\D/g, '')) },
+  { label: 'Slug válido', description: 'Crea una URL pública única para tu catálogo.', done: !!normalizedSlug.value && slugState.value === 'available' },
+  { label: 'Categorías seleccionadas', description: 'Selecciona al menos una categoría sugerida.', done: selectedCategories.value.size > 0 },
 ])
 const canPublish = computed(() => checklist.value.every(item => item.done))
 

@@ -16,6 +16,7 @@
         <option :value="1">1 estrella</option>
       </select>
       <textarea v-model="comment" rows="3" maxlength="300" placeholder="Cuéntale al negocio cómo te fue" />
+      <p v-if="submitError" class="text-sm text-rose-600 dark:text-rose-400">{{ submitError }}</p>
       <button class="solid-btn" @click="submit">Enviar reseña</button>
     </div>
 
@@ -57,9 +58,12 @@ const visibleReviews = computed(() =>
     .slice(0, 8),
 )
 
+const submitError = ref('')
+
 const submit = () => {
+  submitError.value = ''
   if (name.value.trim().length < 2 || comment.value.trim().length < 3) {
-    window.alert('Completa un nombre y un comentario válidos')
+    submitError.value = 'Completa un nombre y un comentario válidos'
     return
   }
   emit('submit', {

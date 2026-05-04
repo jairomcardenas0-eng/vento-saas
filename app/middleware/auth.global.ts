@@ -4,7 +4,17 @@ export default defineNuxtRouteMiddleware(async (to) => {
   }
 
   const authStore = useAuthStore()
-  await authStore.initAuth()
+  const initialized = useState('auth-middleware-initialized', () => false)
+
+  if (!initialized.value) {
+    try {
+      await authStore.initAuth()
+    } catch (err) {
+      console.error('[auth middleware] initAuth failed:', err)
+    } finally {
+      initialized.value = true
+    }
+  }
 
   const protectedPrefixes = ['/admin', '/onboarding']
   const ownerOnlyPrefixes = ['/master']
@@ -12,16 +22,15 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const needsOwner = ownerOnlyPrefixes.some(prefix => to.path.startsWith(prefix))
 
   if (needsAuth && !authStore.isAuthenticated) {
-    return navigateTo('/login')
+    return navigateTo(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
   }
 
   if (needsOwner && !authStore.isAuthenticated) {
-    return navigateTo('/login')
+    return navigateTo(`/login?redirect=${encodeURIComponent(to.fullPath)}`)
   }
 
   if (needsOwner && !authStore.isOwner) {
-    await authStore.logout()
-    return navigateTo('/login')
+    return navigateTo('/admin')
   }
 
   if (authStore.isOwner && (to.path.startsWith('/admin') || to.path.startsWith('/onboarding'))) {

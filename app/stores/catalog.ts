@@ -101,7 +101,7 @@ const mapCatalogProductToItem = (product: CatalogProduct): ProductItem => ({
       sortOrder: optionIndex,
     })),
   })),
-  hasPromo: product.salePrice !== null && product.salePrice !== undefined,
+  hasPromo: product.salePrice !== null && product.salePrice !== undefined && Number(product.salePrice) >= 0,
   promoPrice: product.salePrice,
   sortOrder: product.order,
   offerLabel: product.offerLabel || '',
@@ -198,9 +198,9 @@ const mapItemProductToCatalog = (product: ProductItem): CatalogProduct => ({
       })),
   })),
   inventoryItems: (product.inventoryItems || []).map(({ available, status, ...item }) => item),
-  reviewsApprovedCount: Number(product.productRatingCount || 0),
-  productRating: Number(product.productRating || 0),
-  productRatingCount: Number(product.productRatingCount || 0),
+  reviewsApprovedCount: Number(product.productRatingCount) || 0,
+  productRating: Number(product.productRating) || 0,
+  productRatingCount: Number(product.productRatingCount) || 0,
 })
 
 export const createEmptyVariantOption = (): VariantOption => ({

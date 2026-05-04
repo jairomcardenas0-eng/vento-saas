@@ -67,9 +67,10 @@ const save = async () => {
   saveError.value = ''
 
   try {
+    const safeId = form.value.id || `${form.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`
     await catalogStore.upsertCategory({
       ...form.value,
-      id: form.value.id || `${form.value.name.toLowerCase().replace(/[^a-z0-9]+/g, '-')}-${Date.now()}`,
+      id: safeId,
     })
     form.value = { id: '', name: '', note: '', order: categories.value.length + 1, active: true }
   } catch (error) {

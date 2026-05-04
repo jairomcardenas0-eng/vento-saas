@@ -13,6 +13,38 @@ export default defineEventHandler(async (event) => {
   const supabase = createSupabaseServiceRoleClient(event)
   const payload = parsed.data
 
+  const { data: existingProduct, error: existingError } = await supabase
+    .from('products')
+    .select('id')
+    .eq('catalog_id', payload.catalogId)
+    .eq('id', payload.id)
+    .maybeSingle()
+
+  if (existingError) {
+    throw createError({ statusCode: 500, statusMessage: 'No se pudo verificar el producto' })
+  }
+
+  if (!existingProduct) {
+    throw createError({ statusCode: 404, statusMessage: 'Producto no encontrado en este catalogo' })
+  }
+
+  if (payload.categoryId) {
+    const { data: categoryExists, error: categoryError } = await supabase
+      .from('categories')
+      .select('id')
+      .eq('catalog_id', payload.catalogId)
+      .eq('id', payload.categoryId)
+      .maybeSingle()
+
+    if (categoryError) {
+      throw createError({ statusCode: 500, statusMessage: 'No se pudo validar la categoria' })
+    }
+
+    if (!categoryExists) {
+      throw createError({ statusCode: 400, statusMessage: 'La categoria no existe en este catalogo' })
+    }
+  }
+
   const { error } = await supabase
     .from('products')
     .update({

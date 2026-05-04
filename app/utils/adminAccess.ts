@@ -50,13 +50,24 @@ export const createOwnerAccessProfile = (catalogId: string): CatalogAccessProfil
   },
 })
 
-export const normalizeTeamPermissions = (value?: Partial<TeamMemberPermissions> | null): TeamMemberPermissions => ({
-  ...defaultPermissions(),
-  ...(value || {}),
-})
+export const normalizeTeamPermissions = (value?: Partial<TeamMemberPermissions> | null): TeamMemberPermissions => {
+  const defaults = defaultPermissions()
+  if (!value) return defaults
+  const knownKeys = Object.keys(defaults) as Array<keyof TeamMemberPermissions>
+  const filtered: Partial<TeamMemberPermissions> = {}
+  for (const key of knownKeys) {
+    if (key in value) {
+      filtered[key] = value[key] as boolean
+    }
+  }
+  return { ...defaults, ...filtered }
+}
 
 export const getAdminRouteRequirement = (path: string): AdminRoutePermission | null => {
   const matched = routePermissionMatchers.find(entry => entry.match.test(path))
+  if (!matched && path.startsWith('/admin')) {
+    console.warn(`[adminAccess] No permission matcher found for route: ${path}`)
+  }
   return matched?.requirement ?? null
 }
 

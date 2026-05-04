@@ -23,6 +23,13 @@ export default defineEventHandler(async (event) => {
   const query = getQuery(event)
   const q = String(query.q || '').trim().toLowerCase()
   const tags = parseTags(query.tags as string | string[] | undefined)
+
+  // Return empty payload if Supabase is not configured
+  const config = useRuntimeConfig(event)
+  if (!config.public.supabaseUrl || !config.public.supabaseAnonKey) {
+    return emptyMarketplaceLanding()
+  }
+
   const supabase = createSupabaseServerClient(event)
   const queryKey = q
     ? `search:${encodeURIComponent(q)}:${tags.join('|') || 'none'}`

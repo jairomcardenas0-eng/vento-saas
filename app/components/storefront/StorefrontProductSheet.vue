@@ -15,7 +15,9 @@
         <div class="relative overflow-hidden rounded-[24px] bg-black/10">
           <div v-if="galleryImages.length" class="relative">
             <img
-              :src="galleryImages[galleryActiveIndex]"
+              :src="optimizedGalleryImage(galleryImages[galleryActiveIndex], 'detail')"
+              :srcset="gallerySrcset(galleryImages[galleryActiveIndex], 'detail')"
+              :sizes="imageSizes('detail')"
               :alt="product.name"
               loading="lazy"
               class="aspect-video w-full object-cover cursor-pointer"
@@ -69,7 +71,14 @@
             :class="index === galleryActiveIndex ? 'border-[color:var(--catalog-primary)]' : 'border-white/10 opacity-70 hover:opacity-100'"
             @click="galleryActiveIndex = index"
           >
-            <img :src="image" :alt="`${product.name} ${index + 1}`" class="h-full w-full object-cover" loading="lazy" />
+            <img
+              :src="optimizedGalleryImage(image, 'thumb')"
+              :srcset="gallerySrcset(image, 'thumb')"
+              :sizes="imageSizes('thumb')"
+              :alt="`${product.name} ${index + 1}`"
+              class="h-full w-full object-cover"
+              loading="lazy"
+            />
           </button>
         </div>
 
@@ -164,6 +173,7 @@
 
 <script setup lang="ts">
 import type { ProductItem, VariantGroup } from '~/stores/catalog'
+import { useImageOptimizer } from '~/composables/useImageOptimizer'
 import { money } from '~/utils/catalog'
 
 const props = defineProps<{
@@ -175,6 +185,7 @@ const props = defineProps<{
   instructions: string
   subtotal: number
 }>()
+const imageOptimizer = useImageOptimizer()
 
 defineEmits<{
   close: []
@@ -187,6 +198,11 @@ defineEmits<{
 
 const lightboxOpen = ref(false)
 const galleryActiveIndex = ref(0)
+const imageSizes = (context: 'thumb' | 'grid' | 'detail' | 'hero' = 'grid') => imageOptimizer.sizes(context)
+const optimizedGalleryImage = (url: string | null | undefined, context: 'thumb' | 'detail') =>
+  imageOptimizer.optimizedUrl(url, { width: context === 'detail' ? 600 : 200, quality: 72 })
+const gallerySrcset = (url: string | null | undefined, context: 'thumb' | 'detail') =>
+  imageOptimizer.srcset(url, context === 'detail' ? [320, 480, 600, 800] : [120, 200, 320])
 
 const galleryImages = computed(() => {
   if (!props.product) return []
@@ -230,7 +246,7 @@ const timerDisplay = ref('')
 let timerInterval: ReturnType<typeof setInterval> | null = null
 
 const updateTimer = () => {
-  if (!props.product?.timerHours) {
+  if (!import.meta.client || !props.product?.timerHours) {
     timerDisplay.value = ''
     return
   }
@@ -274,7 +290,7 @@ watch(() => props.product?.id, () => {
 }, { immediate: true })
 
 const shareProduct = async () => {
-  if (!props.product) return
+  if (!import.meta.client || !props.product) return
   const url = window.location.href
   const text = `${props.product.name} - ${money(props.product.hasPromo && props.product.promoPrice ? props.product.promoPrice : props.product.basePrice, props.currency)}`
 

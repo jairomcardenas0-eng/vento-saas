@@ -44,6 +44,10 @@ export const createSupabaseAnalyticsBackend = ({
         activeUsers: Number(snapshot.totals?.activeUsers || 0),
         newUsers: Number(snapshot.totals?.newUsers || 0),
         productClicks: Number(snapshot.totals?.productClicks || 0),
+        addToCarts: Number(snapshot.totals?.addToCarts || 0),
+        checkouts: Number(snapshot.totals?.checkouts || 0),
+        purchases: Number(snapshot.totals?.purchases || 0),
+        searches: Number(snapshot.totals?.searches || 0),
       },
       daily: Array.isArray(snapshot.daily)
         ? snapshot.daily.map((point) => ({
@@ -52,6 +56,10 @@ export const createSupabaseAnalyticsBackend = ({
           activeUsers: Number(point?.activeUsers || 0),
           newUsers: Number(point?.newUsers || 0),
           productClicks: Number(point?.productClicks || 0),
+          addToCarts: Number(point?.addToCarts || 0),
+          checkouts: Number(point?.checkouts || 0),
+          purchases: Number(point?.purchases || 0),
+          searches: Number(point?.searches || 0),
         }))
         : [],
     }

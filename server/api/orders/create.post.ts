@@ -182,7 +182,8 @@ export default defineEventHandler(async (event) => {
   const deliveryZoneId = sanitizeText(order.deliveryZoneId, 120)
   const deliveryZoneName = sanitizeText(order.deliveryZoneName, 160)
 
-  if (customerName.length < 2 && settings.checkoutNameReq === 'obligatorio') {
+  const isNameRequired = settings.checkoutNameReq !== 'optional'
+  if (customerName.length < 2 && isNameRequired) {
     throw createError({ statusCode: 400, statusMessage: 'El nombre del cliente no es valido' })
   }
 

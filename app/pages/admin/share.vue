@@ -311,10 +311,11 @@ const renderQR = async () => {
     const qr = new QRCodeStyling(buildQrOptions(currentQrSettings(), publicUrl.value, 400))
     const blob = await qr.getRawData('png')
     if (blob instanceof Blob) {
-      if (qrPreviewUrl.value) {
-        URL.revokeObjectURL(qrPreviewUrl.value)
-      }
+      const oldUrl = qrPreviewUrl.value
       qrPreviewUrl.value = URL.createObjectURL(blob)
+      if (oldUrl && oldUrl !== qrPreviewUrl.value) {
+        URL.revokeObjectURL(oldUrl)
+      }
     }
   } catch (error) {
     console.error('Error generando QR:', error)
